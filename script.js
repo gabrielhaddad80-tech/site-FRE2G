@@ -15,7 +15,7 @@ nav.querySelectorAll("a").forEach((link) =>
 );
 
 // Formulaire : ouvre le client mail avec la demande pré-remplie
-const CONTACT_EMAIL = "contact@fre2g.fr";
+const CONTACT_EMAIL = "electroclimconcept@gmail.com";
 
 document.getElementById("contact-form").addEventListener("submit", (e) => {
   e.preventDefault();

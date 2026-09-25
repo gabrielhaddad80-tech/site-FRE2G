@@ -188,8 +188,9 @@ h3 { font-size: 1.15rem; font-weight: 700; }
   stroke-linejoin: round;
 }
 .infobar .info:nth-child(2) svg { fill: #ff7a6b; stroke: none; }
-.info strong { display: block; font-size: 1.35rem; font-weight: 600; line-height: 1.3; }
+.info strong { display: block; font-size: clamp(1.05rem, 1.6vw, 1.35rem); font-weight: 600; line-height: 1.3; }
 .info span { font-size: 0.8rem; color: rgba(255, 255, 255, 0.72); }
+@media (max-width: 420px) { .info strong { font-size: 0.98rem; } }
 a.info:hover strong { text-decoration: underline; text-underline-offset: 4px; }
 
 /* Sections */
@@ -325,6 +326,39 @@ a.info:hover strong { text-decoration: underline; text-underline-offset: 4px; }
 }
 .tags li:hover { background: var(--grad-blue); color: var(--white); border-color: transparent; }
 
+/* Marques */
+.brands { padding: 46px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.brands__title {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 26px;
+}
+.brands__list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 18px 54px;
+}
+.brand {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #9aa3b5;
+  white-space: nowrap;
+  transition: color 0.25s;
+}
+.brand:hover { color: var(--blue); }
+.brand--daikin { font-style: italic; letter-spacing: 0.02em; text-transform: uppercase; }
+.brand--mitsubishi { font-size: 1.1rem; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.1; }
+.brand--hitachi { letter-spacing: 0.12em; text-transform: uppercase; }
+.brand--airwell { font-style: italic; font-weight: 700; font-size: 1.6rem; letter-spacing: -0.01em; }
+.brand--franceair { font-weight: 600; font-size: 1.4rem; }
+
 /* Contact */
 .contact { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
 .contact__info > p:not(.kicker) { opacity: 0.8; margin: 16px 0 30px; }
@@ -341,6 +375,7 @@ a.info:hover strong { text-decoration: underline; text-underline-offset: 4px; }
   stroke-linejoin: round;
 }
 .contact__list li:first-child svg { fill: #ff8a7c; stroke: none; }
+.contact__list a { overflow-wrap: anywhere; }
 .contact__list a:hover { text-decoration: underline; }
 
 .form {
@@ -376,6 +411,8 @@ a.info:hover strong { text-decoration: underline; text-underline-offset: 4px; }
 .footer { background: #061e4a; color: rgba(255, 255, 255, 0.7); padding: 36px 0; font-size: 0.88rem; }
 .footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
 .logo--small img { height: 50px; }
+.footer__legal span { white-space: nowrap; }
+.footer__legal { flex-basis: 100%; text-align: center; font-size: 0.78rem; color: rgba(255, 255, 255, 0.5); padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 
 /* Responsive */
 @media (max-width: 960px) {
@@ -383,7 +420,7 @@ a.info:hover strong { text-decoration: underline; text-underline-offset: 4px; }
   .about, .contact { grid-template-columns: 1fr; gap: 56px; }
   .about__media { margin-right: 22px; }
   .infobar__inner { grid-template-columns: 1fr; gap: 18px; justify-items: center; }
-  .info { justify-content: flex-start; width: 290px; }
+  .info { justify-content: flex-start; width: min(100%, 320px); }
 }
 
 @media (max-width: 760px) {

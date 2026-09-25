@@ -4,13 +4,16 @@ Site vitrine de FRE2G — installation, dépannage et entretien de climatisation
 
 Site statique (HTML/CSS/JS, aucune dépendance) : ouvrir `index.html` dans un navigateur, ou héberger le dossier tel quel (GitHub Pages, Netlify…).
 
-## À personnaliser
+## Coordonnées
 
-Les coordonnées sont provisoires :
+Coordonnées reprises des documents de l'entreprise :
 
-- Téléphone `01 00 00 00 00` / `tel:+33100000000` — `index.html`
-- E-mail `contact@fre2g.fr` — `index.html` et `script.js` (`CONTACT_EMAIL`)
-- Adresse et horaires — section Contact de `index.html`
+- Téléphone : 06 64 62 12 31
+- E-mail : electroclimconcept@gmail.com (aussi dans `script.js`, `CONTACT_EMAIL`)
+- Adresse : 42, rue du Port, 93300 Aubervilliers
+- SASU FRE2G au capital de 5 000 € — RCS Bobigny 844 794 057 (pied de page)
+
+À vérifier : les horaires affichés (du lundi au samedi, 8h – 19h).
 
 ## Logo
 
