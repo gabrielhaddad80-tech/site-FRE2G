@@ -16,12 +16,13 @@ Les coordonnées sont provisoires :
 
 Dossier `logo/` :
 
-- `logo.svg` / `logo.png` — logo complet, pour fond clair
-- `logo-white.svg` / `logo-white.png` — version blanche, pour fond bleu ou foncé
-- `icon.svg` / `icon-blue.svg` (+ PNG 1024 px) — symbole seul (favicon, réseaux sociaux, avatar)
+- `logo.svg` / `logo.png` — logo complet avec le slogan, pour fond clair
+- `logo-white.svg` / `logo-white.png` — version pour fond bleu ou foncé
+- `logo-compact.svg` / `logo-compact-white.svg` (+ PNG) — sans slogan, pour les petites tailles (en-tête et pied de page du site)
+- `icon.svg` / `icon-blue.svg` (+ PNG 1024 px) — éclair et flocon seuls (favicon, réseaux sociaux, avatar)
 
-Le symbole associe un flocon (camaïeu de bleus, le froid) et un demi-soleil (camaïeu d'orangés et de rouges, le chaud), avec une ombre douce. Le nom FRE2G est en dégradé de bleus, le 2 en dégradé de rouges.
-Les SVG sont vectoriels (texte converti en tracés) et peuvent être agrandis sans perte pour l'impression.
+Le logo reprend l'esprit du logo Electroclim : éclair rouge (l'électricité), nom en capitales larges en dégradé rouge vers bleu, stalactites de glace sous les lettres et flocon sur le G (le froid).
+Les SVG sont vectoriels (texte converti en tracés, police Archivo) et peuvent être agrandis sans perte pour l'impression.
 
 ## Photos
 

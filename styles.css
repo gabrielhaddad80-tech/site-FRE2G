@@ -18,7 +18,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+html { scroll-behavior: smooth; scroll-padding-top: 84px; }
 
 body {
   font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -82,9 +82,9 @@ h3 { font-size: 1.15rem; font-weight: 700; }
   backdrop-filter: blur(8px);
   box-shadow: 0 2px 14px rgba(18, 26, 43, 0.06);
 }
-.header__inner { display: flex; align-items: center; justify-content: space-between; height: 76px; }
+.header__inner { display: flex; align-items: center; justify-content: space-between; height: 84px; }
 .logo { display: inline-flex; }
-.logo img { height: 48px; width: auto; }
+.logo img { height: 60px; width: auto; }
 
 .nav { display: flex; align-items: center; gap: 34px; }
 .nav a {
@@ -375,7 +375,7 @@ a.info:hover strong { text-decoration: underline; text-underline-offset: 4px; }
 /* Pied de page */
 .footer { background: #061e4a; color: rgba(255, 255, 255, 0.7); padding: 36px 0; font-size: 0.88rem; }
 .footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
-.logo--small img { height: 42px; }
+.logo--small img { height: 50px; }
 
 /* Responsive */
 @media (max-width: 960px) {
@@ -392,7 +392,7 @@ a.info:hover strong { text-decoration: underline; text-underline-offset: 4px; }
   .burger { display: block; }
   .nav {
     position: absolute;
-    top: 76px;
+    top: 84px;
     left: 0;
     right: 0;
     flex-direction: column;
