@@ -20,5 +20,5 @@ Dossier `logo/` :
 - `logo-white.svg` / `logo-white.png` — version blanche, pour fond bleu ou foncé
 - `icon.svg` / `icon-blue.svg` (+ PNG 1024 px) — symbole seul (favicon, réseaux sociaux, avatar)
 
-Le symbole représente le cycle chaud / froid : deux flèches effilées en dégradé (camaïeu de bleus pour le froid, de rouges pour le chaud) autour d'un flocon, avec une ombre douce. Le nom en italique et en dégradé donne l'idée de mouvement.
+Le symbole associe un flocon (camaïeu de bleus, le froid) et un demi-soleil (camaïeu d'orangés et de rouges, le chaud), avec une ombre douce. Le nom FRE2G est en dégradé de bleus, le 2 en dégradé de rouges.
 Les SVG sont vectoriels (texte converti en tracés) et peuvent être agrandis sans perte pour l'impression.
