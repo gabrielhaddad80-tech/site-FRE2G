@@ -97,7 +97,7 @@ h3 { font-size: 1.2rem; font-weight: 700; }
 }
 
 .logo { display: inline-flex; }
-.logo img { height: 44px; width: auto; }
+.logo img { height: 50px; width: auto; }
 
 .nav { display: flex; align-items: center; gap: 30px; }
 .nav a:not(.btn) { font-weight: 500; color: var(--muted); transition: color 0.2s; }
@@ -306,7 +306,7 @@ h3 { font-size: 1.2rem; font-weight: 700; }
 /* Footer */
 .footer { background: var(--blue-dark); color: rgba(255, 255, 255, 0.7); padding: 36px 0; font-size: 0.9rem; }
 .footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
-.logo--small img { height: 38px; }
+.logo--small img { height: 42px; }
 
 /* Responsive */
 @media (max-width: 960px) {

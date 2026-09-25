@@ -20,5 +20,5 @@ Dossier `logo/` :
 - `logo-white.svg` / `logo-white.png` — version blanche, pour fond bleu ou foncé
 - `icon.svg` / `icon-blue.svg` (+ PNG 1024 px) — symbole seul (favicon, réseaux sociaux, avatar)
 
-Le symbole représente le cycle chaud / froid : deux flèches en rotation (bleue pour le froid, rouge pour le chaud) autour d'un flocon. Le nom en italique donne l'idée de mouvement.
+Le symbole représente le cycle chaud / froid : deux flèches effilées en dégradé (camaïeu de bleus pour le froid, de rouges pour le chaud) autour d'un flocon, avec une ombre douce. Le nom en italique et en dégradé donne l'idée de mouvement.
 Les SVG sont vectoriels (texte converti en tracés) et peuvent être agrandis sans perte pour l'impression.
