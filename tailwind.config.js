@@ -9,12 +9,13 @@ module.exports = {
       white: "#FFFFFF",
       electro: { 50: "#EEF2FA", 100: "#E3EAF6", 400: "#2E6FD6", DEFAULT: "#1B3F8F", 700: "#163474", 900: "#0F2556" },
       eclair: { 50: "#FDEDEE", DEFAULT: "#D7262E", 700: "#B51D24", 300: "#FF8B86" },
-      nuit: { DEFAULT: "#0E1A2B", 800: "#16263D" },
+      nuit: { DEFAULT: "#0E1A2B", 800: "#16263D", 950: "#0A1320" },
       ardoise: { DEFAULT: "#55617A", 300: "#A3ABBA" },
       sable: { DEFAULT: "#F5F3EF", 300: "#E4E1DB", 400: "#D6D2CA" },
+      ivoire: { DEFAULT: "#F7F3EC", 200: "#EDE6DA" },
     },
     fontFamily: {
-      display: ['"Archivo"', '"Helvetica Neue"', "Arial", "sans-serif"],
+      display: ['"Cormorant Garamond"', '"Cormorant"', "Georgia", "serif"],
       sans: ['"Inter"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
     },
     extend: {

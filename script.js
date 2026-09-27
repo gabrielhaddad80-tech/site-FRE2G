@@ -6,12 +6,14 @@ if (burger && nav) {
   burger.addEventListener("click", () => {
     const open = nav.classList.toggle("is-open");
     burger.setAttribute("aria-expanded", String(open));
+    document.getElementById("header")?.classList.toggle("is-solid", open);
   });
 
   nav.querySelectorAll("a").forEach((link) =>
     link.addEventListener("click", () => {
       nav.classList.remove("is-open");
       burger.setAttribute("aria-expanded", "false");
+      document.getElementById("header")?.classList.remove("is-solid");
     })
   );
 }
@@ -48,7 +50,7 @@ if (reduceMotion || !canObserve) {
 
 // Vidéos de chantier : lecture muette quand elles sont visibles, pause sinon.
 // Si l'utilisateur limite les animations, on affiche simplement les contrôles.
-const videos = document.querySelectorAll(".shot-media video");
+const videos = document.querySelectorAll(".media video");
 
 if (reduceMotion || !canObserve) {
   videos.forEach((v) => (v.controls = true));

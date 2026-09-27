@@ -7,9 +7,10 @@ Le dossier s'héberge tel quel (Netlify, OVH, o2switch, GitHub Pages…) : `asse
 
 ## Charte graphique
 
-`brand-book.html` présente la charte : 5 couleurs (Bleu Electroclim `#1B3F8F`, Rouge Éclair `#D7262E`, Nuit `#0E1A2B`,
-Ardoise `#55617A`, Sable `#F5F3EF`), 2 typographies (Archivo pour les titres, Inter pour le texte), le kit de composants
-et les règles d'animation. La palette Tailwind est **fermée** dans `tailwind.config.js` : pas de noir pur ni de gris génériques.
+`brand-book.html` présente la charte (version 2, registre haut de gamme) : 5 couleurs (Nuit `#0E1A2B`, Ivoire `#F7F3EC`,
+Bleu Electroclim `#1B3F8F`, Rouge Éclair `#D7262E` en touche rare, Ardoise `#55617A`), 2 typographies
+(Cormorant Garamond pour les titres, Inter pour le texte), le kit de composants et les règles d'animation.
+La palette Tailwind est **fermée** dans `tailwind.config.js` : pas de noir pur ni de gris génériques.
 
 ## Structure
 
@@ -21,7 +22,7 @@ src/site.css            source Tailwind : base, composants (boutons, cartes, gal
 assets/site.css         CSS compilé et minifié (à régénérer après modification)
 tailwind.config.js      jetons de la charte : couleurs, polices
 script.js               menu mobile, en-tête, apparitions au défilement, vidéo, formulaire
-fonts/                  Archivo et Inter hébergées localement (pas d'appel à Google)
+fonts/                  Cormorant Garamond et Inter hébergées localement (pas d'appel à Google)
 images/                 photos de chantiers (WebP + JPEG, 900 et 1600 px)
 videos/                 vidéo de chantier (MP4 + WebM) et son image d'aperçu
 logo/                   logo Electroclim et icônes
@@ -42,8 +43,8 @@ Les animations (apparition au défilement, survols) respectent l'option système
 
 Photos de chantiers fournies par l'entreprise, recadrées et optimisées :
 
-- `hero-toiture` — groupe extérieur et gaines en toiture (grande photo d'accueil, versions paysage et mobile)
-- `chambre-gainable` — gainable intégré sous les moulures
+- `hero-toiture` — groupe extérieur et gaines en toiture (non utilisée actuellement)
+- `chambre-gainable` — gainable intégré sous les moulures (grande photo d'accueil)
 - `gainable-haussmannien` — caisson avec deux grilles de soufflage
 - `console-habillage` — console et son habillage sur mesure
 - `centrale-traitement-air` — centrale de traitement d'air en local industriel
