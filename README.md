@@ -13,6 +13,7 @@ styles.css              styles
 script.js               menu mobile, en-tête, formulaire
 fonts/                  polices Archivo et Inter hébergées localement (pas d'appel à Google)
 images/                 photos de chantiers (WebP + JPEG, 900 et 1600 px)
+videos/                 vidéo de chantier (MP4 + WebM) et son image d'aperçu
 logo/                   logo Electroclim et icônes
 ```
 
@@ -29,7 +30,18 @@ Photos de chantiers fournies par l'entreprise, recadrées et optimisées :
 - `gainable-cuisine` — grille de gainable au-dessus d'une baie
 - `liaisons-facade` — goulottes des liaisons en façade
 
-Les photos sont recadrées pour retirer le filigrane « Galaxy S23 » du téléphone.
+- `mural-eclairage` — split mural sous éclairage indirect
+- `unite-exterieure` — groupe extérieur sur supports antivibratiles
+- `plenum-chantier` — plénum de soufflage en construction neuve
+- `toiture-groupe` — groupe extérieur et gaines en toiture
+
+Les photos sont recadrées pour retirer le filigrane « Galaxy S23 » et l'interface de messagerie.
+
+## Vidéo
+
+`videos/cassettes-batiment` — cassettes en cours de pose dans un bâtiment d'activité (9 s, sans le son).
+Source iPhone HEVC HDR convertie en SDR, 720 × 1280, en deux formats : MP4 H.264 (Safari, Chrome, Edge, Firefox) et WebM VP9 (repli).
+La vidéo se lance en muet quand elle est visible et se met en pause sinon ; avec l'option système « réduire les animations », elle ne démarre pas seule et affiche ses contrôles.
 
 Pour en ajouter : exporter en 900 et 1600 px de large, en `.webp` et `.jpg`, avec le même schéma de nom.
 

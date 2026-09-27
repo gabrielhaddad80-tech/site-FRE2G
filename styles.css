@@ -209,33 +209,66 @@ h3 { font-size: 1.2rem; font-weight: 700; }
 }
 
 /* Réalisations */
-.gallery {
-  display: grid;
+.gallery__title {
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+.gallery { display: grid; gap: 28px 24px; }
+.gallery + .gallery__title { margin-top: clamp(56px, 7vw, 88px); }
+.gallery--home {
   grid-template-columns: repeat(3, 1fr);
   grid-template-areas:
     "a b b"
     "a c d"
-    "e f g"
-    "e h h";
-  gap: 28px 24px;
+    "e f f"
+    "e g h";
 }
-.shot { margin: 0; display: flex; flex-direction: column; min-width: 0; }
-.shot picture { display: block; flex: 1; overflow: hidden; border-radius: 4px; background: var(--sand); }
-.shot img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 4 / 3; }
+.gallery--pro { grid-template-columns: repeat(4, 1fr); }
 .shot--a { grid-area: a; } .shot--b { grid-area: b; } .shot--c { grid-area: c; } .shot--d { grid-area: d; }
-.shot--e { grid-area: e; } .shot--f { grid-area: f; } .shot--cta { grid-area: g; } .shot--h { grid-area: h; }
+.shot--e { grid-area: e; } .shot--f { grid-area: f; } .shot--g { grid-area: g; } .shot--h { grid-area: h; }
+
+.shot { margin: 0; display: flex; flex-direction: column; min-width: 0; }
+.shot picture, .shot__video { position: relative; display: block; flex: 1; overflow: hidden; border-radius: 4px; background: var(--sand); }
+.shot img, .shot video { display: block; width: 100%; height: 100%; object-fit: cover; aspect-ratio: 4 / 3; }
 .shot--a img, .shot--e img { aspect-ratio: auto; }
-.shot--b img, .shot--h img { aspect-ratio: 16 / 9; }
+.shot--b img, .shot--f img { aspect-ratio: 16 / 9; }
+.gallery--pro picture, .gallery--pro .shot__video { flex: none; aspect-ratio: 3 / 4; }
+.gallery--pro img, .gallery--pro video { aspect-ratio: auto; }
 .shot figcaption strong { display: block; color: var(--ink); font-weight: 600; font-size: 0.92rem; }
-.shot--cta {
+.shot__badge {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  padding: 4px 10px;
+  border-radius: 2px;
+  background: rgba(14, 26, 43, 0.75);
+  color: var(--white);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cta-band {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 32px;
+  margin-top: clamp(48px, 6vw, 72px);
+  padding: clamp(24px, 4vw, 40px);
   background: var(--blue);
   color: var(--white);
   border-radius: 4px;
 }
-.shot--cta p { font: 600 1.3rem/1.35 var(--font-head); font-stretch: 108%; }
+.cta-band p { font: 600 clamp(1.15rem, 2vw, 1.45rem)/1.35 var(--font-head); font-stretch: 108%; }
+.cta-band .btn { flex-shrink: 0; }
 
 /* Méthode */
 .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; counter-reset: step; }
@@ -334,16 +367,17 @@ h3 { font-size: 1.2rem; font-weight: 700; }
   .service + .service { border-top: 1px solid var(--line); }
   .audiences { grid-template-columns: 1fr; }
   .section__head--split { flex-direction: column; align-items: flex-start; }
-  .gallery {
+  .gallery--home {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "b b"
       "a e"
       "c d"
-      "h h"
-      "f g";
+      "f f"
+      "g h";
   }
   .shot--a img, .shot--e img { aspect-ratio: 3 / 4; }
+  .gallery--pro { grid-template-columns: 1fr 1fr; }
   .steps { grid-template-columns: 1fr 1fr; }
   .footer__grid { grid-template-columns: 1fr 1fr; }
   .footer__brand { grid-column: span 2; }
@@ -351,8 +385,10 @@ h3 { font-size: 1.2rem; font-weight: 700; }
 
 @media (max-width: 560px) {
   .hero__cta .btn { width: 100%; }
-  .gallery { grid-template-columns: 1fr; grid-template-areas: "b" "c" "e" "d" "h" "a" "f" "g"; }
-  .shot--b img, .shot--h img { aspect-ratio: 4 / 3; }
+  .gallery--home { grid-template-columns: 1fr; grid-template-areas: "b" "a" "c" "e" "d" "f" "g" "h"; }
+  .shot--b img, .shot--f img { aspect-ratio: 4 / 3; }
+  .gallery--pro { gap: 20px 12px; }
+  .cta-band { flex-direction: column; align-items: flex-start; }
   .steps { grid-template-columns: 1fr; }
   .form__row { grid-template-columns: 1fr; }
   .coords div { grid-template-columns: 1fr; gap: 4px; }

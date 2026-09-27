@@ -20,6 +20,26 @@ const onScroll = () => header.classList.toggle("is-scrolled", window.scrollY > 8
 window.addEventListener("scroll", onScroll, { passive: true });
 onScroll();
 
+// Vidéos de chantier : lecture muette quand elles sont visibles, pause sinon.
+// Si l'utilisateur limite les animations, on affiche simplement les contrôles.
+const videos = document.querySelectorAll(".shot__video video");
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+if (reduceMotion || !("IntersectionObserver" in window)) {
+  videos.forEach((v) => (v.controls = true));
+} else {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (isIntersecting) target.play().catch(() => (target.controls = true));
+        else target.pause();
+      });
+    },
+    { threshold: 0.4 }
+  );
+  videos.forEach((v) => observer.observe(v));
+}
+
 // Formulaire : ouvre la messagerie avec la demande pré-remplie
 const CONTACT_EMAIL = "electroclimconcept@gmail.com";
 
