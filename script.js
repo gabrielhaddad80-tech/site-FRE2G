@@ -84,8 +84,6 @@ if (form) {
       `Nom : ${data.get("nom")}`,
       `Profil : ${data.get("profil")}`,
       `Téléphone : ${data.get("telephone")}`,
-      `E-mail : ${data.get("email") || "-"}`,
-      `Ville : ${data.get("ville") || "-"}`,
       `Besoin : ${data.get("besoin")}`,
       "",
       data.get("message"),
