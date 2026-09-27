@@ -7,7 +7,7 @@ module.exports = {
       transparent: "transparent",
       current: "currentColor",
       white: "#FFFFFF",
-      electro: { 50: "#EEF2FA", 100: "#E3EAF6", DEFAULT: "#1B3F8F", 700: "#163474", 900: "#0F2556" },
+      electro: { 50: "#EEF2FA", 100: "#E3EAF6", 400: "#2E6FD6", DEFAULT: "#1B3F8F", 700: "#163474", 900: "#0F2556" },
       eclair: { 50: "#FDEDEE", DEFAULT: "#D7262E", 700: "#B51D24", 300: "#FF8B86" },
       nuit: { DEFAULT: "#0E1A2B", 800: "#16263D" },
       ardoise: { DEFAULT: "#55617A", 300: "#A3ABBA" },

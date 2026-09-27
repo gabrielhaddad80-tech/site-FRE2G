@@ -41,12 +41,13 @@ Les animations (apparition au défilement, survols) respectent l'option système
 
 Photos de chantiers fournies par l'entreprise, recadrées et optimisées :
 
-- `chambre-gainable` — gainable intégré sous les moulures (image d'accueil)
+- `hero-toiture` — groupe extérieur et gaines en toiture (grande photo d'accueil, versions paysage et mobile)
+- `chambre-gainable` — gainable intégré sous les moulures
 - `gainable-haussmannien` — caisson avec deux grilles de soufflage
 - `console-habillage` — console et son habillage sur mesure
 - `centrale-traitement-air` — centrale de traitement d'air en local industriel
 - `diffuseur-lineaire` — fente de soufflage intégrée à la boiserie
-- `mural-chambre` — split mural en chambre
+- `mural-chambre` — split mural en chambre (non utilisée actuellement)
 - `gainable-cuisine` — grille de gainable au-dessus d'une baie
 - `liaisons-facade` — goulottes des liaisons en façade
 

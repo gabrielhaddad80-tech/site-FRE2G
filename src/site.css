@@ -22,13 +22,19 @@
 
   /* Boutons */
   .btn {
-    @apply inline-flex min-h-[50px] items-center justify-center gap-2 rounded-[3px] border-[1.5px] border-transparent px-6
+    @apply inline-flex min-h-[50px] items-center justify-center gap-2 rounded-full border-[1.5px] border-transparent px-6
            text-[0.95rem] font-semibold no-underline transition duration-200 ease-out;
   }
   .btn-primary { @apply bg-eclair text-white hover:bg-eclair-700 active:translate-y-px; }
   .btn-outline { @apply border-nuit text-nuit hover:bg-nuit hover:text-white; }
   .btn-light { @apply border-white/70 text-white hover:bg-white hover:text-nuit; }
   .btn-sm { @apply min-h-[40px] px-4 text-[0.9rem]; }
+  .btn-lg { @apply min-h-[58px] px-9 text-[1.05rem]; }
+  .btn-blue { @apply bg-electro-400 text-white hover:bg-electro active:translate-y-px; }
+  .btn-phone {
+    @apply inline-flex h-11 w-11 items-center justify-center gap-2.5 rounded-full border-2 border-electro font-semibold text-electro
+           transition-colors duration-200 hover:bg-electro hover:text-white lg:h-12 lg:w-auto lg:px-6;
+  }
   .btn .arrow { @apply transition-transform duration-200 ease-out; }
   .btn:hover .arrow { @apply translate-x-1; }
 
@@ -55,6 +61,7 @@
   .tick::before {
     content: ""; @apply absolute left-0.5 top-[13px] h-[7px] w-3 -rotate-45 border-b-2 border-l-2 border-eclair;
   }
+  .tick-light::before { @apply border-eclair-300; }
 
   /* Galerie */
   .shot { @apply m-0 flex min-w-0 flex-col; }
@@ -103,6 +110,10 @@
   .stretch-wide { font-stretch: 112%; }
   .counter-steps { counter-reset: step; }
 }
+
+/* Photo d'accueil : zoom très lent à l'arrivée */
+.js .hero-img { animation: hero-zoom 1.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes hero-zoom { from { transform: scale(1.06); } to { transform: scale(1); } }
 
 /* Apparition au défilement — activée seulement si JavaScript tourne */
 .js [data-reveal] {
