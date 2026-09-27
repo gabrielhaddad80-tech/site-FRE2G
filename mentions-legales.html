@@ -5,26 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mentions légales — Electroclim</title>
   <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0E1A2B">
   <link rel="icon" type="image/svg+xml" href="logo/icon-blue.svg">
   <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-  <header class="header is-scrolled">
-    <div class="wrap header__inner">
-      <a href="index.html" class="header__logo" aria-label="Electroclim, retour à l’accueil">
-        <img src="logo/logo-compact.svg" alt="Electroclim" width="314" height="44">
+  <header class="header is-scrolled sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
+    <div class="wrap flex h-[66px] items-center lg:h-[76px]">
+      <a href="index.html" aria-label="Electroclim, retour à l’accueil">
+        <img src="logo/logo-compact.svg" alt="Electroclim" width="314" height="44" class="h-[34px] w-auto lg:h-10">
       </a>
-      <div class="header__actions" style="margin-left:auto">
-        <a class="btn btn--line btn--sm" href="index.html">Retour au site</a>
-      </div>
+      <a class="btn btn-outline btn-sm ml-auto" href="index.html">Retour au site</a>
     </div>
   </header>
 
-  <main class="legal">
-    <h1>Mentions légales</h1>
+  <main class="mx-auto max-w-[760px] px-5 py-[clamp(48px,7vw,88px)] sm:px-8 [&_h2]:mb-2.5 [&_h2]:mt-9 [&_h2]:text-xl [&_h2]:font-bold [&_p]:text-ardoise">
+    <h1 class="mb-8 text-[clamp(2rem,3.6vw,3rem)] font-extrabold">Mentions légales</h1>
 
     <h2>Éditeur du site</h2>
     <p>
@@ -37,14 +36,14 @@
     </p>
 
     <h2>Directeur de la publication</h2>
-    <p><span class="todo">[Nom du président de la SASU — à compléter]</span></p>
+    <p><mark class="rounded-sm bg-eclair-50 px-1 text-eclair-700">[Nom du président de la SASU — à compléter]</mark></p>
 
     <h2>Hébergement</h2>
-    <p><span class="todo">[Nom, adresse et téléphone de l’hébergeur — à compléter une fois le site mis en ligne]</span></p>
+    <p><mark class="rounded-sm bg-eclair-50 px-1 text-eclair-700">[Nom, adresse et téléphone de l’hébergeur — à compléter une fois le site mis en ligne]</mark></p>
 
     <h2>Propriété intellectuelle</h2>
     <p>
-      L’ensemble des contenus de ce site (textes, photographies, logo) est la propriété d’Electroclim, sauf mention contraire.
+      L’ensemble des contenus de ce site (textes, photographies, vidéo, logo) est la propriété d’Electroclim, sauf mention contraire.
       Toute reproduction sans autorisation préalable est interdite. Les marques citées appartiennent à leurs propriétaires respectifs.
     </p>
 

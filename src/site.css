@@ -1,0 +1,120 @@
+/* Electroclim — source Tailwind (compilée vers assets/site.css par `npm run build`) */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-font-smoothing: antialiased; }
+  body { @apply bg-white font-sans text-nuit-800 leading-relaxed; }
+  h1, h2, h3, h4 { @apply font-display text-nuit; font-stretch: 112%; letter-spacing: -0.01em; line-height: 1.15; }
+  :focus-visible { @apply outline outline-2 outline-offset-4 outline-electro; }
+  ::selection { @apply bg-electro-100 text-nuit; }
+}
+
+@layer components {
+  .wrap { @apply mx-auto w-full max-w-wrap px-5 sm:px-8 lg:px-10; }
+
+  /* Titres de section */
+  .eyebrow { @apply mb-3.5 text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-eclair; }
+  .eyebrow-light { @apply text-eclair-300; }
+  .h2 { @apply text-[clamp(1.65rem,2.6vw,2.3rem)] font-bold; }
+
+  /* Boutons */
+  .btn {
+    @apply inline-flex min-h-[50px] items-center justify-center gap-2 rounded-[3px] border-[1.5px] border-transparent px-6
+           text-[0.95rem] font-semibold no-underline transition duration-200 ease-out;
+  }
+  .btn-primary { @apply bg-eclair text-white hover:bg-eclair-700 active:translate-y-px; }
+  .btn-outline { @apply border-nuit text-nuit hover:bg-nuit hover:text-white; }
+  .btn-light { @apply border-white/70 text-white hover:bg-white hover:text-nuit; }
+  .btn-sm { @apply min-h-[40px] px-4 text-[0.9rem]; }
+  .btn .arrow { @apply transition-transform duration-200 ease-out; }
+  .btn:hover .arrow { @apply translate-x-1; }
+
+  .link-arrow { @apply inline-flex items-center gap-1.5 border-b-[1.5px] border-current pb-0.5 font-semibold no-underline; }
+  .link-arrow::after { content: "→"; @apply transition-transform duration-200; }
+  .link-arrow:hover::after { @apply translate-x-1; }
+
+  /* Navigation */
+  .nav-link { @apply relative py-1.5 text-[0.93rem] font-medium text-nuit no-underline; }
+  .nav-link::after {
+    content: ""; @apply absolute inset-x-0 -bottom-px h-[1.5px] origin-left scale-x-0 bg-eclair transition-transform duration-300 ease-out;
+  }
+  .nav-link:hover::after { @apply scale-x-100; }
+  .header.is-scrolled { @apply border-sable-300 shadow-header; }
+
+  /* Cartes */
+  .card { @apply rounded bg-white p-7 transition duration-300 ease-out md:p-10; }
+  .card-hover { @apply hover:-translate-y-1 hover:shadow-soft; }
+  .service { @apply border-t border-sable-300 pt-8 transition-colors duration-300; }
+  .service:hover .service-num { @apply text-electro; }
+  .service-num { @apply mb-4 block font-display text-sm font-bold text-eclair transition-colors duration-300; }
+  .service li { @apply border-t border-sable-300 py-2.5 text-[0.95rem]; }
+  .tick { @apply relative py-1.5 pl-7; }
+  .tick::before {
+    content: ""; @apply absolute left-0.5 top-[13px] h-[7px] w-3 -rotate-45 border-b-2 border-l-2 border-eclair;
+  }
+
+  /* Galerie */
+  .shot { @apply m-0 flex min-w-0 flex-col; }
+  .shot-media { @apply relative block flex-1 overflow-hidden rounded bg-sable; }
+  .shot-media img, .shot-media video { @apply block h-full w-full object-cover transition-transform duration-700 ease-out; }
+  .shot:hover .shot-media img { @apply scale-[1.035]; }
+  .shot figcaption { @apply mt-2.5 text-[0.82rem] text-ardoise; }
+  .shot figcaption strong { @apply block text-[0.92rem] font-semibold text-nuit; }
+  .badge { @apply absolute left-3 top-3 rounded-sm bg-nuit/75 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-white; }
+
+  .gallery-home {
+    @apply grid gap-x-6 gap-y-7;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas: "a b b" "a c d" "e f f" "e g h";
+  }
+  .gallery-home .area-a { grid-area: a; } .gallery-home .area-b { grid-area: b; }
+  .gallery-home .area-c { grid-area: c; } .gallery-home .area-d { grid-area: d; }
+  .gallery-home .area-e { grid-area: e; } .gallery-home .area-f { grid-area: f; }
+  .gallery-home .area-g { grid-area: g; } .gallery-home .area-h { grid-area: h; }
+  .gallery-home .shot img { aspect-ratio: 4 / 3; }
+  .gallery-home .area-a img, .gallery-home .area-e img { aspect-ratio: auto; }
+  .gallery-home .area-b img, .gallery-home .area-f img { aspect-ratio: 16 / 9; }
+  @media (max-width: 900px) {
+    .gallery-home { grid-template-columns: 1fr 1fr; grid-template-areas: "b b" "a e" "c d" "f f" "g h"; }
+    .gallery-home .area-a img, .gallery-home .area-e img { aspect-ratio: 3 / 4; }
+  }
+  @media (max-width: 560px) {
+    .gallery-home { grid-template-columns: 1fr; grid-template-areas: "b" "a" "c" "e" "d" "f" "g" "h"; }
+    .gallery-home .area-b img, .gallery-home .area-f img { aspect-ratio: 4 / 3; }
+  }
+
+  /* Formulaire */
+  .field { @apply grid gap-1.5 text-[0.88rem] font-semibold text-nuit; }
+  .input {
+    @apply w-full rounded-[3px] border border-sable-400 bg-white px-3.5 py-3 text-base font-normal text-nuit-800
+           transition-colors duration-200 placeholder:text-ardoise-300 hover:border-ardoise-300
+           focus:border-transparent focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-electro;
+  }
+
+  /* Méthode */
+  .step { counter-increment: step; @apply border-t border-white/20 pt-6; }
+  .step::before { content: "0" counter(step); @apply mb-4 block font-display text-sm font-bold text-eclair-300; }
+}
+
+@layer utilities {
+  .stretch-wide { font-stretch: 112%; }
+  .counter-steps { counter-reset: step; }
+}
+
+/* Apparition au défilement — activée seulement si JavaScript tourne */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--delay, 0ms);
+}
+.js [data-reveal].is-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .js [data-reveal] { opacity: 1; transform: none; transition: none; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

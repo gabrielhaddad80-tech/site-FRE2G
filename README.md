@@ -2,20 +2,40 @@
 
 Site d'Electroclim (SASU FRE2G) : installation, entretien et dépannage de climatisation, pompes à chaleur et traitement d'air à Paris et en Île-de-France. Particuliers et professionnels.
 
-Site statique (HTML, CSS, JavaScript), sans dépendance ni outil de build : le dossier s'héberge tel quel (OVH, o2switch, Netlify, GitHub Pages…).
+Site statique : HTML5, **Tailwind CSS** (compilé à l'avance, aucun script CSS chargé au runtime) et JavaScript vanille, sans framework.
+Le dossier s'héberge tel quel (Netlify, OVH, o2switch, GitHub Pages…) : `assets/site.css` est déjà compilé et versionné.
+
+## Charte graphique
+
+`brand-book.html` présente la charte : 5 couleurs (Bleu Electroclim `#1B3F8F`, Rouge Éclair `#D7262E`, Nuit `#0E1A2B`,
+Ardoise `#55617A`, Sable `#F5F3EF`), 2 typographies (Archivo pour les titres, Inter pour le texte), le kit de composants
+et les règles d'animation. La palette Tailwind est **fermée** dans `tailwind.config.js` : pas de noir pur ni de gris génériques.
 
 ## Structure
 
 ```
 index.html              page principale
 mentions-legales.html   mentions légales
-styles.css              styles
-script.js               menu mobile, en-tête, formulaire
-fonts/                  polices Archivo et Inter hébergées localement (pas d'appel à Google)
+brand-book.html         charte graphique (non indexée)
+src/site.css            source Tailwind : base, composants (boutons, cartes, galerie…), animations
+assets/site.css         CSS compilé et minifié (à régénérer après modification)
+tailwind.config.js      jetons de la charte : couleurs, polices
+script.js               menu mobile, en-tête, apparitions au défilement, vidéo, formulaire
+fonts/                  Archivo et Inter hébergées localement (pas d'appel à Google)
 images/                 photos de chantiers (WebP + JPEG, 900 et 1600 px)
 videos/                 vidéo de chantier (MP4 + WebM) et son image d'aperçu
 logo/                   logo Electroclim et icônes
 ```
+
+## Modifier les styles
+
+```
+npm install        # une seule fois
+npm run dev        # recompile à chaque modification
+npm run build      # version minifiée avant mise en ligne
+```
+
+Les animations (apparition au défilement, survols) respectent l'option système « réduire les animations ».
 
 ## Photos
 
