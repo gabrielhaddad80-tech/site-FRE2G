@@ -24,6 +24,12 @@ Photos de chantiers fournies par l'entreprise, recadrées et optimisées :
 - `gainable-haussmannien` — caisson avec deux grilles de soufflage
 - `console-habillage` — console et son habillage sur mesure
 - `centrale-traitement-air` — centrale de traitement d'air en local industriel
+- `diffuseur-lineaire` — fente de soufflage intégrée à la boiserie
+- `mural-chambre` — split mural en chambre
+- `gainable-cuisine` — grille de gainable au-dessus d'une baie
+- `liaisons-facade` — goulottes des liaisons en façade
+
+Les photos sont recadrées pour retirer le filigrane « Galaxy S23 » du téléphone.
 
 Pour en ajouter : exporter en 900 et 1600 px de large, en `.webp` et `.jpg`, avec le même schéma de nom.
 

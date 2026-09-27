@@ -212,21 +212,22 @@ h3 { font-size: 1.2rem; font-weight: 700; }
 .gallery {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: auto auto;
-  gap: 24px;
+  grid-template-areas:
+    "a b b"
+    "a c d"
+    "e f g"
+    "e h h";
+  gap: 28px 24px;
 }
-.shot { margin: 0; }
-.shot img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
-.shot picture { display: block; overflow: hidden; border-radius: 4px; }
-.shot--tall { grid-row: span 2; display: flex; flex-direction: column; }
-.shot--tall picture { flex: 1; }
-.shot--wide { grid-column: span 2; }
-.shot--wide img { aspect-ratio: 16 / 9; }
-.shot:not(.shot--tall):not(.shot--wide):not(.shot--cta) img { aspect-ratio: 4 / 3; }
+.shot { margin: 0; display: flex; flex-direction: column; min-width: 0; }
+.shot picture { display: block; flex: 1; overflow: hidden; border-radius: 4px; background: var(--sand); }
+.shot img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 4 / 3; }
+.shot--a { grid-area: a; } .shot--b { grid-area: b; } .shot--c { grid-area: c; } .shot--d { grid-area: d; }
+.shot--e { grid-area: e; } .shot--f { grid-area: f; } .shot--cta { grid-area: g; } .shot--h { grid-area: h; }
+.shot--a img, .shot--e img { aspect-ratio: auto; }
+.shot--b img, .shot--h img { aspect-ratio: 16 / 9; }
 .shot figcaption strong { display: block; color: var(--ink); font-weight: 600; font-size: 0.92rem; }
 .shot--cta {
-  display: flex;
-  flex-direction: column;
   justify-content: space-between;
   gap: 24px;
   padding: 32px;
@@ -333,10 +334,16 @@ h3 { font-size: 1.2rem; font-weight: 700; }
   .service + .service { border-top: 1px solid var(--line); }
   .audiences { grid-template-columns: 1fr; }
   .section__head--split { flex-direction: column; align-items: flex-start; }
-  .gallery { grid-template-columns: 1fr 1fr; }
-  .shot--tall { grid-row: span 1; }
-  .shot--tall img { aspect-ratio: 3 / 4; }
-  .shot--wide { grid-column: span 2; order: -1; }
+  .gallery {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "b b"
+      "a e"
+      "c d"
+      "h h"
+      "f g";
+  }
+  .shot--a img, .shot--e img { aspect-ratio: 3 / 4; }
   .steps { grid-template-columns: 1fr 1fr; }
   .footer__grid { grid-template-columns: 1fr 1fr; }
   .footer__brand { grid-column: span 2; }
@@ -344,8 +351,8 @@ h3 { font-size: 1.2rem; font-weight: 700; }
 
 @media (max-width: 560px) {
   .hero__cta .btn { width: 100%; }
-  .gallery { grid-template-columns: 1fr; }
-  .shot--wide { grid-column: auto; }
+  .gallery { grid-template-columns: 1fr; grid-template-areas: "b" "c" "e" "d" "h" "a" "f" "g"; }
+  .shot--b img, .shot--h img { aspect-ratio: 4 / 3; }
   .steps { grid-template-columns: 1fr; }
   .form__row { grid-template-columns: 1fr; }
   .coords div { grid-template-columns: 1fr; gap: 4px; }
