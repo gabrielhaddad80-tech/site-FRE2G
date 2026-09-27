@@ -25,6 +25,7 @@ fonts/                  Archivo et Inter hébergées localement (pas d'appel à 
 images/                 photos de chantiers (WebP + JPEG, 900 et 1600 px)
 videos/                 vidéo de chantier (MP4 + WebM) et son image d'aperçu
 logo/                   logo Electroclim et icônes
+logos-marques/          logos des marques installées (fond transparent, PNG + WebP)
 ```
 
 ## Modifier les styles

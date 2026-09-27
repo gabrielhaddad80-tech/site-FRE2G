@@ -63,6 +63,9 @@
   }
   .tick-light::before { @apply border-eclair-300; }
 
+  /* Logos des marques : gris discret, couleur au survol */
+  .brand-logo { @apply object-contain opacity-60 grayscale transition duration-300 ease-out hover:opacity-100 hover:grayscale-0; }
+
   /* Galerie */
   .shot { @apply m-0 flex min-w-0 flex-col; }
   .shot-media { @apply relative block flex-1 overflow-hidden rounded bg-sable; }
