@@ -1,37 +1,43 @@
-# FRE2G
+# Electroclim — site vitrine
 
-Site vitrine de FRE2G — installation, dépannage et entretien de climatisation à Aubervilliers, Paris et Île-de-France.
+Site d'Electroclim (SASU FRE2G) : installation, entretien et dépannage de climatisation, pompes à chaleur et traitement d'air à Paris et en Île-de-France. Particuliers et professionnels.
 
-Site statique (HTML/CSS/JS, aucune dépendance) : ouvrir `index.html` dans un navigateur, ou héberger le dossier tel quel (GitHub Pages, Netlify…).
+Site statique (HTML, CSS, JavaScript), sans dépendance ni outil de build : le dossier s'héberge tel quel (OVH, o2switch, Netlify, GitHub Pages…).
 
-## Coordonnées
+## Structure
 
-Coordonnées reprises des documents de l'entreprise :
-
-- Téléphone : 06 64 62 12 31
-- E-mail : electroclimconcept@gmail.com (aussi dans `script.js`, `CONTACT_EMAIL`)
-- Adresse : 42, rue du Port, 93300 Aubervilliers
-- SASU FRE2G au capital de 5 000 € — RCS Bobigny 844 794 057 (pied de page)
-
-À vérifier : les horaires affichés (du lundi au samedi, 8h – 19h).
-
-## Logo
-
-Dossier `logo/` :
-
-- `logo.svg` / `logo.png` — logo complet avec le slogan, pour fond clair
-- `logo-white.svg` / `logo-white.png` — version pour fond bleu ou foncé
-- `logo-compact.svg` / `logo-compact-white.svg` (+ PNG) — sans slogan, pour les petites tailles (en-tête et pied de page du site)
-- `icon.svg` / `icon-blue.svg` (+ PNG 1024 px) — éclair et flocon seuls (favicon, réseaux sociaux, avatar)
-
-Le logo reprend l'esprit du logo Electroclim : éclair rouge (l'électricité), nom en capitales larges en dégradé rouge vers bleu, stalactites de glace sous les lettres et flocon sur le G (le froid).
-Les SVG sont vectoriels (texte converti en tracés, police Archivo) et peuvent être agrandis sans perte pour l'impression.
+```
+index.html              page principale
+mentions-legales.html   mentions légales
+styles.css              styles
+script.js               menu mobile, en-tête, formulaire
+fonts/                  polices Archivo et Inter hébergées localement (pas d'appel à Google)
+images/                 photos de chantiers (WebP + JPEG, 900 et 1600 px)
+logo/                   logo Electroclim et icônes
+```
 
 ## Photos
 
-Dossier `images/` : photos libres de droits issues de [Pexels](https://www.pexels.com/license/) (usage commercial autorisé, sans attribution obligatoire) :
+Photos de chantiers fournies par l'entreprise, recadrées et optimisées :
 
-- `hero.jpg` — technicien au travail ([photo 32588555](https://www.pexels.com/photo/32588555/)), recadrée
-- `clim.jpg` — climatisation murale ([photo 38788452](https://www.pexels.com/photo/38788452/))
+- `chambre-gainable` — gainable intégré sous les moulures (image d'accueil)
+- `gainable-haussmannien` — caisson avec deux grilles de soufflage
+- `console-habillage` — console et son habillage sur mesure
+- `centrale-traitement-air` — centrale de traitement d'air en local industriel
 
-Idéalement, les remplacer par de vraies photos des chantiers FRE2G (mêmes noms de fichiers, format paysage).
+Pour en ajouter : exporter en 900 et 1600 px de large, en `.webp` et `.jpg`, avec le même schéma de nom.
+
+## Logo
+
+Le logo reprend le logo Electroclim existant (éclair rouge, lettres dégradé rouge vers bleu, stalactites, flocon sur le M), redessiné en vectoriel avec un nom incliné pour plus de dynamisme.
+
+- `logo.svg` / `.png` — complet avec le slogan, fond clair
+- `logo-white.svg` / `.png` — pour fond foncé
+- `logo-compact*.svg` / `.png` — sans slogan (en-tête, pied de page)
+- `icon*.svg` / `.png`, `apple-touch-icon.png` — éclair et flocon (favicon, réseaux sociaux)
+
+## Avant la mise en ligne
+
+- Compléter dans `mentions-legales.html` le nom du directeur de la publication et l'hébergeur.
+- Le formulaire ouvre la messagerie du visiteur (`mailto:`). Pour recevoir les demandes directement, brancher un service de formulaire (Formspree, formulaire Netlify…).
+- Une fois le domaine connu, passer les URL de `og:image` et du bloc JSON-LD en adresses absolues (`https://…`).
