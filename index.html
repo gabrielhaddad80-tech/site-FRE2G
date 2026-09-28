@@ -50,16 +50,16 @@
 
   <!-- En-tête -->
   <header id="header" class="site-header sticky top-0 z-50 bg-white/95 backdrop-blur transition-shadow duration-300">
-    <div class="wrap flex h-[72px] items-center gap-8 lg:h-[84px]">
-      <a href="#" class="shrink-0" aria-label="Electroclim, retour en haut de page"><picture><source type="image/webp" srcset="logo/logo-compact.webp"><img src="logo/logo-compact.png" alt="Electroclim" width="1137" height="220" class="h-10 w-auto lg:h-12"></picture></a>
+    <div class="wrap grid h-[72px] grid-cols-[1fr_auto_1fr] items-center gap-3 lg:flex lg:h-[84px] lg:gap-8">
+      <a href="#" class="order-2 shrink-0 justify-self-center lg:order-none" aria-label="Electroclim, retour en haut de page"><picture><source type="image/webp" srcset="logo/logo-compact.webp"><img src="logo/logo-compact.png" alt="Electroclim" width="1137" height="220" class="h-10 w-auto lg:h-12"></picture></a>
       <nav id="nav" aria-label="Navigation principale"
            class="absolute inset-x-0 top-full hidden flex-col border-b border-sable-300 bg-white px-6 pb-6 pt-2 shadow-lg lg:static lg:ml-auto lg:flex lg:flex-row lg:gap-8 lg:border-0 lg:p-0 lg:shadow-none [&.is-open]:flex">
         <a class="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-nuit transition-colors hover:text-eclair border-b border-sable-300 py-4 lg:border-0 lg:py-2" href="#services">Services</a>
         <a class="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-nuit transition-colors hover:text-eclair border-b border-sable-300 py-4 lg:border-0 lg:py-2" href="#realisations">Réalisations</a>
         <a class="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-nuit transition-colors hover:text-eclair py-4 lg:py-2" href="#contact">Contact</a>
       </nav>
-      <a class="ml-auto inline-flex h-11 items-center gap-2 rounded-full bg-eclair px-4 text-sm font-semibold text-white transition-colors hover:bg-eclair-700 lg:ml-0 lg:px-5" href="tel:+33664621231" aria-label="Appeler le 06 64 62 12 31"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg><span class="hidden sm:inline">06 64 62 12 31</span></a>
-      <button id="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav" class="group grid h-11 w-11 place-content-center gap-1.5 lg:hidden">
+      <a class="order-3 inline-flex h-11 min-w-11 items-center justify-center gap-2 justify-self-end rounded-full bg-eclair px-3.5 text-sm lg:order-none font-semibold text-white transition-colors hover:bg-eclair-700 lg:ml-0 lg:px-5" href="tel:+33664621231" aria-label="Appeler le 06 64 62 12 31"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg><span class="hidden sm:inline">06 64 62 12 31</span></a>
+      <button id="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav" class="group order-1 -ml-2 grid h-11 w-11 place-content-center gap-1.5 justify-self-start lg:hidden">
         <span class="block h-0.5 w-6 bg-nuit transition-transform duration-300 group-aria-expanded:translate-y-1 group-aria-expanded:rotate-45"></span>
         <span class="block h-0.5 w-6 bg-nuit transition-transform duration-300 group-aria-expanded:-translate-y-1 group-aria-expanded:-rotate-45"></span>
       </button>
