@@ -125,5 +125,75 @@ module.exports = function aiRoutes(db, options = {}) {
     }
   });
 
+  // Chat avec l'assistant : Claude utilise les outils (lecture des données, création de devis brouillon)
+  r.post('/ai/chat', async (req, res, next) => {
+    try {
+      const key = apiKey();
+      if (!key) throw httpError(503, "L'assistant IA n'est pas configuré : ajoutez votre clé API Anthropic dans Paramètres.");
+      const history = (Array.isArray(req.body.messages) ? req.body.messages : [])
+        .filter((m) => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string' && m.content.trim())
+        .slice(-20)
+        .map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }));
+      while (history.length && history[0].role !== 'user') history.shift();
+      if (!history.length || history[history.length - 1].role !== 'user') throw httpError(400, 'Écrivez un message.');
+      const note = AiDraft.contextNote(req.body.context);
+      if (note) history[history.length - 1] = { role: 'user', content: history[history.length - 1].content + '\n\n' + note };
+
+      const settings = getSettings(db);
+      const d = new Date();
+      const today = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      const system = AiDraft.chatSystemPrompt({ company: settings.company_name, today });
+
+      // Les outils appellent l'API du logiciel lui-même (mêmes règles que l'interface)
+      const port = req.socket.localPort;
+      const request = async (method, url, body) => {
+        const r2 = await fetch(`http://127.0.0.1:${port}/api${url}`, {
+          method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined
+        });
+        const data = await r2.json().catch(() => null);
+        if (!r2.ok) throw new Error((data && data.error) || `Erreur ${r2.status}`);
+        return data;
+      };
+
+      const client = createClient(key);
+      const messages = [...history];
+      const created = [];
+      for (let round = 0; round < 8; round++) {
+        const response = await client.beta.messages.create({
+          model: MODEL,
+          max_tokens: 16000,
+          betas: ['server-side-fallback-2026-07-01'],
+          fallbacks: 'default',
+          output_config: { effort: 'medium' },
+          system,
+          tools: AiDraft.CHAT_TOOLS,
+          messages
+        });
+        if (response.stop_reason === 'refusal') throw httpError(422, "L'IA n'a pas pu répondre à cette demande. Reformulez-la.");
+        if (response.stop_reason !== 'tool_use') {
+          const reply = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n\n').trim();
+          return res.json({ reply: reply || "Je n'ai pas de réponse à proposer. Pouvez-vous préciser ?", created });
+        }
+        // Tour d'outils : on renvoie tout le contenu de l'assistant, puis tous les résultats dans un seul message
+        messages.push({ role: 'assistant', content: response.content });
+        const results = [];
+        for (const block of response.content) {
+          if (block.type !== 'tool_use') continue;
+          try {
+            const out = await AiDraft.runChatTool(block.name, block.input, request);
+            if (block.name === 'creer_devis') created.push({ number: out.numero, link: out.link });
+            results.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(out).slice(0, 30000) });
+          } catch (e) {
+            results.push({ type: 'tool_result', tool_use_id: block.id, content: 'Erreur : ' + e.message, is_error: true });
+          }
+        }
+        messages.push({ role: 'user', content: results });
+      }
+      res.json({ reply: "J'ai dû m'arrêter avant la fin : la demande demandait trop d'étapes. Pouvez-vous la découper ?", created });
+    } catch (e) {
+      next(apiError(e));
+    }
+  });
+
   return r;
 };

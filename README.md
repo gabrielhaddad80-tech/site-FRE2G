@@ -72,6 +72,16 @@ collez-la dans **Paramètres → Assistant IA**, ou lancez le logiciel avec la v
 La clé reste sur l'ordinateur : elle n'est jamais renvoyée au navigateur ni incluse dans les sauvegardes. Les textes
 et photos soumis à l'assistant sont transmis à Anthropic pour être traités.
 
+### Chat avec l'assistant IA
+Le bouton **Assistant** (en bas à droite de chaque page) ouvre une discussion avec l'IA. Elle consulte vos données
+pour répondre — clients, catalogue, devis, factures, tableau de bord — et peut **préparer un devis brouillon**
+à partir de votre catalogue (à vérifier avant envoi). Exemples : « Quelles factures sont en retard ? »,
+« Quel est mon CA de mars ? », « Rédige une relance pour la facture FAC-2026-0004 », « Prépare un devis pour
+20 m² de carrelage chez Mme Martin ». Elle sait sur quelle page vous êtes (« ce devis », « ce client »),
+répond avec des liens vers les documents, et accepte la dictée. Elle ne peut ni émettre une facture, ni
+enregistrer un règlement, ni supprimer quoi que ce soit. La conversation est conservée dans le navigateur ;
+le bouton crayon en démarre une nouvelle. Même clé API que l'assistant de rédaction.
+
 ### Modèles personnalisables (`Modèles`)
 Chaque modèle est une page HTML + CSS avec des variables (`{{client.display_name}}`, `{{money totals.ttc}}`, …)
 éditable directement dans l'application avec **aperçu en direct**. Plusieurs modèles possibles, un par défaut,

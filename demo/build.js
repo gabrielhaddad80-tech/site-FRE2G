@@ -73,6 +73,9 @@ ${read('public/js/calc.js')}
 ${read('public/js/ai.js')}
 </script>
 <script>
+${read('public/js/chat.js')}
+</script>
+<script>
 ${safe(scripts.join('\n'))}
 </script>
 <script>

@@ -205,6 +205,45 @@
     }
   };
 
+  // Chat : Claude dans la page, avec les mêmes outils exécutés sur les données de la démo
+  window.aiChat = async ({ messages, context, signal, onText }) => {
+    const sample = await getSample();
+    if (!sample) throw { code: 'not_granted', message: AI_MESSAGES.not_granted };
+    const request = async (method, url, body) => {
+      const r = DemoBackend.handle(method, '/api' + url, body === undefined ? undefined : JSON.parse(JSON.stringify(body)));
+      const data = r.body ? JSON.parse(r.body) : null;
+      if (r.statusCode >= 400) throw new Error((data && data.error) || 'Erreur ' + r.statusCode);
+      if (method !== 'GET') persist();
+      return data;
+    };
+    const settings = call('GET', '/api/settings');
+    const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const turns = messages.filter((m) => m && m.content).map((m) => ({ role: m.role, content: m.content }));
+    while (turns.length && turns[0].role !== 'user') turns.shift();
+    const note = AiDraft.contextNote(context);
+    if (note && turns.length) turns[turns.length - 1] = { role: 'user', content: turns[turns.length - 1].content + '\n\n' + note };
+    let rules = AiDraft.chatSystemPrompt({ company: settings.company_name, today }) + '\n\n(Ce qui précède sont tes consignes permanentes ; la conversation suit.)';
+    const limits = await sample.limits().catch(() => null);
+    let tools;
+    if (limits && limits.tools) {
+      tools = AiDraft.CHAT_TOOLS.slice(0, limits.tools.maxCount).map((t) => ({
+        name: t.name, description: t.description, inputSchema: t.input_schema,
+        execute: (input) => AiDraft.runChatTool(t.name, input, request)
+      }));
+    } else {
+      rules += '\n\nOutils indisponibles dans cette vue. Données actuelles :\n' + JSON.stringify(await AiDraft.runChatTool('tableau_de_bord', {}, request)).slice(0, 20000);
+    }
+    try {
+      const r = await sample([{ role: 'user', content: rules }, ...turns], {
+        tools, signal, cache: false, onText: ({ text }) => onText && onText(text)
+      });
+      return { reply: r.text, created: [] };
+    } catch (e) {
+      const code = e && e.code;
+      throw { code, message: AI_MESSAGES[code] || "L'assistant n'a pas pu répondre : réessayez." };
+    }
+  };
+
   // Conversion d'un modèle existant par Claude (image ou 1re page de PDF)
   PDFJS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   window.aiTemplate = async ({ image, signal }) => {

@@ -132,3 +132,49 @@ test('papier à en-tête : image de fond non échappée à l\'impression', async
   const cleared = (await call(`/templates/${tpl.id}`, 'PUT', { background: '' })).body;
   assert.strictEqual(cleared.background, null);
 });
+
+test('chat : Claude utilise les outils puis répond', async () => {
+  const items = (await call('/items?limit=100')).body;
+  const mo = items.find((i) => i.reference === 'MO-01');
+  const replies = [
+    { stop_reason: 'tool_use', content: [
+      { type: 'text', text: 'Je regarde.' },
+      { type: 'tool_use', id: 't1', name: 'rechercher_catalogue', input: { recherche: 'MO-01' } },
+      { type: 'tool_use', id: 't2', name: 'lire_document', input: { id: 999999 } }
+    ] },
+    { stop_reason: 'tool_use', content: [
+      { type: 'tool_use', id: 't3', name: 'creer_devis', input: { client_id: 1, objet: 'Pose carrelage', lignes: [{ type_ligne: 'item', item_id: mo.id, designation: mo.designation, quantite: 10, unite: 'h', prix_unitaire_ht: mo.sale_price, tva: 20 }] } }
+    ] },
+    { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Voici le devis [DEV](document.html?id=1).' }] }
+  ];
+  const seen = [];
+  const scripted = () => ({ beta: { messages: { create: async (params) => { seen.push(JSON.parse(JSON.stringify(params))); return replies.shift(); } } } });
+  const db = openDatabase(':memory:');
+  const srv = createApp(db, { ai: { createClient: scripted } }).listen(0);
+  await new Promise((r) => srv.once('listening', r));
+  const url = `http://127.0.0.1:${srv.address().port}/api`;
+  try {
+    await fetch(url + '/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anthropic_api_key: 'sk-ant-x' }) });
+    const res = await fetch(url + '/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'assistant', content: 'Bonjour' }, { role: 'user', content: 'Fais un devis de pose' }], context: { page: 'clients.html', id: 1 } }) });
+    const body = await res.json();
+    assert.strictEqual(res.status, 200);
+    assert.match(body.reply, /Voici le devis/);
+    assert.strictEqual(body.created.length, 1);
+    assert.match(body.created[0].number, /^DEV-/);
+    assert.strictEqual(seen.length, 3);
+    assert.strictEqual(seen[0].messages[0].role, 'user', 'l\'historique commence par un message utilisateur');
+    assert.match(seen[0].messages.at(-1).content, /fiche du client id 1/, 'le contexte de la page est transmis');
+    assert.ok(seen[0].tools.some((t) => t.name === 'creer_devis'));
+    const round1 = seen[1].messages.at(-1).content;
+    assert.strictEqual(round1.length, 2, 'tous les résultats dans un seul message');
+    assert.match(round1[0].content, /MO-01/);
+    assert.strictEqual(round1[1].is_error, true, 'document introuvable signalé comme erreur');
+    const docs = await (await fetch(url + '/documents?type=devis')).json();
+    assert.strictEqual(docs.length, 1);
+    assert.strictEqual(docs[0].total_ht, mo.sale_price * 10);
+    assert.strictEqual(docs[0].status, 'brouillon');
+  } finally {
+    srv.close();
+  }
+});

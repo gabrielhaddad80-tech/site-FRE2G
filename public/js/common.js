@@ -61,6 +61,11 @@ function aiDraft({ text, images, docType, signal }) {
 function aiUnavailableHint() {
   return 'Pour activer l\'assistant, ajoutez votre clé API Anthropic dans <a href="parametres.html">Paramètres</a>.';
 }
+// Chat avec l'assistant : renvoie { reply, created }
+function aiChat({ messages, context, signal }) {
+  return api('/ai/chat', { signal, body: { messages, context } });
+}
+
 // Conversion d'un modèle existant (image ou PDF) par l'IA
 function aiTemplate({ image, signal }) {
   return api('/ai/template', { signal, body: { image: { media_type: image.media_type, data: image.data } } });
