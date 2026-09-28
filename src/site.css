@@ -105,7 +105,7 @@
   }
 
   /* Logos des marques */
-  .brand-logo { @apply object-contain opacity-50 grayscale transition duration-500 ease-out hover:opacity-100 hover:grayscale-0; }
+  .brand-logo { @apply object-contain transition-transform duration-300 ease-out hover:scale-105; }
 
   /* Formulaire : champs soulignés */
   .field { @apply grid gap-2 text-[0.7rem] font-medium uppercase tracking-[0.24em] text-ivoire/60; }
