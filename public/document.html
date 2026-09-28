@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="css/app.css">
 <script src="js/common.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/ai.js"></script>
 <script defer src="vendor/alpine.js"></script>
 <style>
   fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -16,6 +17,36 @@
   .add-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
   .margin-info { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: right; }
   .client-card { font-size: 13px; line-height: 1.4; margin-top: 6px; color: var(--muted); }
+  .ai-card { background: linear-gradient(140deg, var(--glow-1), var(--surface) 55%, var(--glow-2)); border-color: var(--primary-light); }
+  .ai-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+  .ai-head h2 { margin: 0 0 2px; }
+  .ai-head p { margin: 0; color: var(--muted); max-width: 70ch; }
+  .ai-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .ai-tools .spacer { flex: 1; }
+  .mic.on { background: var(--danger); border-color: var(--danger); color: #fff; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px var(--danger-bg); } }
+  @media (prefers-reduced-motion: reduce) { .mic.on { animation: none; } }
+  .interim { color: var(--muted); font-style: italic; margin-top: 6px; }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .thumb { position: relative; width: 76px; height: 76px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb button { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; padding: 0; justify-content: center; border-radius: 50%; background: var(--ink); color: var(--on-ink); border: 0; }
+  .thumb button svg.i { width: 13px; height: 13px; }
+  .ai-busy { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--muted); }
+  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--primary-light); border-top-color: var(--primary); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ai-result { margin-top: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px; }
+  .ai-result .summary { margin: 0 0 10px; }
+  .ai-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .ai-lines li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--border-soft); border-radius: 12px; }
+  .ai-lines li.sec { background: var(--section-bg); font-weight: 700; grid-template-columns: auto minmax(0, 1fr); }
+  .ai-lines .d small { display: block; color: var(--muted); }
+  .ai-lines .p { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+  .tag.cat { background: var(--ok-bg); color: var(--ok); }
+  .tag.est { background: var(--warn-bg); color: var(--warn); }
+  .ai-q { margin: 12px 0 0; padding: 10px 14px; background: var(--warn-bg); color: var(--warn); border-radius: 12px; }
+  .ai-q ul { margin: 4px 0 0; padding-left: 18px; }
 </style>
 </head>
 <body>
@@ -102,6 +133,74 @@
       <div class="card">
         <label>Texte d'introduction</label>
         <textarea x-model="doc.intro" rows="2"></textarea>
+      </div>
+
+      <div class="card ai-card" x-show="!doc.locked">
+        <div class="ai-head">
+          <span class="tile-ic violet" x-html="icon('sparkle')"></span>
+          <div>
+            <h2>Assistant IA</h2>
+            <p>Dictez ou écrivez ce qu'il faut faire, ajoutez des photos du chantier : l'IA propose les lignes à partir de votre catalogue et de vos tarifs. Vous vérifiez avant d'ajouter.</p>
+          </div>
+        </div>
+        <template x-if="ai.available === false">
+          <p class="muted" style="margin:0" x-html="aiUnavailableHint()"></p>
+        </template>
+        <div x-show="ai.available !== false">
+          <label for="ai-text" class="sr-label">Votre demande</label>
+          <textarea id="ai-text" x-model="ai.text" rows="3" :disabled="ai.busy"
+            placeholder="Ex. : salle de bain de 6 m², dépose de l'ancienne faïence, carrelage au sol et aux murs, remplacement du WC et du lavabo. Chantier au 12 rue des Lilas à Lyon."></textarea>
+          <p class="interim" x-show="ai.interim" x-text="ai.interim"></p>
+          <div class="thumbs" x-show="ai.images.length">
+            <template x-for="(im, i) in ai.images" :key="im.preview">
+              <div class="thumb"><img :src="im.preview" :alt="'Photo ' + (i + 1)"><button type="button" :aria-label="'Retirer la photo ' + (i + 1)" @click="ai.images.splice(i, 1)" x-html="icon('x')" :disabled="ai.busy"></button></div>
+            </template>
+          </div>
+          <div class="ai-tools">
+            <button type="button" class="mic" :class="ai.listening && 'on'" x-show="ai.canDictate" @click="toggleDictation()" :disabled="ai.busy">
+              <span x-html="icon('mic')"></span><span x-text="ai.listening ? 'Arrêter la dictée' : 'Dicter'"></span>
+            </button>
+            <label class="btn" :style="ai.busy && 'pointer-events:none;opacity:.5'" style="margin:0; font-size:14px; color:inherit">
+              <span x-html="icon('camera')"></span>Photos
+              <input type="file" accept="image/*" multiple style="display:none" @change="addPhotos($event)">
+            </label>
+            <span class="spacer"></span>
+            <button type="button" class="primary" @click="generate()" :disabled="ai.busy || (!ai.text.trim() && !ai.images.length)">
+              <span x-html="icon('sparkle')"></span><span x-text="'Générer ' + (doc.type === 'facture' ? 'la facture' : 'le devis')"></span>
+            </button>
+          </div>
+          <div class="ai-busy" x-show="ai.busy" role="status">
+            <span class="spinner" aria-hidden="true"></span><span>L'IA prépare vos lignes… (10 à 60 secondes)</span>
+            <button type="button" class="small" x-show="ai.ctl" @click="ai.ctl && ai.ctl.abort()">Arrêter</button>
+          </div>
+          <template x-if="ai.result">
+            <div class="ai-result">
+              <p class="summary"><strong x-text="ai.result.title || 'Proposition'"></strong><span class="muted" x-text="ai.result.summary ? ' · ' + ai.result.summary : ''"></span></p>
+              <ul class="ai-lines">
+                <template x-for="(l, i) in ai.result.lines" :key="i">
+                  <li :class="l.kind !== 'item' && 'sec'">
+                    <input type="checkbox" x-model="l._keep" :aria-label="'Garder ' + l.designation">
+                    <span class="d"><span x-text="l.designation"></span>
+                      <template x-if="l.kind === 'item'"><span class="tag" :class="l.from_catalog ? 'cat' : 'est'" x-text="l.from_catalog ? 'Catalogue' : 'Prix estimé'"></span></template>
+                      <small x-show="l.kind === 'item' && l.description" x-text="l.description"></small></span>
+                    <span class="p" x-show="l.kind === 'item'" x-text="num(l.quantity) + ' ' + l.unit + ' × ' + money(l.unit_price) + ' = ' + money(Calc.lineTotal(l))"></span>
+                  </li>
+                </template>
+              </ul>
+              <div class="ai-q" x-show="ai.result.questions.length">
+                <strong>À vérifier avec le client</strong>
+                <ul><template x-for="q in ai.result.questions" :key="q"><li x-text="q"></li></template></ul>
+              </div>
+              <div class="ai-tools">
+                <span class="muted small" x-text="'Total HT proposé : ' + money(Calc.computeTotals(ai.result.lines.filter((l) => l._keep), { vat_exempt: vatExempt }).ht)"></span>
+                <span class="spacer"></span>
+                <button type="button" @click="ai.result = null">Ignorer</button>
+                <button type="button" x-show="doc.lines.length" @click="applyAi(true)">Remplacer les lignes</button>
+                <button type="button" class="primary" @click="applyAi(false)"><span x-html="icon('check')"></span>Ajouter au document</button>
+              </div>
+            </div>
+          </template>
+        </div>
       </div>
 
       <div class="card">
@@ -299,6 +398,7 @@ function editor() {
     doc: null, clients: [], templates: [], categories: [], settings: {},
     saving: false, snapshot: null, dragFrom: null, newClient: null, payment: null,
     picker: { open: false, q: '', type: '', category_id: '', detail: false, results: [] },
+    ai: { available: null, text: '', interim: '', images: [], busy: false, ctl: null, result: null, canDictate: !!(window.SpeechRecognition || window.webkitSpeechRecognition), listening: false, rec: null },
 
     get vatExempt() { return this.settings.vat_exempt === '1'; },
     get vatRates() { return (this.settings.vat_rates || '20,10,5.5,0').split(',').map(Number); },
@@ -330,6 +430,7 @@ function editor() {
       if (!this.doc.id) this.snapshot = JSON.stringify(this.payload());
       window.addEventListener('beforeunload', (e) => { if (this.dirty && !this.doc.locked) { e.preventDefault(); e.returnValue = ''; } });
       document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); this.save(); } });
+      this.ai.available = await aiAvailable();
     },
 
     setDoc(d) {
@@ -476,6 +577,69 @@ function editor() {
         this.doc.lines.push(this.lineFromItem(it, qty));
       }
       toast('Ajouté : ' + it.designation);
+    },
+
+    // ----- Assistant IA -----
+    toggleDictation() {
+      if (this.ai.listening) { this.ai.rec && this.ai.rec.stop(); return; }
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SR();
+      rec.lang = 'fr-FR';
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.onresult = (e) => {
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript;
+          if (e.results[i].isFinal) this.ai.text = (this.ai.text ? this.ai.text.replace(/\s*$/, ' ') : '') + t.trim();
+          else interim += t;
+        }
+        this.ai.interim = interim;
+      };
+      rec.onerror = (e) => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          toast("Micro indisponible ici. Utilisez le micro du clavier de votre téléphone pour dicter dans le champ texte.", 'error');
+          this.ai.canDictate = false;
+        } else if (e.error !== 'no-speech' && e.error !== 'aborted') toast('Dictée interrompue : ' + e.error, 'error');
+      };
+      rec.onend = () => { this.ai.listening = false; this.ai.interim = ''; };
+      try { rec.start(); this.ai.rec = rec; this.ai.listening = true; } catch (e) { toast('Impossible de démarrer la dictée', 'error'); }
+    },
+    async addPhotos(e) {
+      const files = [...e.target.files].slice(0, Math.max(0, 5 - this.ai.images.length));
+      e.target.value = '';
+      for (const f of files) {
+        try { this.ai.images.push(await prepareImage(f)); } catch (err) { toast(err.message, 'error'); }
+      }
+      if (this.ai.images.length >= 5) toast('5 photos maximum par demande');
+    },
+    async generate() {
+      if (this.ai.listening) this.ai.rec.stop();
+      this.ai.busy = true;
+      this.ai.result = null;
+      this.ai.ctl = new AbortController();
+      try {
+        const r = await aiDraft({ text: this.ai.text, images: this.ai.images, docType: this.doc.type, signal: this.ai.ctl.signal });
+        r.lines.forEach((l) => { l._keep = true; });
+        if (!r.lines.length) toast("L'IA n'a proposé aucune ligne : précisez la demande.", 'error');
+        else this.ai.result = r;
+      } catch (e) {
+        if (e && e.code !== 'cancelled' && !(e instanceof Error)) toast(e.message || "L'assistant IA n'a pas pu répondre.", 'error');
+      } finally {
+        this.ai.busy = false;
+        this.ai.ctl = null;
+      }
+    },
+    applyAi(replace) {
+      const r = this.ai.result;
+      const lines = r.lines.filter((l) => l._keep).map(({ _keep, from_catalog, ...l }) => withKey(l));
+      if (replace) this.doc.lines = lines;
+      else this.doc.lines.push(...lines);
+      if (!this.doc.title && r.title) this.doc.title = r.title;
+      if (!this.doc.site_address && r.site_address) this.doc.site_address = r.site_address;
+      if (r.questions.length) this.doc.notes = [this.doc.notes, 'À confirmer : ' + r.questions.join(' ; ')].filter(Boolean).join('\n');
+      this.ai.result = null;
+      toast(lines.length + ' ligne(s) ajoutée(s) : vérifiez puis enregistrez');
     },
 
     // ----- Clients -----

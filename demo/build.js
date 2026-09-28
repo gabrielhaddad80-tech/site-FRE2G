@@ -70,6 +70,9 @@ ${read('public/js/common.js')}
 ${read('public/js/calc.js')}
 </script>
 <script>
+${read('public/js/ai.js')}
+</script>
+<script>
 ${safe(scripts.join('\n'))}
 </script>
 <script>

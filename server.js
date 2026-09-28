@@ -4,13 +4,14 @@ const path = require('path');
 const express = require('express');
 const { openDatabase } = require('./src/db');
 
-function createApp(db) {
+function createApp(db, options = {}) {
   const app = express();
   app.use(express.json({ limit: '25mb' }));
 
   app.use('/api', require('./src/routes/catalog')(db));
   app.use('/api', require('./src/routes/documents')(db));
   app.use('/api', require('./src/routes/admin')(db));
+  app.use('/api', require('./src/routes/ai')(db, options.ai));
 
   app.use('/vendor/alpine.js', (req, res) => res.sendFile(require.resolve('alpinejs/dist/cdn.min.js')));
   app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));

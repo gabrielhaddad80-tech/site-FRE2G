@@ -56,6 +56,22 @@ coordonnées, notes et activité récente.
 - Numérotation personnalisable (`FAC-{AAAA}-{NUM:4}`, `F{AA}{MM}-{NUM}`, …).
 - **Aperçu / PDF** : bouton « Imprimer / Enregistrer en PDF » (format A4).
 
+### Assistant IA (dictée, note, photos)
+Dans l'éditeur de devis et de factures, la carte **Assistant IA** prépare les lignes à votre place :
+- **dictez** la demande (bouton micro, reconnaissance vocale du navigateur en français — Chrome, Edge, Safari),
+  ou écrivez / collez une **note** ;
+- ajoutez jusqu'à 5 **photos** du chantier (réduites automatiquement avant l'envoi) ;
+- l'IA (Claude, d'Anthropic) propose l'objet, l'adresse du chantier et les lignes en **reprenant vos articles et vos prix
+  du catalogue** ; ce qui n'existe pas au catalogue est marqué « Prix estimé » ; les points à vérifier avec le client
+  sont listés ;
+- vous cochez les lignes à garder, puis « Ajouter au document » ou « Remplacer les lignes ». Rien n'est enregistré
+  sans votre validation.
+
+Activation : créez une clé API sur <https://console.anthropic.com/settings/keys> (usage facturé par Anthropic) et
+collez-la dans **Paramètres → Assistant IA**, ou lancez le logiciel avec la variable d'environnement `ANTHROPIC_API_KEY`.
+La clé reste sur l'ordinateur : elle n'est jamais renvoyée au navigateur ni incluse dans les sauvegardes. Les textes
+et photos soumis à l'assistant sont transmis à Anthropic pour être traités.
+
 ### Modèles personnalisables (`Modèles`)
 Chaque modèle est une page HTML + CSS avec des variables (`{{client.display_name}}`, `{{money totals.ttc}}`, …)
 éditable directement dans l'application avec **aperçu en direct**. Plusieurs modèles possibles, un par défaut,
@@ -79,6 +95,8 @@ server.js               serveur Express
 src/db.js               schéma SQLite, paramètres par défaut, données d'exemple
 src/numbering.js        numérotation des documents
 src/render.js           rendu des modèles (Handlebars)
+src/routes/ai.js        assistant IA (API Claude)
+public/js/ai.js         consignes envoyées à l'IA et rapprochement avec le catalogue
 src/routes/             API : catalogue & clients, documents, paramètres / modèles / sauvegarde
 templates/              modèle d'impression par défaut (HTML + CSS)
 public/                 interface web (Alpine.js), police Plus Jakarta Sans hébergée localement (public/fonts, licence OFL)

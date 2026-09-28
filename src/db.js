@@ -185,7 +185,8 @@ const DEFAULT_SETTINGS = {
   footer_text: '',
   primary_color: '#1f4e79',
   accent_color: '#f2f6fa',
-  currency: 'EUR'
+  currency: 'EUR',
+  anthropic_api_key: ''
 };
 
 function openDatabase(file) {

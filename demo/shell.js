@@ -162,6 +162,49 @@
     }
   });
 
+  // ---------- Assistant IA : Claude via la page (compte de la personne qui consulte) ----------
+  window.IS_DEMO = true;
+  const AI_MESSAGES = {
+    not_granted: "L'assistant IA n'a pas été autorisé pour cette page.",
+    sampling_disabled: "Claude n'est pas disponible pour ce compte.",
+    rate_limited: "Trop de demandes pour le moment : réessayez dans quelques minutes.",
+    refused: "L'IA n'a pas pu traiter cette demande : reformulez-la ou retirez une photo.",
+    invalid_json: "La réponse de l'IA était illisible : réessayez.",
+    image_rejected: 'Une photo a été refusée : essayez un autre fichier (JPEG ou PNG).',
+    images_unavailable: 'Les photos ne peuvent pas être envoyées depuis cette vue : décrivez le chantier par écrit.',
+    prompt_too_large: 'La demande est trop longue : raccourcissez la note.',
+    session_expired: 'Votre session Claude a expiré : reconnectez-vous.'
+  };
+  let samplePromise = null;
+  const getSample = () => samplePromise || (samplePromise = (window.claude && typeof window.claude.use === 'function')
+    ? window.claude.use('sample').catch(() => null) : Promise.resolve(null));
+  window.aiAvailable = async () => !!(await getSample());
+  window.aiUnavailableHint = () => "L'assistant IA n'est pas disponible dans cette vue de la démo (il fonctionne quand la page est ouverte dans Claude). Dans la version installée, il s'active avec une clé API.";
+  window.aiDraft = async ({ text, images, docType, signal }) => {
+    const sample = await getSample();
+    if (!sample) throw { code: 'not_granted', message: AI_MESSAGES.not_granted };
+    const settings = call('GET', '/api/settings');
+    const catalog = call('GET', '/api/items?limit=' + AiDraft.MAX_CATALOG_ITEMS);
+    const vatExempt = settings.vat_exempt === '1';
+    const opts = { signal, cache: false };
+    if (images && images.length) {
+      const limits = await sample.limits().catch(() => null);
+      if (!limits || !limits.images) throw { code: 'images_unavailable', message: AI_MESSAGES.images_unavailable };
+      opts.images = images.slice(0, limits.images.maxCount).map((im) => im.blob);
+    }
+    const prompt = AiDraft.buildPrompt({
+      text, imageCount: opts.images ? opts.images.length : 0, docType, catalog, vatExempt,
+      defaultVat: settings.default_vat_rate, units: (settings.units || '').split(',').map((u) => u.trim()).filter(Boolean)
+    });
+    try {
+      const result = await sample.json(prompt, opts);
+      return AiDraft.normalize(result, catalog, { vatExempt, defaultVat: settings.default_vat_rate });
+    } catch (e) {
+      const code = e && e.code;
+      throw { code, message: AI_MESSAGES[code] || "L'assistant IA n'a pas pu répondre : réessayez." };
+    }
+  };
+
   document.getElementById('demo-reset').addEventListener('click', async () => {
     if (!(await uiConfirm('Effacer toutes les données saisies et repartir des exemples ?', 'Réinitialiser'))) return;
     try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }

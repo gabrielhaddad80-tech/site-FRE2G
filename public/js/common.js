@@ -17,7 +17,15 @@ async function api(url, options = {}) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(options.body);
   }
-  const res = await fetch('/api' + url, opts);
+  if (options.signal) opts.signal = options.signal;
+  let res;
+  try {
+    res = await fetch('/api' + url, opts);
+  } catch (e) {
+    if (e && e.name === 'AbortError') throw Object.assign(new Error('Annulé'), { code: 'cancelled' });
+    toast('Le logiciel ne répond pas : vérifiez qu\'il est bien lancé.', 'error');
+    throw e;
+  }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const msg = (data && data.error) || `Erreur ${res.status}`;
@@ -41,6 +49,42 @@ function currentPage() { return location.pathname.split('/').pop() || 'index.htm
 function go(url) { location.href = url; }
 function setUrl(url) { history.replaceState(null, '', url); }
 function openPrint(id) { window.open(`/api/documents/${id}/print`, '_blank'); }
+
+// Assistant IA (redéfinissables pour la démo en ligne)
+async function aiAvailable() {
+  try { return (await api('/ai/status')).available; } catch (e) { return false; }
+}
+// images : [{ blob, media_type, data (base64) }]
+function aiDraft({ text, images, docType, signal }) {
+  return api('/ai/draft', { signal, body: { text, doc_type: docType, images: (images || []).map((im) => ({ media_type: im.media_type, data: im.data })) } });
+}
+function aiUnavailableHint() {
+  return 'Pour activer l\'assistant, ajoutez votre clé API Anthropic dans <a href="parametres.html">Paramètres</a>.';
+}
+// Réduit une photo (1568 px maximum, JPEG) avant l'envoi
+function prepareImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1568 / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error('Photo illisible'));
+        const reader = new FileReader();
+        reader.onload = () => resolve({ blob, media_type: 'image/jpeg', data: String(reader.result).split(',')[1], preview: URL.createObjectURL(blob), name: file.name });
+        reader.onerror = () => reject(new Error('Photo illisible'));
+        reader.readAsDataURL(blob);
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Format de photo non reconnu')); };
+    img.src = url;
+  });
+}
 
 // Fenêtre de confirmation intégrée à la page (remplace confirm())
 function uiConfirm(message, okLabel = 'Confirmer') {
@@ -135,6 +179,10 @@ const ICONS = {
   trend: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  sparkle: '<path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.5l-1.8-5L5 9.7l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
   pin: '<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   check: '<path d="m5 12 5 5 9-10"/>',

@@ -18,17 +18,26 @@ module.exports = function adminRoutes(db) {
   const r = express.Router();
 
   // ---------- Paramètres ----------
-  r.get('/settings', (req, res) => res.json(getSettings(db)));
+// La clé API n'est jamais renvoyée au navigateur ni incluse dans les sauvegardes
+  const publicSettings = () => {
+    const s = getSettings(db);
+    s.ai_key_configured = !!s.anthropic_api_key;
+    delete s.anthropic_api_key;
+    return s;
+  };
+
+  r.get('/settings', (req, res) => res.json(publicSettings()));
 
   r.put('/settings', (req, res) => {
     const up = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
     db.transaction(() => {
       for (const [k, v] of Object.entries(req.body || {})) {
         if (!(k in DEFAULT_SETTINGS)) continue;
-        up.run(k, v === null || v === undefined ? '' : String(v));
+        const value = v === null || v === undefined ? '' : String(v);
+        up.run(k, k === 'anthropic_api_key' ? value.trim() : value);
       }
     })();
-    res.json(getSettings(db));
+    res.json(publicSettings());
   });
 
   // ---------- Modèles de document ----------
@@ -231,6 +240,7 @@ module.exports = function adminRoutes(db) {
   r.get('/backup', (req, res) => {
     const dump = { app: 'fre2g-facturation', version: 1, exported_at: new Date().toISOString(), tables: {} };
     for (const t of BACKUP_TABLES) dump.tables[t] = db.prepare(`SELECT * FROM ${t}`).all();
+    dump.tables.settings = dump.tables.settings.filter((row) => row.key !== 'anthropic_api_key');
     res.setHeader('Content-Disposition', `attachment; filename="sauvegarde-facturation-${new Date().toISOString().slice(0, 10)}.json"`);
     res.json(dump);
   });
@@ -238,6 +248,7 @@ module.exports = function adminRoutes(db) {
   r.post('/restore', (req, res) => {
     const dump = req.body;
     if (!dump || dump.app !== 'fre2g-facturation' || !dump.tables) return res.status(400).json({ error: 'Fichier de sauvegarde invalide.' });
+    const keptKey = getSettings(db).anthropic_api_key || '';
     db.pragma('foreign_keys = OFF');
     try {
       db.transaction(() => {
@@ -250,6 +261,7 @@ module.exports = function adminRoutes(db) {
             db.prepare(`INSERT INTO ${t} (${cols.join(',')}) VALUES (${cols.map((c) => '@' + c).join(',')})`).run(Object.fromEntries(cols.map((c) => [c, row[c]])));
           }
         }
+        db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('anthropic_api_key', keptKey);
       })();
     } finally {
       db.pragma('foreign_keys = ON');

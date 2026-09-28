@@ -102,6 +102,28 @@
       </div>
     </div>
 
+    <div class="card" x-show="isDemo">
+      <h2>Assistant IA</h2>
+      <p class="small muted" style="margin:0">Dans cette démo, l'assistant utilise votre compte Claude : aucune clé n'est nécessaire. Dans la version installée, une clé API Anthropic se renseigne ici.</p>
+    </div>
+    <div class="card" x-show="!isDemo">
+      <h2>Assistant IA</h2>
+      <p class="small muted">L'assistant rédige vos devis et factures à partir d'une dictée, d'une note ou de photos, en s'appuyant sur votre catalogue.
+        Il utilise l'API Claude d'Anthropic : créez une clé sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> (usage facturé par Anthropic).
+        La clé reste sur cet ordinateur : elle n'est jamais affichée ni incluse dans les sauvegardes. Les textes et photos envoyés à l'assistant sont transmis à Anthropic pour être traités.</p>
+      <div class="grid grid-2">
+        <div>
+          <label for="ai-key">Clé API Anthropic</label>
+          <input id="ai-key" type="password" x-model="aiKey" autocomplete="off" :placeholder="s.ai_key_configured ? 'Clé enregistrée (laisser vide pour la conserver)' : 'sk-ant-…'">
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap">
+          <span class="badge" :class="s.ai_key_configured ? 'accepte' : 'soft'" x-text="s.ai_key_configured ? 'Assistant activé' : 'Assistant non configuré'"></span>
+          <button type="button" class="small primary" x-show="aiKey.trim()" @click="save()">Enregistrer la clé</button>
+          <button type="button" class="small danger" x-show="s.ai_key_configured" @click="removeKey()">Retirer la clé</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>Sauvegarde</h2>
       <p class="small muted">Toutes les données sont stockées localement dans <code>data/facturation.db</code>. Téléchargez régulièrement une sauvegarde.</p>
@@ -116,14 +138,26 @@
 <script>
 function settingsPage() {
   return {
-    s: null,
+    s: null, aiKey: '', isDemo: !!window.IS_DEMO,
     async init() { this.s = await api('/settings'); },
     example(fmt) {
       const d = todayIso();
       return (fmt || '').replace(/\{AAAA\}/g, d.slice(0, 4)).replace(/\{AA\}/g, d.slice(2, 4)).replace(/\{MM\}/g, d.slice(5, 7))
         .replace(/\{NUM(?::(\d+))?\}/g, (_, w) => '1'.padStart(w ? Number(w) : 1, '0'));
     },
-    async save() { this.s = await api('/settings', { method: 'PUT', body: this.s }); toast('Paramètres enregistrés'); },
+    async save() {
+      const body = { ...this.s };
+      delete body.ai_key_configured;
+      if (this.aiKey.trim()) body.anthropic_api_key = this.aiKey.trim();
+      this.s = await api('/settings', { method: 'PUT', body });
+      this.aiKey = '';
+      toast('Paramètres enregistrés');
+    },
+    async removeKey() {
+      if (!(await uiConfirm("Retirer la clé API ? L'assistant IA sera désactivé.", 'Retirer'))) return;
+      this.s = await api('/settings', { method: 'PUT', body: { anthropic_api_key: '' } });
+      toast('Clé retirée');
+    },
     loadLogo(e) {
       const f = e.target.files[0];
       if (!f) return;
