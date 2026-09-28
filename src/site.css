@@ -93,14 +93,15 @@
     @apply w-full rounded-xl border border-sable-400 bg-white px-4 py-3.5 text-base text-nuit placeholder:text-ardoise/70
            transition-colors focus:border-electro focus:outline-none focus:ring-2 focus:ring-electro/20;
   }
-  .gallery-simple { @apply grid gap-6; grid-template-columns: 2fr 1fr; grid-template-areas: "a b" "c d"; }
+  .gallery-simple { @apply grid gap-6; grid-template-columns: 2fr 1fr; grid-template-areas: "a b" "c d" "f e"; }
   .gallery-simple .ga { grid-area: a; } .gallery-simple .gb { grid-area: b; }
   .gallery-simple .gc { grid-area: c; } .gallery-simple .gd { grid-area: d; }
-  .gallery-simple .ga img, .gallery-simple .gc img { aspect-ratio: 16 / 10; }
-  .gallery-simple .gb img, .gallery-simple .gd img { aspect-ratio: 4 / 5; }
+  .gallery-simple .ge { grid-area: e; } .gallery-simple .gf { grid-area: f; }
+  .gallery-simple .ga img, .gallery-simple .gc img, .gallery-simple .gf img { aspect-ratio: 16 / 10; }
+  .gallery-simple .gb img, .gallery-simple .gd img, .gallery-simple .ge img { aspect-ratio: 4 / 5; }
   @media (max-width: 767px) {
-    .gallery-simple { grid-template-columns: 1fr; grid-template-areas: "a" "b" "c" "d"; }
-    .gallery-simple .gb img, .gallery-simple .gd img { aspect-ratio: 4 / 3; }
+    .gallery-simple { grid-template-columns: 1fr; grid-template-areas: "a" "b" "c" "d" "f" "e"; }
+    .gallery-simple .gb img, .gallery-simple .gd img, .gallery-simple .ge img { aspect-ratio: 4 / 3; }
   }
 
   /* Logos des marques */
