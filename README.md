@@ -70,16 +70,17 @@ Pour en ajouter : exporter en 900 et 1600 px de large, en `.webp` et `.jpg`, ave
 
 ## Logo
 
-Nouveau logo Electroclim : un flocon à six branches dans un anneau fin, dont la branche haute devient un éclair rouge
-(le froid et l'électricité). Nom en Cormorant Garamond, capitales espacées ; slogan « De père en fils · depuis 30 ans ».
-Tous les textes sont vectorisés : les SVG s'agrandissent sans perte pour l'impression.
+Logo fourni par Electroclim (flux d'air bleu et rouge, « Electro » bleu marine + « clim » rouge, slogan « Climatisation & Ventilation »),
+détouré (fond blanc retiré) et décliné :
 
-- `logo.svg` / `logo-white.svg` — horizontal avec slogan (fond clair / fond foncé)
-- `logo-compact*.svg` — horizontal sans slogan (en-tête et pied de page du site)
-- `logo-vertical*.svg` — emblème au-dessus du nom (enseigne, carte de visite, véhicule)
-- `emblem*.svg` — emblème seul
-- `icon.svg`, `icon-blue.svg`, `favicon.svg`, `apple-touch-icon.png`, `icon-512.png` — icônes (onglet, réseaux sociaux, Google)
-- Chaque SVG existe aussi en PNG transparent.
+- `logo.png` / `logo-white.png` — version complète verticale (fond clair / fond foncé : texte bleu marine passé en ivoire)
+- `logo-horizontal*.png` — emblème à gauche, nom et slogan à droite
+- `logo-compact*.png` — emblème + nom, sans slogan (en-tête et pied de page du site)
+- `emblem.png` — emblème seul
+- `icon-512.png`, `apple-touch-icon.png`, `favicon-32.png`, `favicon-64.png` — icônes
+- Chaque fichier existe en PNG transparent et en WebP.
+
+Le logo d'origine étant une image (pas un fichier vectoriel), demander au graphiste un **SVG ou PDF vectoriel** pour l'impression grand format (camionnette, enseigne).
 
 ## Avant la mise en ligne
 
