@@ -319,7 +319,7 @@ function catalogPage() {
       if (!file) return;
       const buf = await file.arrayBuffer();
       let text = new TextDecoder('utf-8').decode(buf);
-      if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
+      if (text.includes('\ufffd')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
       const rows = parseCSV(text);
       this.importer.headers = rows[0] || [];
       this.importer.rows = rows.slice(1);
