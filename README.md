@@ -24,10 +24,9 @@ Options : `PORT=8080 npm start` pour changer de port, `DB_FILE=/chemin/base.db` 
 ## Fonctionnalités
 
 ### Accueil
-Page d'entrée organisée comme un classeur à intercalaires : trois rubriques (**Vendre**, **Base de données**,
-**Piloter**) regroupent toutes les sections du logiciel, avec leurs chiffres à jour (prochain numéro de devis
-et de facture, montants à encaisser, retards, articles par type, informations entreprise à compléter).
-Recherche globale (clients, documents, articles) et raccourcis de création.
+Écran d'accueil façon application mobile : conseil du jour (relance d'une facture en retard, devis accepté à
+facturer, devis à relancer), compteurs, actions rapides, accès à toutes les rubriques et activité récente.
+Sur mobile, une barre d'onglets en bas donne accès aux écrans principaux.
 
 ### Base de données / catalogue (`Catalogue & tarifs`)
 - Articles typés : **prestation**, **main d'œuvre**, **fourniture**, **matériel**, **ouvrage**.
@@ -41,8 +40,9 @@ Recherche globale (clients, documents, articles) et raccourcis de création.
 - **Export CSV** et **mise à jour des prix en masse** (ex. +3,5 % sur un catalogue).
 
 ### Clients
-Professionnels et particuliers, code client automatique, SIRET, TVA intracommunautaire, délai de paiement et remise
-habituelle, historique des documents.
+Professionnels et particuliers en fiches cartes, code client automatique, SIRET, TVA intracommunautaire, délai de
+paiement et remise habituelle. Fiche client détaillée : chiffre d'affaires facturé, appel et e-mail en un clic,
+coordonnées, notes et activité récente.
 
 ### Devis, factures, avoirs
 - Ajout de lignes depuis le catalogue (recherche, filtres), lignes libres, **sections avec sous-totaux**, lignes de texte.
@@ -81,7 +81,7 @@ src/numbering.js        numérotation des documents
 src/render.js           rendu des modèles (Handlebars)
 src/routes/             API : catalogue & clients, documents, paramètres / modèles / sauvegarde
 templates/              modèle d'impression par défaut (HTML + CSS)
-public/                 interface web (Alpine.js), polices hébergées localement (public/fonts, licence OFL)
+public/                 interface web (Alpine.js), police Plus Jakarta Sans hébergée localement (public/fonts, licence OFL)
 public/js/calc.js       calcul des totaux (partagé navigateur / serveur)
 test/                   tests automatisés (npm test)
 ```

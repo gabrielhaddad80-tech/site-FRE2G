@@ -4,58 +4,104 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Documents — Facturation</title>
 <link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/app.css">
 <script src="js/common.js"></script>
 <script defer src="vendor/alpine.js"></script>
+<style>
+.page-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.page-head h1 { flex: 1; margin: 0; text-align: center; font-size: 20px; }
+.filter-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 18px 0 10px; }
+.filter-label { font-weight: 700; }
+.period summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 600; font-size: 13px; }
+.period summary::-webkit-details-marker { display: none; }
+.period[open] { position: relative; }
+.period-box { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: min(340px, 86vw); padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 12px 30px var(--shadow); }
+.leads { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 16px; }
+.lead { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; border-radius: 22px; background: var(--surface); border: 1px solid var(--border-soft); box-shadow: 0 1px 2px var(--shadow); color: var(--text); text-decoration: none; min-width: 0; }
+.lead.featured { background: linear-gradient(160deg, var(--glow-1), var(--surface) 85%); border-color: var(--primary-light); }
+.lead:hover { border-color: var(--primary-light); }
+.lead-top { display: flex; align-items: center; gap: 12px; }
+.lead-id { flex: 1; min-width: 0; }
+.lead-id strong { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead-id small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.go-circle { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--border); color: var(--muted); flex-shrink: 0; background: var(--surface); }
+.lead:hover .go-circle { color: var(--primary); border-color: var(--primary); }
+.lead-meta { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px 12px; color: var(--muted); font-size: 12.5px; }
+.lead-meta > span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lead-meta svg.i { width: 15px; height: 15px; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.amount { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.list-total { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--muted); margin-top: 18px; font-size: 13px; }
+.list-total strong { color: var(--text); font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .leads { grid-template-columns: minmax(0, 1fr); } .page-head .btn span:last-child { display: none; } .page-head .btn { width: 40px; height: 40px; padding: 0; justify-content: center; } }
+</style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main x-data="docList()" x-cloak>
-  <div class="toolbar">
-    <h1 style="margin:0" x-text="title"></h1>
-    <div class="spacer"></div>
-    <a class="btn primary" x-show="type !== 'avoir'" :href="'document.html?new=' + type" x-text="type === 'devis' ? '+ Nouveau devis' : '+ Nouvelle facture'"></a>
+  <div class="page-head">
+    <a class="icon-btn" href="index.html" aria-label="Retour à l'accueil" x-html="icon('back')"></a>
+    <h1 x-text="title"></h1>
+    <a class="btn primary" x-show="type !== 'avoir'" :href="'document.html?new=' + type"><span x-html="icon('plus')"></span><span x-text="type === 'devis' ? 'Nouveau devis' : 'Nouvelle facture'"></span></a>
+    <span x-show="type === 'avoir'" style="width:40px"></span>
   </div>
-  <div class="card">
-    <div class="grid grid-4" style="margin-bottom:12px">
-      <div><label>Recherche</label><input type="search" x-model="q" @input.debounce.300ms="load()" placeholder="N°, client, objet…"></div>
-      <div><label>Statut</label>
-        <select x-model="status" @change="load()">
-          <option value="">Tous</option>
-          <template x-for="s in statuses" :key="s"><option :value="s" x-text="LABELS.status[s]" :selected="s === status"></option></template>
-        </select>
+
+  <div class="search-pill">
+    <span x-html="icon('search')"></span>
+    <input type="search" x-model="q" @input.debounce.300ms="load()" placeholder="Rechercher (n°, client, objet)…" aria-label="Rechercher">
+  </div>
+
+  <div class="filter-row">
+    <span class="filter-label">Filtrer par statut</span>
+    <details class="period">
+      <summary><span x-html="icon('calendar')"></span> Période</summary>
+      <div class="period-box">
+        <div><label for="f-from">Du</label><input id="f-from" type="date" x-model="from" @change="load()"></div>
+        <div><label for="f-to">Au</label><input id="f-to" type="date" x-model="to" @change="load()"></div>
       </div>
-      <div><label>Du</label><input type="date" x-model="from" @change="load()"></div>
-      <div><label>Au</label><input type="date" x-model="to" @change="load()"></div>
-    </div>
-    <table class="list">
-      <thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Objet</th><th>Statut</th><th class="num">Total HT</th><th class="num">Total TTC</th><th class="num" x-show="type === 'facture'">Reste dû</th></tr></thead>
-      <tbody>
-        <template x-for="d in rows" :key="d.id">
-          <tr class="clickable" @click="go('document.html?id=' + d.id)">
-            <td x-text="d.number || '(brouillon)'" :class="!d.number && 'muted'"></td>
-            <td x-text="fdate(d.date)"></td>
-            <td x-text="d.client_name"></td>
-            <td x-text="d.title"></td>
-            <td>
-              <span class="badge" :class="d.status" x-text="LABELS.status[d.status]"></span>
-              <span class="badge late" x-show="type === 'facture' && ['emise','partielle'].includes(d.status) && d.due_date && d.due_date < today">En retard</span>
-            </td>
-            <td class="num" x-text="money(d.total_ht)"></td>
-            <td class="num" x-text="money(d.total_ttc)"></td>
-            <td class="num" x-show="type === 'facture'" x-text="d.number && !['annulee'].includes(d.status) ? money(d.total_ttc - d.paid) : ''"></td>
-          </tr>
-        </template>
-      </tbody>
-      <tfoot x-show="rows.length">
-        <tr><td colspan="5"><strong x-text="rows.length + ' document(s)'"></strong></td>
-          <td class="num"><strong x-text="money(rows.reduce((s, d) => s + d.total_ht, 0))"></strong></td>
-          <td class="num"><strong x-text="money(rows.reduce((s, d) => s + d.total_ttc, 0))"></strong></td>
-          <td x-show="type === 'facture'"></td></tr>
-      </tfoot>
-    </table>
-    <div class="empty" x-show="!rows.length">Aucun document.</div>
+    </details>
   </div>
+  <div class="pills" role="tablist">
+    <button type="button" :class="!status && 'active'" @click="status = ''; load()">Tous</button>
+    <template x-for="s in statuses" :key="s">
+      <button type="button" :class="status === s && 'active'" @click="status = s; load()" x-text="LABELS.status[s]"></button>
+    </template>
+  </div>
+
+  <div class="leads">
+    <template x-for="(d, i) in rows" :key="d.id">
+      <a class="lead" :class="i === 0 && 'featured'" :href="'document.html?id=' + d.id">
+        <div class="lead-top">
+          <span class="avatar" :style="avatarStyle(d.client_name)" x-text="initials(d.client_name)"></span>
+          <span class="lead-id">
+            <strong x-text="d.client_name || 'Sans client'"></strong>
+            <small x-text="(d.number || 'Brouillon') + (d.title ? ' · ' + d.title : '')"></small>
+          </span>
+          <span class="go-circle" x-html="icon('arrow')"></span>
+        </div>
+        <div class="lead-meta">
+          <span><span x-html="icon('mail')"></span><span class="ellipsis" x-text="d.client_email || '—'"></span></span>
+          <span><span x-html="icon('calendar')"></span><span x-text="relDate(d.date)"></span></span>
+          <span><span x-html="icon('phone')"></span><span x-text="d.client_phone || '—'"></span></span>
+          <span><span x-html="icon('trend')"></span><span x-text="extra(d)"></span></span>
+        </div>
+        <div class="lead-foot">
+          <span style="display:flex; gap:6px; flex-wrap:wrap">
+            <span class="badge" :class="d.status" x-text="LABELS.status[d.status]"></span>
+            <span class="badge late" x-show="isLate(d)">En retard</span>
+          </span>
+          <strong class="amount" x-text="money(d.total_ttc)"></strong>
+        </div>
+      </a>
+    </template>
+  </div>
+  <div class="empty" x-show="!rows.length">Aucun document.</div>
+  <p class="list-total" x-show="rows.length">
+    <span x-text="rows.length + ' document(s)'"></span>
+    <span>Total HT <strong x-text="money(rows.reduce((s, d) => s + d.total_ht, 0))"></strong> · TTC <strong x-text="money(rows.reduce((s, d) => s + d.total_ttc, 0))"></strong></span>
+  </p>
 </main>
 <script>
 function docList() {
@@ -66,6 +112,16 @@ function docList() {
     statuses: STATUSES[type],
     title: { devis: 'Devis', facture: 'Factures', avoir: 'Avoirs' }[type],
     init() { document.title = this.title + ' — Facturation'; this.load(); },
+    isLate(d) { return d.type === 'facture' && ['emise', 'partielle'].includes(d.status) && d.due_date && d.due_date < this.today; },
+    extra(d) {
+      if (d.type === 'devis') return d.validity_date ? 'Valable au ' + fdate(d.validity_date) : '—';
+      if (d.type === 'facture') {
+        if (!d.number) return 'Brouillon';
+        if (d.total_ttc && d.paid) return Math.round(d.paid / d.total_ttc * 100) + ' % réglé';
+        return d.due_date ? 'Échéance ' + fdate(d.due_date) : '—';
+      }
+      return 'Avoir';
+    },
     async load() {
       const p = new URLSearchParams({ type: this.type });
       for (const k of ['q', 'status', 'from', 'to']) if (this[k]) p.set(k, this[k]);

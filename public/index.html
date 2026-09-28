@@ -9,332 +9,252 @@
 <script src="js/common.js"></script>
 <script defer src="vendor/alpine.js"></script>
 <style>
-/* Classeur à intercalaires : en-tête daté, souche perforée avec les chiffres du moment,
-   puis trois intercalaires aux onglets décalés (Vendre, Base de données, Piloter) portant chacun trois fiches. */
-:root {
-  --copy-yellow: #f3cf3e;   /* feuillet carbone jaune */
-  --copy-blue: #9fc4ec;     /* feuillet carbone bleu */
-  --copy-pink: #f2a6bb;     /* feuillet carbone rose */
-  --tab-ink: #15212e;       /* texte posé sur les onglets */
-  --rule: #c8d1db;          /* filets et perforations */
-  --font-display: 'Archivo', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
-  --tab-step: 33.333%;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --copy-yellow: #e5c23a; --copy-blue: #8ab6e4; --copy-pink: #e993ab; --tab-ink: #15212e; --rule: #34414f; }
-}
-:root[data-theme="dark"] { --copy-yellow: #e5c23a; --copy-blue: #8ab6e4; --copy-pink: #e993ab; --tab-ink: #15212e; --rule: #34414f; }
+.home { max-width: 1240px; background: radial-gradient(900px 420px at 0% 0%, var(--glow-1), transparent 70%), radial-gradient(700px 380px at 70% 0%, var(--glow-2), transparent 70%); background-repeat: no-repeat; }
+.top { display: flex; align-items: center; gap: 10px; margin-bottom: 26px; }
+.brandmark { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; min-width: 0; }
+.brandmark .logo { width: 32px; height: 32px; border-radius: 10px; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; font-style: italic; flex-shrink: 0; }
+.brandmark span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top .spacer { flex: 1; }
+.top .avatar { width: 40px; height: 40px; font-size: 13px; text-decoration: none; }
 
-.home { padding-block: 36px 64px; max-width: 1240px; }
-.home .mono { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.finder { position: relative; margin: -8px 0 22px; }
+.finder-results { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 30; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 16px 40px var(--shadow); max-height: 400px; overflow-y: auto; padding: 8px; }
+.finder-results h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 10px 10px 4px; }
+.finder-results a { display: flex; justify-content: space-between; gap: 12px; padding: 9px 10px; border-radius: 12px; color: var(--text); text-decoration: none; }
+.finder-results a:hover, .finder-results a:focus-visible { background: var(--hover); outline: none; }
+.finder-results .r-side { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.finder-results .r-none { padding: 10px; color: var(--muted); margin: 0; }
 
-/* En-tête */
-.hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px 40px; align-items: end; margin-bottom: 40px; }
-.hero-logo { max-height: 44px; max-width: 160px; display: block; margin-bottom: 18px; }
-.eyebrow { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
-.hello { font-family: var(--font-display); font-stretch: 125%; font-size: clamp(34px, 5vw, 62px); line-height: .98; letter-spacing: -0.025em; margin: 0; text-wrap: balance; }
-.hello .greet { display: block; font-weight: 300; color: var(--muted); }
-.hello .company { display: block; font-weight: 800; color: var(--text); overflow-wrap: anywhere; }
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; align-items: start; }
+.col-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; min-width: 0; }
+.hello-date { margin: 0 0 6px; color: var(--muted); font-weight: 500; }
+.hello { margin: 0; font-size: clamp(30px, 4.2vw, 46px); line-height: 1.08; letter-spacing: -0.03em; font-weight: 700; }
+.hello em { display: block; font-weight: 400; }
 
-.finder { position: relative; }
-.finder label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
-.finder input[type=search] { height: 52px; font-size: 17px; padding: 0 16px; border: 1.5px solid var(--text); border-radius: 3px; background: var(--surface); }
-.finder input[type=search]:focus { outline: 3px solid var(--copy-yellow); outline-offset: 0; border-color: var(--text); }
-.finder-results { position: absolute; left: 0; right: 0; top: 76px; z-index: 30; background: var(--surface); border: 1.5px solid var(--text); border-radius: 3px; max-height: 380px; overflow-y: auto; padding: 6px 0; }
-.finder-results h3 { font-family: var(--font-mono); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 10px 16px 4px; }
-.finder-results a { display: flex; justify-content: space-between; gap: 12px; padding: 7px 16px; color: var(--text); text-decoration: none; }
-.finder-results a:hover, .finder-results a:focus-visible { background: color-mix(in srgb, var(--copy-yellow) 28%, transparent); outline: none; }
-.finder-results .r-side { color: var(--muted); font-size: 13px; white-space: nowrap; }
-.finder-results .r-none { padding: 10px 16px; color: var(--muted); margin: 0; }
-.quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.quick a { font-family: var(--font-display); font-stretch: 112%; font-weight: 600; font-size: 14px; text-decoration: none; color: var(--text); padding: 8px 14px; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); transition: background-color .15s, border-color .15s; }
-.quick a.ink { background: var(--text); color: var(--bg); border-color: var(--text); }
-.quick a:hover { background: var(--copy-yellow); border-color: var(--copy-yellow); color: var(--tab-ink); }
+.insight { position: relative; display: flex; align-items: center; gap: 16px; padding: 20px 22px; border-radius: 24px; text-decoration: none; color: var(--text); background: linear-gradient(135deg, var(--surface) 0%, var(--glow-1) 100%); border: 1px solid var(--border-soft); box-shadow: 0 1px 2px var(--shadow); overflow: hidden; }
+.insight .ins-body { flex: 1; min-width: 0; }
+.insight .ins-title { margin: 0 0 6px; font-weight: 700; font-size: 16px; }
+.insight .ins-text { margin: 0; color: var(--muted); line-height: 1.5; max-width: 52ch; }
+.insight .ins-cta { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; font-weight: 700; color: var(--primary); font-size: 13px; }
+.insight.danger .ins-cta { color: var(--danger); }
+.insight .bulb { width: 92px; height: 92px; flex-shrink: 0; }
+.insight:hover { border-color: var(--primary-light); }
 
-/* Souche perforée : les chiffres du moment */
-.stub { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 22px; margin-bottom: 72px; }
-.stub::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: radial-gradient(circle, var(--rule) 2px, transparent 2.5px) 0 50% / 13px 8px repeat-x; }
-.stub-cell { display: flex; flex-direction: column; gap: 4px; padding: 4px 20px; border-left: 1px solid var(--rule); color: var(--text); text-decoration: none; min-width: 0; }
-.stub-cell:first-child { border-left: 0; padding-left: 0; }
-.stub-fig { font-size: clamp(22px, 2.5vw, 30px); line-height: 1.1; }
-.stub-cap { font-size: 13px; color: var(--muted); }
-.stub-cell:hover .stub-fig { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; text-decoration-color: var(--copy-yellow); }
-.stub-cell.alert .stub-fig { color: var(--danger); }
-.stub-cell.calm .stub-fig { color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stat { min-width: 0; grid-template-columns: minmax(0, 1fr); background: var(--surface); border: 1px solid var(--border-soft); border-radius: 20px; padding: 14px 16px; box-shadow: 0 1px 2px var(--shadow); text-decoration: none; color: var(--text); display: grid; gap: 8px; }
+.stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stat .tile-ic { width: 32px; height: 32px; border-radius: 10px; }
+.stat .n { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.stat .l { font-weight: 700; font-size: 14px; }
+.stat .s { color: var(--muted); font-size: 12px; margin-top: -6px; }
+.stat:hover { border-color: var(--primary-light); }
 
-/* Intercalaires */
-.binder { display: grid; gap: 78px; }
-.divider { position: relative; border-top: 2px solid var(--cat); }
-.tab { position: absolute; top: -2px; left: calc(var(--i) * var(--tab-step)); transform: translateY(-100%); margin: 0; background: var(--cat); color: var(--tab-ink);
-  font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: 12.5px; text-transform: uppercase; letter-spacing: .12em; padding: 8px 18px 7px; border-radius: 7px 7px 0 0; white-space: nowrap; }
-.sheets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--rule); }
-.sheet { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 24px 22px 18px; min-height: 228px; border-left: 1px solid var(--rule); transition: background-color .18s ease; min-width: 0; }
-.sheet:first-child { border-left: 0; }
-.sheet:hover, .sheet:focus-within { background: color-mix(in srgb, var(--cat) 15%, transparent); }
-.sheet-link { color: var(--text); text-decoration: none; }
-.sheet-link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
-.sheet-link:focus-visible { outline: none; }
-.sheet-link:focus-visible::after { outline: 2px solid var(--text); outline-offset: -2px; }
-.sheet-title { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0; font-family: var(--font-display); font-stretch: 118%; font-weight: 700; font-size: clamp(21px, 1.9vw, 26px); line-height: 1.1; letter-spacing: -0.015em; }
-.sheet-title .arrow { font-weight: 300; transition: transform .18s ease; }
-.sheet:hover .arrow { transform: translateX(5px); }
-.sheet-desc { margin: 0; color: var(--muted); line-height: 1.45; max-width: 38ch; }
-.ref { align-self: flex-start; font-size: 12px; color: var(--text); border: 1px dashed var(--rule); padding: 3px 7px; border-radius: 2px; max-width: 100%; overflow-wrap: anywhere; }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.chips span { font-size: 11.5px; padding: 2px 6px; border: 1px dashed var(--rule); border-radius: 2px; }
-.sheet-foot { margin-top: auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; padding-top: 12px; border-top: 1px dotted var(--rule); }
-.count { font-size: 13px; color: var(--muted); }
-.count b { font-family: var(--font-mono); font-weight: 500; font-size: 20px; color: var(--text); margin-right: 3px; }
-.flag { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 2px; background: var(--warn-bg); color: var(--warn); }
-.flag.bad { background: var(--danger-bg); color: var(--danger); }
-.flag.ok { background: var(--ok-bg); color: var(--ok); }
-.sheet-add { position: relative; z-index: 2; font-size: 13px; font-weight: 600; color: var(--text); text-decoration: none; border-bottom: 2px solid var(--cat); padding: 0 1px 1px; white-space: nowrap; }
-.sheet-add:hover, .sheet-add:focus-visible { background: var(--cat); color: var(--tab-ink); outline: none; }
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.sec-head h2 { margin: 0; font-size: 17px; }
+.sec-head a { font-size: 13px; font-weight: 600; text-decoration: none; }
+.qa-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.qa { position: relative; display: grid; gap: 22px; padding: 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border-soft); box-shadow: 0 1px 2px var(--shadow); text-decoration: none; color: var(--text); font-weight: 600; }
+.qa-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.qa .go { color: var(--muted); transition: transform .15s ease, color .15s ease; }
+.qa:hover .go { transform: translate(2px, -2px); color: var(--primary); }
+.qa:hover { border-color: var(--primary-light); }
 
-/* Derniers documents */
-.recent { margin-top: 72px; }
-.recent-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
-.recent-head h2 { margin: 0; font-family: var(--font-display); font-stretch: 118%; font-weight: 700; font-size: 20px; }
-.recent-head a { font-size: 13px; }
-.recent ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
-.recent li a { display: grid; grid-template-columns: 150px minmax(0, 1fr) 96px 120px 150px; gap: 6px 16px; align-items: baseline; padding: 11px 4px; border-bottom: 1px solid var(--rule); color: var(--text); text-decoration: none; }
-.recent li a:hover { background: color-mix(in srgb, var(--copy-blue) 16%, transparent); }
-.recent .r-num { font-size: 13px; }
-.recent .r-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recent .r-what small { color: var(--muted); font-size: 13px; }
-.recent .r-date { color: var(--muted); font-size: 13px; }
-.recent .r-amount { text-align: right; font-size: 13px; }
-.recent .r-status { justify-self: end; }
-.recent .empty-line { padding: 18px 4px; color: var(--muted); border-bottom: 1px solid var(--rule); margin: 0; }
+.rub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.rub { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border-soft); box-shadow: 0 1px 2px var(--shadow); text-decoration: none; color: var(--text); min-width: 0; }
+.rub .t { font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rub .c { color: var(--muted); font-size: 12px; display: block; }
+.rub .txt { flex: 1; min-width: 0; }
+.rub .go { color: var(--muted); }
+.rub:hover { border-color: var(--primary-light); }
+.rub:hover .go { color: var(--primary); }
 
-@media (max-width: 1080px) {
-  .sheets { grid-template-columns: minmax(0, 1fr); }
-  .sheet { min-height: 0; border-left: 0; border-top: 1px solid var(--rule); }
-  .sheet:first-child { border-top: 0; }
-  .recent li a { grid-template-columns: 130px minmax(0, 1fr) 110px; }
-  .recent .r-date, .recent .r-status { display: none; }
+.col-side { min-width: 0; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 24px; padding: 20px; box-shadow: 0 1px 2px var(--shadow); position: sticky; top: 20px; }
+.act { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.act a { display: flex; gap: 12px; align-items: center; padding: 10px; margin: 0 -10px; border-radius: 16px; text-decoration: none; color: var(--text); }
+.act a:hover { background: var(--hover); }
+.act .tile-ic { width: 36px; height: 36px; }
+.act .txt { flex: 1; min-width: 0; }
+.act .t { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act .s { color: var(--muted); font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act .amt { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.side-total { margin-top: 16px; padding: 16px; border-radius: 18px; background: var(--ink); color: var(--on-ink); display: flex; justify-content: space-between; align-items: center; gap: 10px; text-decoration: none; }
+.side-total small { display: block; opacity: .7; font-size: 12px; }
+.side-total strong { font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+@media (max-width: 1100px) {
+  .home-grid { grid-template-columns: minmax(0, 1fr); }
+  .col-side { position: static; }
+  .qa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
-  :root { --tab-step: 21%; }
-  .home { padding-block: 20px 48px; }
-  .hero { grid-template-columns: minmax(0, 1fr); margin-bottom: 28px; }
-  .quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .quick a { text-align: center; }
-  .stub { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 18px; margin-bottom: 64px; }
-  .stub-cell:nth-child(3) { border-left: 0; padding-left: 0; }
-  .tab { font-stretch: 100%; letter-spacing: .08em; padding: 7px 12px 6px; }
-  .sheet { padding: 20px 4px 16px; }
-  .recent li a { grid-template-columns: minmax(0, 1fr) auto; }
-  .recent .r-num { grid-column: 1 / -1; }
+  .home { background: radial-gradient(500px 300px at 0% 0%, var(--glow-1), transparent 70%), radial-gradient(400px 260px at 100% 0%, var(--glow-2), transparent 70%); background-repeat: no-repeat; }
+  .top { margin-bottom: 20px; }
+  .insight { padding: 16px; }
+  .insight .bulb { width: 70px; height: 70px; }
+  .stats { gap: 8px; }
+  .stat { padding: 12px; border-radius: 18px; }
+  .stat .n { font-size: 22px; }
+  .stat .l { font-size: 13px; }
+  .rub-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .rub { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 18px; }
+  .rub .t { white-space: normal; font-size: 13px; line-height: 1.25; }
+  .rub .go { display: none; }
+  .qa { gap: 16px; padding: 14px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .sheet, .sheet-title .arrow, .quick a { transition: none; }
-}
+@media (prefers-reduced-motion: reduce) { .qa .go { transition: none; } }
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
 <main class="home" x-data="home()" x-cloak>
-  <header class="hero">
-    <div>
-      <img class="hero-logo" x-show="d && d.company.logo" :src="d ? d.company.logo : ''" alt="">
-      <p class="eyebrow"><span x-text="dateLabel"></span><span aria-hidden="true">·</span><span x-text="'Exercice ' + year"></span></p>
-      <h1 class="hello"><span class="greet" x-text="greeting"></span><span class="company" x-text="d ? d.company.name : '…'"></span></h1>
+  <div class="top">
+    <a class="brandmark" href="index.html"><span class="logo">F</span><span x-text="d ? d.company.name : 'Facturation'"></span></a>
+    <span class="spacer"></span>
+    <button type="button" class="icon-btn" aria-label="Rechercher" @click="searchOpen = !searchOpen; $nextTick(() => searchOpen && $refs.q.focus())" x-html="icon('search')"></button>
+    <a class="icon-btn" href="documents.html?type=facture&amp;status=emise" :aria-label="d && d.counts.invoices_overdue ? d.counts.invoices_overdue + ' facture(s) en retard' : 'Factures à encaisser'">
+      <span x-html="icon('bell')"></span><span class="dot" x-show="d && d.counts.invoices_overdue"></span>
+    </a>
+    <a class="avatar" href="parametres.html" :style="avatarStyle(d ? d.company.name : '')" x-text="initials(d ? d.company.name : '')" aria-label="Paramètres de l'entreprise"></a>
+  </div>
+
+  <div class="finder" x-show="searchOpen" @click.outside="results = null" @keydown.escape="results = null; searchOpen = false">
+    <div class="search-pill">
+      <span x-html="icon('search')"></span>
+      <input id="home-search" x-ref="q" type="search" x-model="q" @input.debounce.200ms="search()" @keydown.enter.prevent="openFirst()"
+             placeholder="Rechercher un client, un devis, un article…" autocomplete="off" aria-label="Rechercher">
     </div>
-    <div class="finder" @click.outside="results = null" @keydown.escape="results = null">
-      <label for="home-search">Rechercher</label>
-      <input id="home-search" type="search" x-model="q" @input.debounce.200ms="search()" @keydown.enter.prevent="openFirst()"
-             placeholder="Un client, un n° de devis, un article…" autocomplete="off">
-      <div class="finder-results" x-show="results" x-cloak>
-        <template x-if="results">
-          <div>
-            <template x-if="results.docs.length"><h3>Devis, factures, avoirs</h3></template>
-            <template x-for="r in results.docs" :key="'d' + r.id">
-              <a :href="'document.html?id=' + r.id"><span x-text="LABELS.type[r.type] + ' ' + (r.number || '(brouillon)') + ' — ' + (r.client_name || '')"></span><span class="r-side mono" x-text="money(r.total_ttc)"></span></a>
-            </template>
-            <template x-if="results.clients.length"><h3>Clients</h3></template>
-            <template x-for="r in results.clients" :key="'c' + r.id">
-              <a :href="'clients.html?id=' + r.id"><span x-text="clientName(r)"></span><span class="r-side" x-text="r.city || ''"></span></a>
-            </template>
-            <template x-if="results.items.length"><h3>Catalogue</h3></template>
-            <template x-for="r in results.items" :key="'i' + r.id">
-              <a :href="'catalogue.html?id=' + r.id"><span x-text="(r.reference ? r.reference + ' · ' : '') + r.designation"></span><span class="r-side mono" x-text="money(r.sale_price) + ' / ' + r.unit"></span></a>
-            </template>
-            <p class="r-none" x-show="!results.docs.length && !results.clients.length && !results.items.length" x-text="'Aucun résultat pour « ' + q + ' ».'"></p>
-          </div>
-        </template>
-      </div>
-      <div class="quick">
-        <a class="ink" href="document.html?new=devis">+ Devis</a>
-        <a href="document.html?new=facture">+ Facture</a>
-        <a href="clients.html?new=1">+ Client</a>
-        <a href="catalogue.html?new=1">+ Article</a>
-      </div>
-    </div>
-  </header>
-
-  <section class="stub" aria-label="En ce moment">
-    <a class="stub-cell" href="documents.html?type=facture&amp;status=emise">
-      <span class="stub-fig mono" x-text="d ? money(d.receivable) : '—'"></span>
-      <span class="stub-cap">à encaisser (TTC)</span>
-    </a>
-    <a class="stub-cell" :class="d && (d.counts.invoices_overdue ? 'alert' : 'calm')" href="documents.html?type=facture&amp;status=emise">
-      <span class="stub-fig mono" x-text="d ? d.counts.invoices_overdue : '—'"></span>
-      <span class="stub-cap" x-text="d && d.counts.invoices_overdue > 1 ? 'factures en retard' : 'facture en retard'"></span>
-    </a>
-    <a class="stub-cell" :class="d && !d.counts.quotes_waiting && 'calm'" href="documents.html?type=devis&amp;status=envoye">
-      <span class="stub-fig mono" x-text="d ? d.counts.quotes_waiting : '—'"></span>
-      <span class="stub-cap">devis en attente de réponse</span>
-    </a>
-    <a class="stub-cell" :class="d && !d.counts.quotes_accepted && 'calm'" href="documents.html?type=devis&amp;status=accepte">
-      <span class="stub-fig mono" x-text="d ? d.counts.quotes_accepted : '—'"></span>
-      <span class="stub-cap" x-text="d && d.counts.quotes_accepted > 1 ? 'devis acceptés à facturer' : 'devis accepté à facturer'"></span>
-    </a>
-  </section>
-
-  <nav class="binder" aria-label="Toutes les rubriques">
-    <!-- Vendre -->
-    <section class="divider" style="--cat: var(--copy-yellow); --i: 0" aria-labelledby="tab-vendre">
-      <h2 class="tab" id="tab-vendre">Vendre</h2>
-      <div class="sheets">
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="documents.html?type=devis">Devis</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">Chiffrer un chantier à partir du catalogue et suivre les réponses.</p>
-          <span class="ref mono" x-text="d ? 'Prochain n° ' + d.next_numbers.devis : '—'"></span>
-          <div class="sheet-foot">
-            <span class="count"><b x-text="d ? d.counts.quotes : '—'"></b>au total</span>
-            <a class="sheet-add" href="document.html?new=devis">+ Nouveau devis</a>
-          </div>
-        </article>
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="documents.html?type=facture">Factures</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">Émettre, enregistrer les règlements, repérer les retards.</p>
-          <span class="ref mono" x-text="d ? 'Prochain n° ' + d.next_numbers.facture : '—'"></span>
-          <div class="sheet-foot">
-            <span class="count"><b x-text="d ? d.counts.invoices : '—'"></b><span x-text="pl(d && d.counts.invoices, 'émise', 'émises')"></span>
-              <span class="flag" x-show="d && d.counts.invoices_draft" x-text="d && d.counts.invoices_draft + ' en brouillon'"></span></span>
-            <a class="sheet-add" href="document.html?new=facture">+ Nouvelle facture</a>
-          </div>
-        </article>
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="documents.html?type=avoir">Avoirs</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">Annuler ou corriger une facture émise, sans casser la numérotation.</p>
-          <span class="ref mono" x-text="d ? 'Prochain n° ' + d.next_numbers.avoir : '—'"></span>
-          <div class="sheet-foot">
-            <span class="count"><b x-text="d ? d.counts.credits : '—'"></b>au total</span>
-            <span class="count">Se crée depuis une facture</span>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- Base de données -->
-    <section class="divider" style="--cat: var(--copy-blue); --i: 1" aria-labelledby="tab-base">
-      <h2 class="tab" id="tab-base">Base de données</h2>
-      <div class="sheets">
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="clients.html">Clients</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">Particuliers et professionnels, avec l'historique de chacun.</p>
-          <span class="ref mono" x-text="d ? d.counts.clients_pro + ' pro · ' + (d.counts.clients - d.counts.clients_pro) + ' particulier' + (d.counts.clients - d.counts.clients_pro > 1 ? 's' : '') : '—'"></span>
-          <div class="sheet-foot">
-            <span class="count"><b x-text="d ? d.counts.clients : '—'"></b><span x-text="pl(d && d.counts.clients, 'fiche', 'fiches')"></span></span>
-            <a class="sheet-add" href="clients.html?new=1">+ Nouveau client</a>
-          </div>
-        </article>
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="catalogue.html">Catalogue &amp; tarifs</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">Prestations, main d'œuvre, fournitures, matériel et ouvrages composés.</p>
-          <div class="chips mono">
-            <template x-for="t in itemTypes" :key="t[0]">
-              <span x-text="t[1] + ' ' + (d && d.counts.items_by_type[t[0]] || 0)"></span>
-            </template>
-          </div>
-          <div class="sheet-foot">
-            <span class="count"><b x-text="d ? d.counts.items : '—'"></b><span x-text="pl(d && d.counts.items, 'article actif', 'articles actifs')"></span></span>
-            <a class="sheet-add" href="catalogue.html?new=1">+ Nouvel article</a>
-          </div>
-        </article>
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="catalogue.html?tab=categories">Catégories</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">Classer les articles et importer les tarifs de vos fournisseurs.</p>
-          <span class="ref mono" x-text="d ? d.counts.catalogs + ' catalogue' + (d.counts.catalogs > 1 ? 's' : '') + ' fournisseur' + (d.counts.catalogs > 1 ? 's' : '') : '—'"></span>
-          <div class="sheet-foot">
-            <span class="count"><b x-text="d ? d.counts.categories : '—'"></b><span x-text="pl(d && d.counts.categories, 'catégorie', 'catégories')"></span></span>
-            <a class="sheet-add" href="catalogue.html?import=1">Importer un tarif</a>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- Piloter -->
-    <section class="divider" style="--cat: var(--copy-pink); --i: 2" aria-labelledby="tab-piloter">
-      <h2 class="tab" id="tab-piloter">Piloter</h2>
-      <div class="sheets">
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="tableau-de-bord.html">Tableau de bord</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">Chiffre d'affaires, encaissements et taux de transformation des devis.</p>
-          <span class="ref mono" x-text="'Exercice ' + year"></span>
-          <div class="sheet-foot">
-            <span class="count"><b x-text="d ? d.counts.invoices_open : '—'"></b><span x-text="pl(d && d.counts.invoices_open, 'facture à encaisser', 'factures à encaisser')"></span></span>
-          </div>
-        </article>
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="modeles.html">Modèles</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">La mise en page de vos devis et factures, à l'image de l'entreprise.</p>
-          <span class="ref mono" x-text="d ? 'Par défaut : ' + d.template_default : '—'"></span>
-          <div class="sheet-foot">
-            <span class="count"><b x-text="d ? d.counts.templates : '—'"></b><span x-text="pl(d && d.counts.templates, 'modèle', 'modèles')"></span></span>
-          </div>
-        </article>
-        <article class="sheet">
-          <h3 class="sheet-title"><a class="sheet-link" href="parametres.html">Paramètres</a><span class="arrow" aria-hidden="true">→</span></h3>
-          <p class="sheet-desc">Entreprise, TVA, numérotation, mentions légales et sauvegarde.</p>
-          <span class="ref mono" x-text="d ? (d.company.name + (d.company.city ? ' · ' + d.company.city : '')) : '—'"></span>
-          <div class="sheet-foot">
-            <template x-if="d && d.company_missing.length">
-              <span class="flag" x-text="'À compléter : ' + d.company_missing.join(', ')"></span>
-            </template>
-            <template x-if="d && !d.company_missing.length">
-              <span class="flag ok">Fiche entreprise complète</span>
-            </template>
-          </div>
-        </article>
-      </div>
-    </section>
-  </nav>
-
-  <section class="recent" aria-labelledby="recent-title">
-    <div class="recent-head">
-      <h2 id="recent-title">Derniers documents</h2>
-      <a href="documents.html?type=devis">Tous les devis</a>
-    </div>
-    <ul>
-      <template x-for="r in (d ? d.recent : [])" :key="r.id">
-        <li><a :href="'document.html?id=' + r.id">
-          <span class="r-num mono" x-text="r.number || (LABELS.type[r.type] + ' brouillon')"></span>
-          <span class="r-what"><span x-text="r.client_name || 'Sans client'"></span> <small x-text="r.title ? '· ' + r.title : ''"></small></span>
-          <span class="r-date mono" x-text="fdate(r.date)"></span>
-          <span class="r-amount mono" x-text="money(r.total_ttc)"></span>
-          <span class="r-status"><span class="badge" :class="r.status" x-text="LABELS.status[r.status]"></span></span>
-        </a></li>
+    <div class="finder-results" x-show="results">
+      <template x-if="results">
+        <div>
+          <template x-if="results.docs.length"><h3>Devis, factures, avoirs</h3></template>
+          <template x-for="r in results.docs" :key="'d' + r.id">
+            <a :href="'document.html?id=' + r.id"><span x-text="LABELS.type[r.type] + ' ' + (r.number || '(brouillon)') + ' · ' + (r.client_name || '')"></span><span class="r-side" x-text="money(r.total_ttc)"></span></a>
+          </template>
+          <template x-if="results.clients.length"><h3>Clients</h3></template>
+          <template x-for="r in results.clients" :key="'c' + r.id">
+            <a :href="'clients.html?id=' + r.id"><span x-text="clientName(r)"></span><span class="r-side" x-text="r.city || ''"></span></a>
+          </template>
+          <template x-if="results.items.length"><h3>Catalogue</h3></template>
+          <template x-for="r in results.items" :key="'i' + r.id">
+            <a :href="'catalogue.html?id=' + r.id"><span x-text="(r.reference ? r.reference + ' · ' : '') + r.designation"></span><span class="r-side" x-text="money(r.sale_price) + ' / ' + r.unit"></span></a>
+          </template>
+          <p class="r-none" x-show="!results.docs.length && !results.clients.length && !results.items.length" x-text="'Aucun résultat pour « ' + q + ' ».'"></p>
+        </div>
       </template>
-    </ul>
-    <p class="empty-line" x-show="d && !d.recent.length">Aucun document pour l'instant. Commencez par un devis.</p>
-  </section>
+    </div>
+  </div>
+
+  <div class="home-grid">
+    <div class="col-main">
+      <div>
+        <p class="hello-date" x-text="greeting + ' · ' + dateLabel"></p>
+        <h1 class="hello">Prêt à<em>conclure vos chantiers</em></h1>
+      </div>
+
+      <a class="insight" :class="d && d.insight.tone" :href="d ? d.insight.href : 'document.html?new=devis'">
+        <div class="ins-body">
+          <p class="ins-title" x-text="d ? d.insight.title : 'Conseil du jour'"></p>
+          <p class="ins-text" x-text="d ? d.insight.text : 'Chargement…'"></p>
+          <span class="ins-cta">Y aller <span x-html="icon('arrow')"></span></span>
+        </div>
+        <svg class="bulb" viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <radialGradient id="glow" cx="50%" cy="42%" r="50%"><stop offset="0" stop-color="#ffe98a" stop-opacity=".9"/><stop offset="1" stop-color="#ffe98a" stop-opacity="0"/></radialGradient>
+            <radialGradient id="glass" cx="40%" cy="32%" r="70%"><stop offset="0" stop-color="#fffbe0"/><stop offset=".45" stop-color="#ffd84a"/><stop offset="1" stop-color="#f5a700"/></radialGradient>
+            <linearGradient id="base" x1="0" x2="1"><stop offset="0" stop-color="#9aa0b4"/><stop offset=".5" stop-color="#e9ebf2"/><stop offset="1" stop-color="#7c8398"/></linearGradient>
+          </defs>
+          <circle cx="50" cy="42" r="46" fill="url(#glow)"/>
+          <g stroke="#ffc933" stroke-width="3" stroke-linecap="round"><path d="M50 4v8M18 16l6 6M82 16l-6 6M8 44h8M84 44h8"/></g>
+          <path d="M50 18a24 24 0 0 0-14 43.5c2.5 2 4 4.5 4 7.5v3h20v-3c0-3 1.5-5.5 4-7.5A24 24 0 0 0 50 18z" fill="url(#glass)"/>
+          <ellipse cx="42" cy="32" rx="6" ry="9" fill="#fff" opacity=".55" transform="rotate(-25 42 32)"/>
+          <rect x="39" y="72" width="22" height="6" rx="2" fill="url(#base)"/>
+          <rect x="40" y="79" width="20" height="5" rx="2" fill="url(#base)"/>
+          <rect x="44" y="85" width="12" height="5" rx="2.5" fill="#5f667c"/>
+        </svg>
+      </a>
+
+      <div class="stats">
+        <a class="stat" href="documents.html?type=devis&amp;status=envoye">
+          <div class="stat-top"><span class="tile-ic" x-html="icon('quote')"></span><span class="n" x-text="d ? d.counts.quotes_waiting : '–'"></span></div>
+          <span class="l">Devis</span><span class="s">En attente de réponse</span>
+        </a>
+        <a class="stat" href="documents.html?type=facture&amp;status=emise">
+          <div class="stat-top"><span class="tile-ic violet" x-html="icon('invoice')"></span><span class="n" x-text="d ? d.counts.invoices_open : '–'"></span></div>
+          <span class="l">Factures</span><span class="s" x-text="d ? money(d.receivable) + ' à encaisser' : 'À encaisser'"></span>
+        </a>
+        <a class="stat" href="documents.html?type=facture&amp;status=emise">
+          <div class="stat-top"><span class="tile-ic pink" x-html="icon('bell')"></span><span class="n" x-text="d ? d.counts.invoices_overdue : '–'"></span></div>
+          <span class="l">Relances</span><span class="s">Factures en retard</span>
+        </a>
+      </div>
+
+      <section>
+        <div class="sec-head"><h2>Actions rapides</h2></div>
+        <div class="qa-grid">
+          <a class="qa" href="document.html?new=devis"><div class="qa-top"><span class="tile-ic" x-html="icon('plus')"></span><span class="go" x-html="icon('arrow')"></span></div>Nouveau devis</a>
+          <a class="qa" href="document.html?new=facture"><div class="qa-top"><span class="tile-ic violet" x-html="icon('invoice')"></span><span class="go" x-html="icon('arrow')"></span></div>Nouvelle facture</a>
+          <a class="qa" href="clients.html?new=1"><div class="qa-top"><span class="tile-ic green" x-html="icon('user')"></span><span class="go" x-html="icon('arrow')"></span></div>Ajouter un client</a>
+          <a class="qa" href="catalogue.html?new=1"><div class="qa-top"><span class="tile-ic pink" x-html="icon('box')"></span><span class="go" x-html="icon('arrow')"></span></div>Ajouter un article</a>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head"><h2>Toutes les rubriques</h2></div>
+        <div class="rub-grid">
+          <template x-for="r in rubriques" :key="r.href">
+            <a class="rub" :href="r.href">
+              <span class="tile-ic" :class="r.tone" x-html="icon(r.icon)"></span>
+              <span class="txt"><span class="t" x-text="r.title"></span><span class="c" x-text="r.count()"></span></span>
+              <span class="go" x-html="icon('arrow')"></span>
+            </a>
+          </template>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col-side" aria-labelledby="act-title">
+      <div class="sec-head"><h2 id="act-title">Activité récente</h2><a href="tableau-de-bord.html">Tout voir</a></div>
+      <ul class="act">
+        <template x-for="(a, i) in (d ? d.activity : [])" :key="i">
+          <li><a :href="a.href">
+            <span class="tile-ic" :class="{ facture: 'violet', avoir: 'pink', payment: 'green', devis: '' }[a.kind]" x-html="icon({ devis: 'quote', facture: 'invoice', avoir: 'credit', payment: 'check' }[a.kind])"></span>
+            <span class="txt"><span class="t" x-text="a.text"></span><span class="s" x-text="(a.sub ? a.sub + ' · ' : '') + relDate(a.at)"></span></span>
+            <span class="amt" x-text="money(a.amount)"></span>
+          </a></li>
+        </template>
+      </ul>
+      <p class="muted" x-show="d && !d.activity.length">Aucune activité pour l'instant.</p>
+      <a class="side-total" href="tableau-de-bord.html">
+        <span><small>Reste à encaisser</small><strong x-text="d ? money(d.receivable) : '–'"></strong></span>
+        <span x-html="icon('arrow')"></span>
+      </a>
+    </aside>
+  </div>
 </main>
 <script>
 function home() {
   const now = new Date();
-  const label = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
+  const label = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
   return {
-    d: null, q: '', results: null,
-    dateLabel: label.charAt(0).toUpperCase() + label.slice(1),
-    year: now.getFullYear(),
-    greeting: now.getHours() >= 18 ? 'Bonsoir,' : 'Bonjour,',
-    itemTypes: [['prestation', 'Presta.'], ['main_oeuvre', 'MO'], ['fourniture', 'Fourn.'], ['materiel', 'Mat.'], ['ouvrage', 'Ouvr.']],
+    d: null, q: '', results: null, searchOpen: false,
+    dateLabel: label,
+    greeting: now.getHours() >= 18 ? 'Bonsoir' : 'Bonjour',
+    get rubriques() {
+      const c = this.d ? this.d.counts : null;
+      const n = (v, one, many) => (c ? `${v} ${v > 1 ? many : one}` : '–');
+      return [
+        { href: 'documents.html?type=devis', title: 'Devis', icon: 'quote', tone: '', count: () => n(c && c.quotes, 'devis', 'devis') },
+        { href: 'documents.html?type=facture', title: 'Factures', icon: 'invoice', tone: 'violet', count: () => n(c && c.invoices, 'émise', 'émises') },
+        { href: 'documents.html?type=avoir', title: 'Avoirs', icon: 'credit', tone: 'pink', count: () => n(c && c.credits, 'avoir', 'avoirs') },
+        { href: 'clients.html', title: 'Clients', icon: 'users', tone: 'green', count: () => n(c && c.clients, 'fiche', 'fiches') },
+        { href: 'catalogue.html', title: 'Catalogue & tarifs', icon: 'box', tone: 'amber', count: () => n(c && c.items, 'article', 'articles') },
+        { href: 'catalogue.html?tab=categories', title: 'Catégories', icon: 'tag', tone: '', count: () => n(c && c.categories, 'catégorie', 'catégories') },
+        { href: 'tableau-de-bord.html', title: 'Tableau de bord', icon: 'chart', tone: 'violet', count: () => 'Exercice ' + now.getFullYear() },
+        { href: 'modeles.html', title: 'Modèles', icon: 'layout', tone: 'pink', count: () => n(c && c.templates, 'modèle', 'modèles') },
+        { href: 'parametres.html', title: 'Paramètres', icon: 'settings', tone: 'green', count: () => (this.d ? (this.d.company_missing.length ? this.d.company_missing.length + ' info(s) à compléter' : 'Fiche complète') : '–') }
+      ];
+    },
     async init() { this.d = await api('/home'); },
-    pl(n, one, many) { return n > 1 ? many : one; },
     async search() {
       const q = this.q.trim();
       if (q.length < 2) { this.results = null; return; }

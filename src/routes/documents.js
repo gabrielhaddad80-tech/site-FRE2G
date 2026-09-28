@@ -132,7 +132,8 @@ module.exports = function documentRoutes(db) {
       params.q = `%${req.query.q}%`;
     }
     const rows = db.prepare(`SELECT d.id, d.type, d.number, d.status, d.date, d.due_date, d.validity_date, d.title, d.total_ht, d.total_vat, d.total_ttc,
-        d.client_id, d.source_id, COALESCE(NULLIF(c.company,''), TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,''))) AS client_name,
+        d.client_id, d.source_id, d.updated_at, COALESCE(NULLIF(c.company,''), TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,''))) AS client_name,
+        c.email AS client_email, c.phone AS client_phone, c.city AS client_city,
         (SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.document_id = d.id) AS paid
       FROM documents d LEFT JOIN clients c ON c.id = d.client_id
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}

@@ -95,6 +95,51 @@ module.exports = function adminRoutes(db) {
   });
 
   // ---------- Page d'accueil ----------
+  const money = (v) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v || 0);
+  const daysBetween = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
+
+  // Conseil du jour : l'action la plus utile à faire maintenant
+  function insight(today) {
+    const base = `SELECT d.*, ${CLIENT_NAME_SQL} AS client_name FROM documents d LEFT JOIN clients c ON c.id = d.client_id`;
+    const late = db.prepare(`${base} WHERE d.type = 'facture' AND d.status IN ('emise','partielle') AND d.due_date < ? ORDER BY d.due_date LIMIT 1`).get(today);
+    if (late) {
+      return { tone: 'danger', title: 'Facture en retard', href: `document.html?id=${late.id}`,
+        text: `Relancez ${late.client_name} : la facture ${late.number} (${money(late.total_ttc)}) est échue depuis ${daysBetween(late.due_date, today)} jour(s).` };
+    }
+    const won = db.prepare(`${base} WHERE d.type = 'devis' AND d.status = 'accepte' ORDER BY d.date LIMIT 1`).get();
+    if (won) {
+      return { tone: 'ok', title: 'Devis accepté', href: `document.html?id=${won.id}`,
+        text: `${won.client_name} a accepté le devis ${won.number} (${money(won.total_ht)} HT). Transformez-le en facture.` };
+    }
+    const sent = db.prepare(`${base} WHERE d.type = 'devis' AND d.status = 'envoye' ORDER BY d.date LIMIT 1`).get();
+    if (sent) {
+      const days = daysBetween(sent.date, today);
+      return { tone: 'info', title: 'À relancer', href: `document.html?id=${sent.id}`,
+        text: `Contactez ${sent.client_name} ${days > 0 ? `: devis ${sent.number} envoyé il y a ${days} jour(s)` : `au sujet du devis ${sent.number}`} (${money(sent.total_ht)} HT).` };
+    }
+    const any = db.prepare('SELECT COUNT(*) AS n FROM documents').get().n;
+    return any
+      ? { tone: 'ok', title: 'Tout est à jour', href: 'document.html?new=devis', text: 'Aucune relance en attente. Préparez votre prochain devis.' }
+      : { tone: 'info', title: 'Premier pas', href: 'document.html?new=devis', text: 'Créez votre premier devis à partir du catalogue.' };
+  }
+
+  // Activité récente : documents modifiés et règlements reçus
+  function activity() {
+    const docs = db.prepare(`SELECT d.id, d.type, d.number, d.status, d.total_ttc, d.updated_at AS at, ${CLIENT_NAME_SQL} AS client_name
+      FROM documents d LEFT JOIN clients c ON c.id = d.client_id ORDER BY d.updated_at DESC, d.id DESC LIMIT 8`).all();
+    const pays = db.prepare(`SELECT p.id, p.amount, p.created_at AS at, d.id AS doc_id, d.number, ${CLIENT_NAME_SQL} AS client_name
+      FROM payments p JOIN documents d ON d.id = p.document_id LEFT JOIN clients c ON c.id = d.client_id ORDER BY p.created_at DESC, p.id DESC LIMIT 4`).all();
+    const label = { devis: 'Devis', facture: 'Facture', avoir: 'Avoir' };
+    const verb = { brouillon: 'en préparation', envoye: 'envoyé', accepte: 'accepté', refuse: 'refusé', facture: 'facturé',
+      emise: 'émise', partielle: 'partiellement réglée', payee: 'réglée', annulee: 'annulée' };
+    return [
+      ...docs.map((d) => ({ kind: d.type, at: d.at, href: `document.html?id=${d.id}`,
+        text: `${label[d.type]} ${d.number || ''} ${verb[d.status] || ''}`.replace(/\s+/g, ' ').trim(), sub: d.client_name || '', amount: d.total_ttc })),
+      ...pays.map((p) => ({ kind: 'payment', at: p.at, href: `document.html?id=${p.doc_id}`,
+        text: `Règlement reçu sur ${p.number}`, sub: p.client_name || '', amount: p.amount }))
+    ].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 6);
+  }
+
   r.get('/home', (req, res) => {
     const s = getSettings(db);
     const today = localToday();
@@ -132,7 +177,9 @@ module.exports = function adminRoutes(db) {
       next_numbers: { devis: peekNumber(db, 'devis', today), facture: peekNumber(db, 'facture', today), avoir: peekNumber(db, 'avoir', today) },
       template_default: db.prepare('SELECT name FROM templates ORDER BY is_default DESC, id LIMIT 1').get()?.name || '',
       recent: db.prepare(`SELECT d.id, d.type, d.number, d.status, d.date, d.title, d.total_ttc, ${CLIENT_NAME_SQL} AS client_name
-        FROM documents d LEFT JOIN clients c ON c.id = d.client_id ORDER BY d.updated_at DESC, d.id DESC LIMIT 6`).all()
+        FROM documents d LEFT JOIN clients c ON c.id = d.client_id ORDER BY d.updated_at DESC, d.id DESC LIMIT 6`).all(),
+      insight: insight(today),
+      activity: activity()
     });
   });
 

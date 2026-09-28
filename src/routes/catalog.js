@@ -38,7 +38,9 @@ module.exports = function catalogRoutes(db) {
   r.get('/clients', (req, res) => {
     const q = `%${req.query.q || ''}%`;
     res.json(db.prepare(`SELECT c.*,
-        (SELECT COUNT(*) FROM documents d WHERE d.client_id = c.id) AS documents_count
+        (SELECT COUNT(*) FROM documents d WHERE d.client_id = c.id) AS documents_count,
+        (SELECT COALESCE(SUM(CASE WHEN d.type = 'facture' THEN d.total_ttc ELSE -d.total_ttc END), 0) FROM documents d
+          WHERE d.client_id = c.id AND d.type IN ('facture','avoir') AND d.number IS NOT NULL) AS invoiced
       FROM clients c
       WHERE COALESCE(company,'') || ' ' || COALESCE(first_name,'') || ' ' || COALESCE(last_name,'') || ' ' || COALESCE(code,'') || ' ' || COALESCE(city,'') || ' ' || COALESCE(email,'') LIKE ?
       ORDER BY COALESCE(NULLIF(company,''), last_name) COLLATE NOCASE`).all(q));
