@@ -2,93 +2,351 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tableau de bord — Facturation</title>
+<title>Accueil — Facturation</title>
 <link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/app.css">
 <script src="js/common.js"></script>
 <script defer src="vendor/alpine.js"></script>
+<style>
+/* Classeur à intercalaires : en-tête daté, souche perforée avec les chiffres du moment,
+   puis trois intercalaires aux onglets décalés (Vendre, Base de données, Piloter) portant chacun trois fiches. */
+:root {
+  --copy-yellow: #f3cf3e;   /* feuillet carbone jaune */
+  --copy-blue: #9fc4ec;     /* feuillet carbone bleu */
+  --copy-pink: #f2a6bb;     /* feuillet carbone rose */
+  --tab-ink: #15212e;       /* texte posé sur les onglets */
+  --rule: #c8d1db;          /* filets et perforations */
+  --font-display: 'Archivo', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --tab-step: 33.333%;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --copy-yellow: #e5c23a; --copy-blue: #8ab6e4; --copy-pink: #e993ab; --tab-ink: #15212e; --rule: #34414f; }
+}
+:root[data-theme="dark"] { --copy-yellow: #e5c23a; --copy-blue: #8ab6e4; --copy-pink: #e993ab; --tab-ink: #15212e; --rule: #34414f; }
+
+.home { padding-block: 36px 64px; max-width: 1240px; }
+.home .mono { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+/* En-tête */
+.hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px 40px; align-items: end; margin-bottom: 40px; }
+.hero-logo { max-height: 44px; max-width: 160px; display: block; margin-bottom: 18px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.hello { font-family: var(--font-display); font-stretch: 125%; font-size: clamp(34px, 5vw, 62px); line-height: .98; letter-spacing: -0.025em; margin: 0; text-wrap: balance; }
+.hello .greet { display: block; font-weight: 300; color: var(--muted); }
+.hello .company { display: block; font-weight: 800; color: var(--text); overflow-wrap: anywhere; }
+
+.finder { position: relative; }
+.finder label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.finder input[type=search] { height: 52px; font-size: 17px; padding: 0 16px; border: 1.5px solid var(--text); border-radius: 3px; background: var(--surface); }
+.finder input[type=search]:focus { outline: 3px solid var(--copy-yellow); outline-offset: 0; border-color: var(--text); }
+.finder-results { position: absolute; left: 0; right: 0; top: 76px; z-index: 30; background: var(--surface); border: 1.5px solid var(--text); border-radius: 3px; max-height: 380px; overflow-y: auto; padding: 6px 0; }
+.finder-results h3 { font-family: var(--font-mono); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 10px 16px 4px; }
+.finder-results a { display: flex; justify-content: space-between; gap: 12px; padding: 7px 16px; color: var(--text); text-decoration: none; }
+.finder-results a:hover, .finder-results a:focus-visible { background: color-mix(in srgb, var(--copy-yellow) 28%, transparent); outline: none; }
+.finder-results .r-side { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.finder-results .r-none { padding: 10px 16px; color: var(--muted); margin: 0; }
+.quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.quick a { font-family: var(--font-display); font-stretch: 112%; font-weight: 600; font-size: 14px; text-decoration: none; color: var(--text); padding: 8px 14px; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); transition: background-color .15s, border-color .15s; }
+.quick a.ink { background: var(--text); color: var(--bg); border-color: var(--text); }
+.quick a:hover { background: var(--copy-yellow); border-color: var(--copy-yellow); color: var(--tab-ink); }
+
+/* Souche perforée : les chiffres du moment */
+.stub { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 22px; margin-bottom: 72px; }
+.stub::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: radial-gradient(circle, var(--rule) 2px, transparent 2.5px) 0 50% / 13px 8px repeat-x; }
+.stub-cell { display: flex; flex-direction: column; gap: 4px; padding: 4px 20px; border-left: 1px solid var(--rule); color: var(--text); text-decoration: none; min-width: 0; }
+.stub-cell:first-child { border-left: 0; padding-left: 0; }
+.stub-fig { font-size: clamp(22px, 2.5vw, 30px); line-height: 1.1; }
+.stub-cap { font-size: 13px; color: var(--muted); }
+.stub-cell:hover .stub-fig { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; text-decoration-color: var(--copy-yellow); }
+.stub-cell.alert .stub-fig { color: var(--danger); }
+.stub-cell.calm .stub-fig { color: var(--muted); }
+
+/* Intercalaires */
+.binder { display: grid; gap: 78px; }
+.divider { position: relative; border-top: 2px solid var(--cat); }
+.tab { position: absolute; top: -2px; left: calc(var(--i) * var(--tab-step)); transform: translateY(-100%); margin: 0; background: var(--cat); color: var(--tab-ink);
+  font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: 12.5px; text-transform: uppercase; letter-spacing: .12em; padding: 8px 18px 7px; border-radius: 7px 7px 0 0; white-space: nowrap; }
+.sheets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--rule); }
+.sheet { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 24px 22px 18px; min-height: 228px; border-left: 1px solid var(--rule); transition: background-color .18s ease; min-width: 0; }
+.sheet:first-child { border-left: 0; }
+.sheet:hover, .sheet:focus-within { background: color-mix(in srgb, var(--cat) 15%, transparent); }
+.sheet-link { color: var(--text); text-decoration: none; }
+.sheet-link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.sheet-link:focus-visible { outline: none; }
+.sheet-link:focus-visible::after { outline: 2px solid var(--text); outline-offset: -2px; }
+.sheet-title { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0; font-family: var(--font-display); font-stretch: 118%; font-weight: 700; font-size: clamp(21px, 1.9vw, 26px); line-height: 1.1; letter-spacing: -0.015em; }
+.sheet-title .arrow { font-weight: 300; transition: transform .18s ease; }
+.sheet:hover .arrow { transform: translateX(5px); }
+.sheet-desc { margin: 0; color: var(--muted); line-height: 1.45; max-width: 38ch; }
+.ref { align-self: flex-start; font-size: 12px; color: var(--text); border: 1px dashed var(--rule); padding: 3px 7px; border-radius: 2px; max-width: 100%; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chips span { font-size: 11.5px; padding: 2px 6px; border: 1px dashed var(--rule); border-radius: 2px; }
+.sheet-foot { margin-top: auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; padding-top: 12px; border-top: 1px dotted var(--rule); }
+.count { font-size: 13px; color: var(--muted); }
+.count b { font-family: var(--font-mono); font-weight: 500; font-size: 20px; color: var(--text); margin-right: 3px; }
+.flag { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 2px; background: var(--warn-bg); color: var(--warn); }
+.flag.bad { background: var(--danger-bg); color: var(--danger); }
+.flag.ok { background: var(--ok-bg); color: var(--ok); }
+.sheet-add { position: relative; z-index: 2; font-size: 13px; font-weight: 600; color: var(--text); text-decoration: none; border-bottom: 2px solid var(--cat); padding: 0 1px 1px; white-space: nowrap; }
+.sheet-add:hover, .sheet-add:focus-visible { background: var(--cat); color: var(--tab-ink); outline: none; }
+
+/* Derniers documents */
+.recent { margin-top: 72px; }
+.recent-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.recent-head h2 { margin: 0; font-family: var(--font-display); font-stretch: 118%; font-weight: 700; font-size: 20px; }
+.recent-head a { font-size: 13px; }
+.recent ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.recent li a { display: grid; grid-template-columns: 150px minmax(0, 1fr) 96px 120px 150px; gap: 6px 16px; align-items: baseline; padding: 11px 4px; border-bottom: 1px solid var(--rule); color: var(--text); text-decoration: none; }
+.recent li a:hover { background: color-mix(in srgb, var(--copy-blue) 16%, transparent); }
+.recent .r-num { font-size: 13px; }
+.recent .r-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent .r-what small { color: var(--muted); font-size: 13px; }
+.recent .r-date { color: var(--muted); font-size: 13px; }
+.recent .r-amount { text-align: right; font-size: 13px; }
+.recent .r-status { justify-self: end; }
+.recent .empty-line { padding: 18px 4px; color: var(--muted); border-bottom: 1px solid var(--rule); margin: 0; }
+
+@media (max-width: 1080px) {
+  .sheets { grid-template-columns: minmax(0, 1fr); }
+  .sheet { min-height: 0; border-left: 0; border-top: 1px solid var(--rule); }
+  .sheet:first-child { border-top: 0; }
+  .recent li a { grid-template-columns: 130px minmax(0, 1fr) 110px; }
+  .recent .r-date, .recent .r-status { display: none; }
+}
+@media (max-width: 760px) {
+  :root { --tab-step: 21%; }
+  .home { padding-block: 20px 48px; }
+  .hero { grid-template-columns: minmax(0, 1fr); margin-bottom: 28px; }
+  .quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .quick a { text-align: center; }
+  .stub { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 18px; margin-bottom: 64px; }
+  .stub-cell:nth-child(3) { border-left: 0; padding-left: 0; }
+  .tab { font-stretch: 100%; letter-spacing: .08em; padding: 7px 12px 6px; }
+  .sheet { padding: 20px 4px 16px; }
+  .recent li a { grid-template-columns: minmax(0, 1fr) auto; }
+  .recent .r-num { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .sheet-title .arrow, .quick a { transition: none; }
+}
+</style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main x-data="dashboard()" x-init="load()" x-cloak>
-  <div class="toolbar">
-    <h1 style="margin:0">Tableau de bord</h1>
-    <div class="spacer"></div>
-    <label style="margin:0">Année</label>
-    <select x-model="year" @change="load()" style="width:100px">
-      <template x-for="y in years" :key="y"><option :value="y" x-text="y" :selected="y == year"></option></template>
-    </select>
-  </div>
-
-  <template x-if="d">
+<main class="home" x-data="home()" x-cloak>
+  <header class="hero">
     <div>
-      <div class="grid grid-4" style="margin-bottom:16px">
-        <div class="kpi"><div class="label">Chiffre d'affaires HT facturé</div><div class="value" x-text="money(d.revenue_ht)"></div></div>
-        <div class="kpi"><div class="label">Encaissé</div><div class="value" x-text="money(d.collected)"></div></div>
-        <div class="kpi"><div class="label">Reste à encaisser (TTC)</div><div class="value" x-text="money(d.receivable)"></div></div>
-        <div class="kpi"><div class="label">Devis en cours (HT) · transformation</div><div class="value"><span x-text="money(d.pending_quotes_total)"></span> <span class="small muted" x-text="'· ' + num(d.conversion_rate) + ' %'"></span></div></div>
+      <img class="hero-logo" x-show="d && d.company.logo" :src="d ? d.company.logo : ''" alt="">
+      <p class="eyebrow"><span x-text="dateLabel"></span><span aria-hidden="true">·</span><span x-text="'Exercice ' + year"></span></p>
+      <h1 class="hello"><span class="greet" x-text="greeting"></span><span class="company" x-text="d ? d.company.name : '…'"></span></h1>
+    </div>
+    <div class="finder" @click.outside="results = null" @keydown.escape="results = null">
+      <label for="home-search">Rechercher</label>
+      <input id="home-search" type="search" x-model="q" @input.debounce.200ms="search()" @keydown.enter.prevent="openFirst()"
+             placeholder="Un client, un n° de devis, un article…" autocomplete="off">
+      <div class="finder-results" x-show="results" x-cloak>
+        <template x-if="results">
+          <div>
+            <template x-if="results.docs.length"><h3>Devis, factures, avoirs</h3></template>
+            <template x-for="r in results.docs" :key="'d' + r.id">
+              <a :href="'document.html?id=' + r.id"><span x-text="LABELS.type[r.type] + ' ' + (r.number || '(brouillon)') + ' — ' + (r.client_name || '')"></span><span class="r-side mono" x-text="money(r.total_ttc)"></span></a>
+            </template>
+            <template x-if="results.clients.length"><h3>Clients</h3></template>
+            <template x-for="r in results.clients" :key="'c' + r.id">
+              <a :href="'clients.html?id=' + r.id"><span x-text="clientName(r)"></span><span class="r-side" x-text="r.city || ''"></span></a>
+            </template>
+            <template x-if="results.items.length"><h3>Catalogue</h3></template>
+            <template x-for="r in results.items" :key="'i' + r.id">
+              <a :href="'catalogue.html?id=' + r.id"><span x-text="(r.reference ? r.reference + ' · ' : '') + r.designation"></span><span class="r-side mono" x-text="money(r.sale_price) + ' / ' + r.unit"></span></a>
+            </template>
+            <p class="r-none" x-show="!results.docs.length && !results.clients.length && !results.items.length" x-text="'Aucun résultat pour « ' + q + ' ».'"></p>
+          </div>
+        </template>
       </div>
-
-      <div class="card">
-        <h2>CA HT mensuel</h2>
-        <div class="bar-chart">
-          <template x-for="m in d.months" :key="m.month">
-            <div class="bar" :title="money(m.ht)">
-              <div class="fill" :style="`height:${max ? Math.max(0, m.ht) / max * 100 : 0}%`"></div>
-              <span x-text="monthNames[+m.month - 1]"></span>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <div class="grid grid-2">
-        <div class="card">
-          <h2>Factures en attente de règlement</h2>
-          <table class="list" x-show="d.open_invoices.length">
-            <thead><tr><th>N°</th><th>Client</th><th>Échéance</th><th class="num">Reste dû</th></tr></thead>
-            <tbody>
-              <template x-for="f in d.open_invoices" :key="f.id">
-                <tr class="clickable" @click="go('document.html?id='+f.id)">
-                  <td x-text="f.number"></td>
-                  <td x-text="f.client_name"></td>
-                  <td><span x-text="fdate(f.due_date)"></span> <span class="badge late" x-show="f.due_date && f.due_date < today">En retard</span></td>
-                  <td class="num" x-text="money(f.total_ttc - f.paid - f.credited)"></td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-          <div class="empty" x-show="!d.open_invoices.length">Aucune facture en attente.</div>
-        </div>
-        <div class="card">
-          <h2>Devis en cours</h2>
-          <table class="list" x-show="d.pending_quotes.length">
-            <thead><tr><th>N°</th><th>Client</th><th>Statut</th><th class="num">Total HT</th></tr></thead>
-            <tbody>
-              <template x-for="q in d.pending_quotes" :key="q.id">
-                <tr class="clickable" @click="go('document.html?id='+q.id)">
-                  <td x-text="q.number"></td>
-                  <td x-text="q.client_name"></td>
-                  <td><span class="badge" :class="q.status" x-text="LABELS.status[q.status]"></span></td>
-                  <td class="num" x-text="money(q.total_ht)"></td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-          <div class="empty" x-show="!d.pending_quotes.length">Aucun devis en cours.</div>
-        </div>
+      <div class="quick">
+        <a class="ink" href="document.html?new=devis">+ Devis</a>
+        <a href="document.html?new=facture">+ Facture</a>
+        <a href="clients.html?new=1">+ Client</a>
+        <a href="catalogue.html?new=1">+ Article</a>
       </div>
     </div>
-  </template>
+  </header>
+
+  <section class="stub" aria-label="En ce moment">
+    <a class="stub-cell" href="documents.html?type=facture&amp;status=emise">
+      <span class="stub-fig mono" x-text="d ? money(d.receivable) : '—'"></span>
+      <span class="stub-cap">à encaisser (TTC)</span>
+    </a>
+    <a class="stub-cell" :class="d && (d.counts.invoices_overdue ? 'alert' : 'calm')" href="documents.html?type=facture&amp;status=emise">
+      <span class="stub-fig mono" x-text="d ? d.counts.invoices_overdue : '—'"></span>
+      <span class="stub-cap" x-text="d && d.counts.invoices_overdue > 1 ? 'factures en retard' : 'facture en retard'"></span>
+    </a>
+    <a class="stub-cell" :class="d && !d.counts.quotes_waiting && 'calm'" href="documents.html?type=devis&amp;status=envoye">
+      <span class="stub-fig mono" x-text="d ? d.counts.quotes_waiting : '—'"></span>
+      <span class="stub-cap">devis en attente de réponse</span>
+    </a>
+    <a class="stub-cell" :class="d && !d.counts.quotes_accepted && 'calm'" href="documents.html?type=devis&amp;status=accepte">
+      <span class="stub-fig mono" x-text="d ? d.counts.quotes_accepted : '—'"></span>
+      <span class="stub-cap" x-text="d && d.counts.quotes_accepted > 1 ? 'devis acceptés à facturer' : 'devis accepté à facturer'"></span>
+    </a>
+  </section>
+
+  <nav class="binder" aria-label="Toutes les rubriques">
+    <!-- Vendre -->
+    <section class="divider" style="--cat: var(--copy-yellow); --i: 0" aria-labelledby="tab-vendre">
+      <h2 class="tab" id="tab-vendre">Vendre</h2>
+      <div class="sheets">
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="documents.html?type=devis">Devis</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">Chiffrer un chantier à partir du catalogue et suivre les réponses.</p>
+          <span class="ref mono" x-text="d ? 'Prochain n° ' + d.next_numbers.devis : '—'"></span>
+          <div class="sheet-foot">
+            <span class="count"><b x-text="d ? d.counts.quotes : '—'"></b>au total</span>
+            <a class="sheet-add" href="document.html?new=devis">+ Nouveau devis</a>
+          </div>
+        </article>
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="documents.html?type=facture">Factures</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">Émettre, enregistrer les règlements, repérer les retards.</p>
+          <span class="ref mono" x-text="d ? 'Prochain n° ' + d.next_numbers.facture : '—'"></span>
+          <div class="sheet-foot">
+            <span class="count"><b x-text="d ? d.counts.invoices : '—'"></b><span x-text="pl(d && d.counts.invoices, 'émise', 'émises')"></span>
+              <span class="flag" x-show="d && d.counts.invoices_draft" x-text="d && d.counts.invoices_draft + ' en brouillon'"></span></span>
+            <a class="sheet-add" href="document.html?new=facture">+ Nouvelle facture</a>
+          </div>
+        </article>
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="documents.html?type=avoir">Avoirs</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">Annuler ou corriger une facture émise, sans casser la numérotation.</p>
+          <span class="ref mono" x-text="d ? 'Prochain n° ' + d.next_numbers.avoir : '—'"></span>
+          <div class="sheet-foot">
+            <span class="count"><b x-text="d ? d.counts.credits : '—'"></b>au total</span>
+            <span class="count">Se crée depuis une facture</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Base de données -->
+    <section class="divider" style="--cat: var(--copy-blue); --i: 1" aria-labelledby="tab-base">
+      <h2 class="tab" id="tab-base">Base de données</h2>
+      <div class="sheets">
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="clients.html">Clients</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">Particuliers et professionnels, avec l'historique de chacun.</p>
+          <span class="ref mono" x-text="d ? d.counts.clients_pro + ' pro · ' + (d.counts.clients - d.counts.clients_pro) + ' particulier' + (d.counts.clients - d.counts.clients_pro > 1 ? 's' : '') : '—'"></span>
+          <div class="sheet-foot">
+            <span class="count"><b x-text="d ? d.counts.clients : '—'"></b><span x-text="pl(d && d.counts.clients, 'fiche', 'fiches')"></span></span>
+            <a class="sheet-add" href="clients.html?new=1">+ Nouveau client</a>
+          </div>
+        </article>
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="catalogue.html">Catalogue &amp; tarifs</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">Prestations, main d'œuvre, fournitures, matériel et ouvrages composés.</p>
+          <div class="chips mono">
+            <template x-for="t in itemTypes" :key="t[0]">
+              <span x-text="t[1] + ' ' + (d && d.counts.items_by_type[t[0]] || 0)"></span>
+            </template>
+          </div>
+          <div class="sheet-foot">
+            <span class="count"><b x-text="d ? d.counts.items : '—'"></b><span x-text="pl(d && d.counts.items, 'article actif', 'articles actifs')"></span></span>
+            <a class="sheet-add" href="catalogue.html?new=1">+ Nouvel article</a>
+          </div>
+        </article>
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="catalogue.html?tab=categories">Catégories</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">Classer les articles et importer les tarifs de vos fournisseurs.</p>
+          <span class="ref mono" x-text="d ? d.counts.catalogs + ' catalogue' + (d.counts.catalogs > 1 ? 's' : '') + ' fournisseur' + (d.counts.catalogs > 1 ? 's' : '') : '—'"></span>
+          <div class="sheet-foot">
+            <span class="count"><b x-text="d ? d.counts.categories : '—'"></b><span x-text="pl(d && d.counts.categories, 'catégorie', 'catégories')"></span></span>
+            <a class="sheet-add" href="catalogue.html?import=1">Importer un tarif</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Piloter -->
+    <section class="divider" style="--cat: var(--copy-pink); --i: 2" aria-labelledby="tab-piloter">
+      <h2 class="tab" id="tab-piloter">Piloter</h2>
+      <div class="sheets">
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="tableau-de-bord.html">Tableau de bord</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">Chiffre d'affaires, encaissements et taux de transformation des devis.</p>
+          <span class="ref mono" x-text="'Exercice ' + year"></span>
+          <div class="sheet-foot">
+            <span class="count"><b x-text="d ? d.counts.invoices_open : '—'"></b><span x-text="pl(d && d.counts.invoices_open, 'facture à encaisser', 'factures à encaisser')"></span></span>
+          </div>
+        </article>
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="modeles.html">Modèles</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">La mise en page de vos devis et factures, à l'image de l'entreprise.</p>
+          <span class="ref mono" x-text="d ? 'Par défaut : ' + d.template_default : '—'"></span>
+          <div class="sheet-foot">
+            <span class="count"><b x-text="d ? d.counts.templates : '—'"></b><span x-text="pl(d && d.counts.templates, 'modèle', 'modèles')"></span></span>
+          </div>
+        </article>
+        <article class="sheet">
+          <h3 class="sheet-title"><a class="sheet-link" href="parametres.html">Paramètres</a><span class="arrow" aria-hidden="true">→</span></h3>
+          <p class="sheet-desc">Entreprise, TVA, numérotation, mentions légales et sauvegarde.</p>
+          <span class="ref mono" x-text="d ? (d.company.name + (d.company.city ? ' · ' + d.company.city : '')) : '—'"></span>
+          <div class="sheet-foot">
+            <template x-if="d && d.company_missing.length">
+              <span class="flag" x-text="'À compléter : ' + d.company_missing.join(', ')"></span>
+            </template>
+            <template x-if="d && !d.company_missing.length">
+              <span class="flag ok">Fiche entreprise complète</span>
+            </template>
+          </div>
+        </article>
+      </div>
+    </section>
+  </nav>
+
+  <section class="recent" aria-labelledby="recent-title">
+    <div class="recent-head">
+      <h2 id="recent-title">Derniers documents</h2>
+      <a href="documents.html?type=devis">Tous les devis</a>
+    </div>
+    <ul>
+      <template x-for="r in (d ? d.recent : [])" :key="r.id">
+        <li><a :href="'document.html?id=' + r.id">
+          <span class="r-num mono" x-text="r.number || (LABELS.type[r.type] + ' brouillon')"></span>
+          <span class="r-what"><span x-text="r.client_name || 'Sans client'"></span> <small x-text="r.title ? '· ' + r.title : ''"></small></span>
+          <span class="r-date mono" x-text="fdate(r.date)"></span>
+          <span class="r-amount mono" x-text="money(r.total_ttc)"></span>
+          <span class="r-status"><span class="badge" :class="r.status" x-text="LABELS.status[r.status]"></span></span>
+        </a></li>
+      </template>
+    </ul>
+    <p class="empty-line" x-show="d && !d.recent.length">Aucun document pour l'instant. Commencez par un devis.</p>
+  </section>
 </main>
 <script>
-function dashboard() {
-  const cy = new Date().getFullYear();
+function home() {
+  const now = new Date();
+  const label = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
   return {
-    d: null, year: String(cy), today: todayIso(),
-    years: Array.from({ length: 6 }, (_, i) => String(cy - i)),
-    monthNames: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'],
-    get max() { return this.d ? Math.max(...this.d.months.map((m) => m.ht), 0) : 0; },
-    async load() { this.d = await api('/dashboard?year=' + this.year); }
+    d: null, q: '', results: null,
+    dateLabel: label.charAt(0).toUpperCase() + label.slice(1),
+    year: now.getFullYear(),
+    greeting: now.getHours() >= 18 ? 'Bonsoir,' : 'Bonjour,',
+    itemTypes: [['prestation', 'Presta.'], ['main_oeuvre', 'MO'], ['fourniture', 'Fourn.'], ['materiel', 'Mat.'], ['ouvrage', 'Ouvr.']],
+    async init() { this.d = await api('/home'); },
+    pl(n, one, many) { return n > 1 ? many : one; },
+    async search() {
+      const q = this.q.trim();
+      if (q.length < 2) { this.results = null; return; }
+      const enc = encodeURIComponent(q);
+      const [docs, clients, items] = await Promise.all([api('/documents?q=' + enc), api('/clients?q=' + enc), api('/items?limit=5&q=' + enc)]);
+      if (q !== this.q.trim()) return;
+      this.results = { docs: docs.slice(0, 6), clients: clients.slice(0, 5), items };
+    },
+    openFirst() {
+      const link = this.$root.querySelector('.finder-results a');
+      if (link) link.click();
+    }
   };
 }
 </script>

@@ -10,7 +10,7 @@
 </head>
 <body>
 <nav id="nav"></nav>
-<main x-data="clientsPage()" x-init="load()" x-cloak>
+<main x-data="clientsPage()" x-cloak>
   <div class="toolbar">
     <h1 style="margin:0">Clients</h1>
     <div class="spacer"></div>
@@ -96,6 +96,13 @@
 function clientsPage() {
   return {
     rows: [], q: '', form: null, history: [],
+    async init() {
+      await this.load();
+      const id = qs('id');
+      const c = id && this.rows.find((r) => r.id == id);
+      if (c) this.edit(c);
+      else if (qs('new')) this.edit({ kind: 'professionnel', country: 'France' });
+    },
     async load() { this.rows = await api('/clients?q=' + encodeURIComponent(this.q)); },
     async edit(c) {
       this.form = { ...c };

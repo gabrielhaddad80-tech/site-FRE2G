@@ -11,7 +11,7 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
 const read = (p) => fs.readFileSync(path.join(APP, p), 'utf8');
 const safe = (s) => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
 
-const PAGE_FILES = ['index.html', 'documents.html', 'document.html', 'clients.html', 'catalogue.html', 'modeles.html', 'parametres.html'];
+const PAGE_FILES = ['index.html', 'tableau-de-bord.html', 'documents.html', 'document.html', 'clients.html', 'catalogue.html', 'modeles.html', 'parametres.html'];
 const pages = {};
 const scripts = [];
 for (const f of PAGE_FILES) {
@@ -36,6 +36,10 @@ const backend = esbuild.buildSync({
   define: { 'process.env.DB_FILE': 'undefined', 'process.env.NO_SEED': 'undefined', __dirname: '"/app/src"' }
 }).outputFiles[0].text;
 
+// Polices intégrées en data: URI (la page doit être autonome)
+const fontsCss = read('public/css/fonts.css').replace(/url\(\.\.\/fonts\/([^)]+)\)/g, (_, f) =>
+  `url(data:font/woff2;base64,${fs.readFileSync(path.join(APP, 'public/fonts', f)).toString('base64')})`);
+
 const files = { 'classique.hbs': read('templates/classique.hbs'), 'classique.css': read('templates/classique.css') };
 
 const demoCss = `
@@ -50,6 +54,7 @@ const demoCss = `
 
 const out = `<title>FRE2G Facturation</title>
 <style>
+${fontsCss}
 ${read('public/css/app.css')}
 ${demoCss}
 </style>

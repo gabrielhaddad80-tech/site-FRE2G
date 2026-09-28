@@ -126,6 +126,18 @@ test('modèles : aperçu et refus d\'un modèle invalide', async () => {
   assert.match(prev.body, /<b>.+<\/b>/);
 });
 
+test('page d\'accueil : compteurs et prochains numéros', async () => {
+  const home = (await call('/home')).body;
+  assert.ok(home.company.name);
+  assert.ok(home.counts.items > 0);
+  assert.match(home.next_numbers.devis, /^DEV-\d{4}-\d{4}$/);
+  // Le prochain numéro affiché n'est pas consommé
+  assert.strictEqual((await call('/home')).body.next_numbers.devis, home.next_numbers.devis);
+  const q = (await call('/documents', 'POST', { type: 'devis', lines: [] })).body;
+  assert.strictEqual(q.number, home.next_numbers.devis);
+  assert.ok(Array.isArray(home.company_missing));
+});
+
 test('sauvegarde et restauration', async () => {
   const dump = (await call('/backup')).body;
   assert.strictEqual(dump.app, 'fre2g-facturation');

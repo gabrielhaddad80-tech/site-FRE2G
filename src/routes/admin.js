@@ -3,6 +3,14 @@
 const express = require('express');
 const { getSettings, DEFAULT_SETTINGS } = require('../db');
 const { renderDocument, pageHtml, handlebars } = require('../render');
+const { peekNumber } = require('../numbering');
+
+function localToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const CLIENT_NAME_SQL = "COALESCE(NULLIF(c.company,''), TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')))";
 
 const BACKUP_TABLES = ['settings', 'clients', 'categories', 'items', 'item_components', 'templates', 'documents', 'document_lines', 'payments', 'counters'];
 
@@ -84,6 +92,48 @@ module.exports = function adminRoutes(db) {
     } catch (e) {
       res.type('html').send(pageHtml({ title: 'Erreur', css: '', body: `<pre style="color:#b00;white-space:pre-wrap">Erreur dans le modèle :\n${String(e.message).replace(/</g, '&lt;')}</pre>` }));
     }
+  });
+
+  // ---------- Page d'accueil ----------
+  r.get('/home', (req, res) => {
+    const s = getSettings(db);
+    const today = localToday();
+    const n = (sql, ...p) => db.prepare(sql).get(...p).n || 0;
+    const open = db.prepare(`SELECT d.total_ttc, d.due_date,
+        (SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.document_id = d.id) AS paid,
+        (SELECT COALESCE(SUM(total_ttc),0) FROM documents a WHERE a.type = 'avoir' AND a.source_id = d.id AND a.number IS NOT NULL) AS credited
+      FROM documents d WHERE d.type = 'facture' AND d.status IN ('emise','partielle')`).all();
+    const byType = {};
+    for (const row of db.prepare('SELECT type, COUNT(*) AS n FROM items WHERE active = 1 GROUP BY type').all()) byType[row.type] = row.n;
+    res.json({
+      company: { name: s.company_name, city: s.company_city, logo: s.company_logo },
+      company_missing: [['company_siret', 'SIRET'], ['company_address', 'adresse'], ['company_email', 'e-mail'], ['bank_iban', 'IBAN']]
+        .filter(([k]) => !s[k]).map(([, label]) => label),
+      today,
+      counts: {
+        quotes: n("SELECT COUNT(*) AS n FROM documents WHERE type = 'devis'"),
+        quotes_waiting: n("SELECT COUNT(*) AS n FROM documents WHERE type = 'devis' AND status IN ('brouillon','envoye')"),
+        quotes_accepted: n("SELECT COUNT(*) AS n FROM documents WHERE type = 'devis' AND status = 'accepte'"),
+        quotes_pending_ht: Math.round((db.prepare("SELECT COALESCE(SUM(total_ht),0) AS n FROM documents WHERE type = 'devis' AND status IN ('brouillon','envoye','accepte')").get().n) * 100) / 100,
+        invoices: n("SELECT COUNT(*) AS n FROM documents WHERE type = 'facture' AND number IS NOT NULL"),
+        invoices_draft: n("SELECT COUNT(*) AS n FROM documents WHERE type = 'facture' AND number IS NULL"),
+        invoices_open: open.length,
+        invoices_overdue: open.filter((d) => d.due_date && d.due_date < today).length,
+        credits: n("SELECT COUNT(*) AS n FROM documents WHERE type = 'avoir'"),
+        clients: n('SELECT COUNT(*) AS n FROM clients'),
+        clients_pro: n("SELECT COUNT(*) AS n FROM clients WHERE kind = 'professionnel'"),
+        items: Object.values(byType).reduce((a, b) => a + b, 0),
+        items_by_type: byType,
+        categories: n('SELECT COUNT(*) AS n FROM categories'),
+        catalogs: n("SELECT COUNT(DISTINCT catalog) AS n FROM items WHERE catalog IS NOT NULL AND catalog <> ''"),
+        templates: n('SELECT COUNT(*) AS n FROM templates')
+      },
+      receivable: Math.round(open.reduce((sum, d) => sum + d.total_ttc - d.paid - d.credited, 0) * 100) / 100,
+      next_numbers: { devis: peekNumber(db, 'devis', today), facture: peekNumber(db, 'facture', today), avoir: peekNumber(db, 'avoir', today) },
+      template_default: db.prepare('SELECT name FROM templates ORDER BY is_default DESC, id LIMIT 1').get()?.name || '',
+      recent: db.prepare(`SELECT d.id, d.type, d.number, d.status, d.date, d.title, d.total_ttc, ${CLIENT_NAME_SQL} AS client_name
+        FROM documents d LEFT JOIN clients c ON c.id = d.client_id ORDER BY d.updated_at DESC, d.id DESC LIMIT 6`).all()
+    });
   });
 
   // ---------- Tableau de bord ----------

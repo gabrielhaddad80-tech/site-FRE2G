@@ -22,7 +22,7 @@
       <div><label>Statut</label>
         <select x-model="status" @change="load()">
           <option value="">Tous</option>
-          <template x-for="s in statuses" :key="s"><option :value="s" x-text="LABELS.status[s]"></option></template>
+          <template x-for="s in statuses" :key="s"><option :value="s" x-text="LABELS.status[s]" :selected="s === status"></option></template>
         </select>
       </div>
       <div><label>Du</label><input type="date" x-model="from" @change="load()"></div>
@@ -62,7 +62,7 @@ function docList() {
   const type = ['devis', 'facture', 'avoir'].includes(qs('type')) ? qs('type') : 'devis';
   const STATUSES = { devis: ['brouillon', 'envoye', 'accepte', 'refuse', 'facture'], facture: ['brouillon', 'emise', 'partielle', 'payee', 'annulee'], avoir: ['brouillon', 'emise'] };
   return {
-    type, rows: [], q: '', status: '', from: '', to: '', today: todayIso(),
+    type, rows: [], q: '', status: qs('status') || '', from: '', to: '', today: todayIso(),
     statuses: STATUSES[type],
     title: { devis: 'Devis', facture: 'Factures', avoir: 'Avoirs' }[type],
     init() { document.title = this.title + ' — Facturation'; this.load(); },

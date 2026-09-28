@@ -111,7 +111,8 @@ function parseCSV(text) {
 }
 
 const NAV = [
-  ['index.html', 'Tableau de bord'],
+  ['index.html', 'Accueil'],
+  ['tableau-de-bord.html', 'Tableau de bord'],
   ['documents.html?type=devis', 'Devis'],
   ['documents.html?type=facture', 'Factures'],
   ['documents.html?type=avoir', 'Avoirs'],
@@ -126,7 +127,7 @@ function renderNav() {
   if (!nav) return;
   const current = currentPage();
   const type = qs('type');
-  nav.innerHTML = '<div class="brand">Facturation</div>' + NAV.map(([href, label]) => {
+  nav.innerHTML = '<a class="brand" href="index.html">Facturation</a>' + NAV.map(([href, label]) => {
     const [page, query] = href.split('?');
     let active = page === current || (current === '' && page === 'index.html');
     if (active && query) active = query === `type=${type}`;

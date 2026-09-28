@@ -23,6 +23,12 @@ Options : `PORT=8080 npm start` pour changer de port, `DB_FILE=/chemin/base.db` 
 
 ## Fonctionnalités
 
+### Accueil
+Page d'entrée organisée comme un classeur à intercalaires : trois rubriques (**Vendre**, **Base de données**,
+**Piloter**) regroupent toutes les sections du logiciel, avec leurs chiffres à jour (prochain numéro de devis
+et de facture, montants à encaisser, retards, articles par type, informations entreprise à compléter).
+Recherche globale (clients, documents, articles) et raccourcis de création.
+
 ### Base de données / catalogue (`Catalogue & tarifs`)
 - Articles typés : **prestation**, **main d'œuvre**, **fourniture**, **matériel**, **ouvrage**.
 - Référence, désignation, description, unité, prix d'achat, coefficient, prix de vente, TVA, catégorie, catalogue/fournisseur.
@@ -75,7 +81,7 @@ src/numbering.js        numérotation des documents
 src/render.js           rendu des modèles (Handlebars)
 src/routes/             API : catalogue & clients, documents, paramètres / modèles / sauvegarde
 templates/              modèle d'impression par défaut (HTML + CSS)
-public/                 interface web (Alpine.js)
+public/                 interface web (Alpine.js), polices hébergées localement (public/fonts, licence OFL)
 public/js/calc.js       calcul des totaux (partagé navigateur / serveur)
 test/                   tests automatisés (npm test)
 ```

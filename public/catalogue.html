@@ -264,6 +264,10 @@ function catalogPage() {
       this.settings = await api('/settings');
       this.coef = Number(this.settings.default_margin_coef || 1.3);
       await Promise.all([this.load(), this.loadCategories()]);
+      if (qs('tab') === 'categories') this.tab = 'categories';
+      if (qs('id')) this.edit({ id: Number(qs('id')) });
+      else if (qs('new')) this.edit({ type: 'prestation' });
+      else if (qs('import')) this.importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {} };
     },
     async load() {
       const p = new URLSearchParams();

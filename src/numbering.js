@@ -25,9 +25,23 @@ function formatNumber(format, date, n) {
     .replace(/\{NUM(?::(\d+))?\}/g, (_, w) => String(n).padStart(w ? Number(w) : 1, '0'));
 }
 
+function formatFor(db, type) {
+  return db.prepare('SELECT value FROM settings WHERE key = ?').get(FORMAT_KEYS[type])?.value || `${type.toUpperCase()}-{NUM:4}`;
+}
+
+// Numéro qui sera attribué au prochain document, sans consommer le compteur.
+function peekNumber(db, type, date) {
+  const format = formatFor(db, type);
+  let n = db.prepare('SELECT value FROM counters WHERE type = ? AND scope = ?').get(type, scopeFor(format, date))?.value || 0;
+  for (;;) {
+    const number = formatNumber(format, date, ++n);
+    if (!db.prepare('SELECT 1 FROM documents WHERE number = ?').get(number)) return number;
+  }
+}
+
 // À appeler dans une transaction.
 function nextNumber(db, type, date) {
-  const format = db.prepare('SELECT value FROM settings WHERE key = ?').get(FORMAT_KEYS[type])?.value || `${type.toUpperCase()}-{NUM:4}`;
+  const format = formatFor(db, type);
   const scope = scopeFor(format, date);
   db.prepare('INSERT OR IGNORE INTO counters (type, scope, value) VALUES (?, ?, 0)').run(type, scope);
   // Saute les numéros déjà utilisés (ex. import d'anciens documents)
@@ -39,4 +53,4 @@ function nextNumber(db, type, date) {
   }
 }
 
-module.exports = { nextNumber, formatNumber, scopeFor };
+module.exports = { nextNumber, peekNumber, formatNumber, scopeFor };
