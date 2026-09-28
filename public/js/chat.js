@@ -9,7 +9,8 @@ const CHAT_SUGGESTIONS = [
   'Prépare un devis pour la pose de 20 m² de carrelage'
 ];
 
-const chat = { messages: [], busy: false, ctl: null, available: null, rec: null };
+const chat = { messages: [], files: [], busy: false, ctl: null, available: null, rec: null };
+const CHAT_MAX_FILES = 5;
 
 function chatLoad() {
   try { chat.messages = JSON.parse(localStorage.getItem(CHAT_KEY) || '[]').filter((m) => m && m.role && m.content).slice(-40); } catch (e) { chat.messages = []; }
@@ -45,13 +46,27 @@ function chatRender() {
   if (!log) return;
   log.innerHTML = '';
   if (!chat.messages.length) {
-    log.innerHTML = '<div class="chat-hello"><strong>Bonjour !</strong><p>Posez-moi une question sur votre activité, demandez un devis ou un texte de relance. Je consulte vos clients, votre catalogue, vos devis et vos factures.</p></div>';
+    log.innerHTML = '<div class="chat-hello"><strong>Bonjour !</strong><p>Posez-moi une question sur votre activité, demandez un devis ou un texte de relance. Je consulte vos clients, votre catalogue, vos devis et vos factures.</p><p>Vous pouvez aussi joindre une photo de chantier, un PDF (devis ou tarif fournisseur…) ou un fichier : trombone, glisser-déposer ou coller.</p></div>';
   }
   for (const m of chat.messages) {
     const b = document.createElement('div');
     b.className = 'bubble ' + m.role;
     if (m.role === 'assistant') b.innerHTML = chatFormat(m.content);
-    else b.textContent = m.content;
+    else {
+      if (m.content) b.textContent = m.content;
+      if (m.files && m.files.length) {
+        const list = document.createElement('div');
+        list.className = 'bubble-files';
+        for (const f of m.files) {
+          const chip = document.createElement('span');
+          chip.className = 'file-chip';
+          chip.innerHTML = icon(f.kind === 'image' ? 'camera' : 'file');
+          chip.append(f.name);
+          list.appendChild(chip);
+        }
+        b.appendChild(list);
+      }
+    }
     log.appendChild(b);
   }
   if (chat.busy) {
@@ -60,27 +75,76 @@ function chatRender() {
     t.innerHTML = chat.streaming ? chatFormat(chat.streaming) : '<span class="dots"><i></i><i></i><i></i></span> Je consulte vos données…';
     log.appendChild(t);
   }
-  document.getElementById('chat-suggest').hidden = chat.messages.length > 0 || chat.available === false;
+  document.getElementById('chat-suggest').hidden = chat.messages.length > 0 || chat.available === false || chat.files.length > 0;
+  chatRenderFiles();
   const send = document.getElementById('chat-send');
   send.hidden = chat.busy;
   document.getElementById('chat-stop').hidden = !chat.busy;
   log.scrollTop = log.scrollHeight;
 }
 
+function chatRenderFiles() {
+  const box = document.getElementById('chat-files');
+  if (!box) return;
+  box.hidden = !chat.files.length;
+  box.innerHTML = '';
+  chat.files.forEach((f, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'file-chip';
+    if (f.kind === 'image') {
+      const img = document.createElement('img');
+      img.src = f.preview;
+      img.alt = '';
+      chip.appendChild(img);
+    } else chip.innerHTML = icon('file');
+    chip.append(f.name);
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.setAttribute('aria-label', 'Retirer ' + f.name);
+    rm.innerHTML = icon('x');
+    rm.disabled = chat.busy;
+    rm.addEventListener('click', () => { chat.files.splice(i, 1); chatRender(); });
+    chip.appendChild(rm);
+    box.appendChild(chip);
+  });
+}
+
+async function chatAddFiles(fileList) {
+  const files = [...(fileList || [])];
+  if (!files.length || chat.busy) return;
+  for (const file of files) {
+    if (chat.files.length >= CHAT_MAX_FILES) { toast(CHAT_MAX_FILES + ' fichiers maximum par message', 'error'); break; }
+    try { chat.files.push(await prepareAttachment(file)); } catch (e) { toast(e.message, 'error'); }
+  }
+  chatRender();
+  document.getElementById('chat-input').focus();
+}
+
+// L'historique envoyé mentionne les fichiers des messages précédents (seul le dernier message les transmet)
+function chatHistoryForApi() {
+  return chat.messages.slice(-20).map((m) => ({
+    role: m.role,
+    content: (m.content || '') + (m.files && m.files.length ? `\n[Pièces jointes : ${m.files.map((f) => f.name).join(', ')}]` : '')
+  })).filter((m) => m.content.trim());
+}
+
 async function chatSend(text) {
   text = String(text || '').trim();
-  if (!text || chat.busy) return;
+  if ((!text && !chat.files.length) || chat.busy) return;
   const input = document.getElementById('chat-input');
   input.value = '';
   input.style.height = '';
-  chat.messages.push({ role: 'user', content: text });
+  const attachments = chat.files;
+  chat.files = [];
+  if (!text) text = attachments.length > 1 ? 'Voici des fichiers.' : 'Voici un fichier.';
+  chat.messages.push({ role: 'user', content: text, files: attachments.map((f) => ({ name: f.name, kind: f.kind })) });
   chat.busy = true;
   chat.streaming = '';
   chat.ctl = new AbortController();
   chatRender();
   try {
     const r = await aiChat({
-      messages: chat.messages.slice(-20), context: chatContext(), signal: chat.ctl.signal,
+      messages: chatHistoryForApi(), context: chatContext(), attachments, signal: chat.ctl.signal,
       onText: (t) => { chat.streaming = t; chatRender(); }
     });
     chat.messages.push({ role: 'assistant', content: r.reply });
@@ -163,7 +227,10 @@ function initChat() {
     <div class="chat-log" id="chat-log" aria-live="polite"></div>
     <div class="chat-suggest" id="chat-suggest">${CHAT_SUGGESTIONS.map((s) => `<button type="button">${s}</button>`).join('')}</div>
     <p class="chat-off" id="chat-off" hidden></p>
+    <div class="chat-files" id="chat-files" hidden></div>
     <form class="chat-form" id="chat-form">
+      <button type="button" class="icon-btn" id="chat-attach" aria-label="Joindre un fichier ou une photo" title="Joindre un fichier ou une photo">${icon('clip')}</button>
+      <input type="file" id="chat-file-input" multiple accept="image/*,application/pdf,.pdf,.txt,.csv,.md,.json,.xml" hidden>
       <textarea id="chat-input" rows="1" placeholder="Écrivez votre question…" aria-label="Votre message"></textarea>
       ${canDictate ? `<button type="button" class="icon-btn" id="chat-mic" aria-label="Dicter">${icon('mic')}</button>` : ''}
       <button type="submit" class="icon-btn send" id="chat-send" aria-label="Envoyer">${icon('arrow')}</button>
@@ -177,6 +244,16 @@ function initChat() {
   panel.querySelector('#chat-suggest').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) chatSend(b.textContent); });
   panel.querySelector('#chat-form').addEventListener('submit', (e) => { e.preventDefault(); chatSend(input.value); });
   panel.querySelector('#chat-stop').addEventListener('click', () => chat.ctl && chat.ctl.abort());
+  const fileInput = panel.querySelector('#chat-file-input');
+  panel.querySelector('#chat-attach').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { chatAddFiles(fileInput.files); fileInput.value = ''; });
+  panel.addEventListener('dragover', (e) => { if (chat.available !== false) { e.preventDefault(); panel.classList.add('drop'); } });
+  panel.addEventListener('dragleave', (e) => { if (!panel.contains(e.relatedTarget)) panel.classList.remove('drop'); });
+  panel.addEventListener('drop', (e) => { e.preventDefault(); panel.classList.remove('drop'); if (chat.available !== false) chatAddFiles(e.dataTransfer.files); });
+  input.addEventListener('paste', (e) => {
+    const files = [...(e.clipboardData ? e.clipboardData.files : [])];
+    if (files.length) { e.preventDefault(); chatAddFiles(files); }
+  });
   const mic = panel.querySelector('#chat-mic');
   if (mic) mic.addEventListener('click', () => chatDictate(mic));
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSend(input.value); } });

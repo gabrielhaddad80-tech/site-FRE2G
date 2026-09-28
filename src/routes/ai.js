@@ -138,6 +138,27 @@ module.exports = function aiRoutes(db, options = {}) {
       if (!history.length || history[history.length - 1].role !== 'user') throw httpError(400, 'Écrivez un message.');
       const note = AiDraft.contextNote(req.body.context);
       if (note) history[history.length - 1] = { role: 'user', content: history[history.length - 1].content + '\n\n' + note };
+      // Pièces jointes du dernier message : images, PDF (lus en entier par Claude) et fichiers texte
+      const files = (Array.isArray(req.body.attachments) ? req.body.attachments : []).slice(0, MAX_IMAGES);
+      if (files.length) {
+        const blocks = [];
+        for (const f of files) {
+          const name = String((f && f.name) || 'fichier').slice(0, 120);
+          if (f.kind === 'image' && IMAGE_TYPES.includes(f.media_type) && typeof f.data === 'string' && f.data) {
+            blocks.push({ type: 'image', source: { type: 'base64', media_type: f.media_type, data: f.data } });
+            blocks.push({ type: 'text', text: `(Image ci-dessus : « ${name} »)` });
+          } else if (f.kind === 'pdf' && typeof f.data === 'string' && f.data) {
+            if (f.data.length > 14 * 1024 * 1024) throw httpError(413, `Le PDF « ${name} » est trop volumineux (10 Mo maximum).`);
+            blocks.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data }, title: name });
+          } else if (f.kind === 'text' && typeof f.text === 'string') {
+            blocks.push({ type: 'text', text: `Contenu du fichier « ${name} » :\n${f.text.slice(0, 60000)}` });
+          } else {
+            throw httpError(400, `Type de fichier non pris en charge : « ${name} ».`);
+          }
+        }
+        const last = history[history.length - 1];
+        history[history.length - 1] = { role: 'user', content: [...blocks, { type: 'text', text: last.content }] };
+      }
 
       const settings = getSettings(db);
       const d = new Date();

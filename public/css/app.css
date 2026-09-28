@@ -220,6 +220,19 @@ body.chat-open #chat-fab { display: none; }
 .chat-form .icon-btn { width: 42px; height: 42px; }
 .chat-form .send { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 .chat-form .icon-btn[hidden] { display: none; }
+.chat-files { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 0; border-top: 1px solid var(--border-soft); }
+.chat-files[hidden] { display: none; }
+.chat-files + .chat-form { border-top: 0; }
+.file-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 6px 4px 8px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--text); overflow: hidden; }
+.file-chip img { width: 28px; height: 28px; object-fit: cover; border-radius: 6px; }
+.file-chip svg.i { width: 15px; height: 15px; color: var(--muted); }
+.file-chip button { width: 22px; height: 22px; padding: 0; justify-content: center; border: 0; background: none; border-radius: 50%; }
+.file-chip button svg.i { width: 13px; height: 13px; }
+.bubble-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.bubble.user .bubble-files:first-child { margin-top: 0; }
+.bubble.user .file-chip { background: rgba(255, 255, 255, .18); border-color: transparent; color: var(--on-primary); }
+.bubble.user .file-chip svg.i { color: var(--on-primary); }
+#chat-panel.drop { outline: 3px dashed var(--primary); outline-offset: -8px; }
 #chat-mic.on { background: var(--danger); border-color: var(--danger); color: #fff; }
 
 @media (max-width: 1000px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

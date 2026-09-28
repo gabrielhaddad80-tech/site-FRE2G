@@ -62,8 +62,62 @@ function aiUnavailableHint() {
   return 'Pour activer l\'assistant, ajoutez votre clé API Anthropic dans <a href="parametres.html">Paramètres</a>.';
 }
 // Chat avec l'assistant : renvoie { reply, created }
-function aiChat({ messages, context, signal }) {
-  return api('/ai/chat', { signal, body: { messages, context } });
+function aiChat({ messages, context, attachments, signal }) {
+  const files = (attachments || []).map((f) => ({ kind: f.kind, name: f.name, media_type: f.media_type, data: f.data, text: f.text }));
+  return api('/ai/chat', { signal, body: { messages, context, attachments: files } });
+}
+
+// Prépare une pièce jointe du chat : image réduite, PDF en base64 (10 Mo max) ou fichier texte
+const CHAT_TEXT_TYPES = /\.(txt|csv|md|json|xml|html?)$/i;
+async function prepareAttachment(file) {
+  const name = file.name || 'fichier';
+  if (/^image\//.test(file.type)) return { kind: 'image', ...(await prepareImage(file, 1568)), name };
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(name)) {
+    if (file.size > 10 * 1024 * 1024) throw new Error(`« ${name} » dépasse 10 Mo.`);
+    const data = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(',')[1]);
+      r.onerror = () => reject(new Error(`Lecture impossible : ${name}`));
+      r.readAsDataURL(file);
+    });
+    return { kind: 'pdf', name, media_type: 'application/pdf', data, file };
+  }
+  if (/^text\//.test(file.type) || CHAT_TEXT_TYPES.test(name)) {
+    if (file.size > 1024 * 1024) throw new Error(`« ${name} » dépasse 1 Mo.`);
+    let text = await file.text();
+    if (text.includes('\ufffd')) text = new TextDecoder('windows-1252').decode(await file.arrayBuffer());
+    return { kind: 'text', name, text };
+  }
+  throw new Error(`Format non pris en charge : « ${name} » (images, PDF ou fichiers texte).`);
+}
+
+// Pages d'un PDF en images. pdf.js tourne dans la page (pdfjsWorker) ;
+// isEvalSupported: false neutralise l'exécution de code des PDF piégés.
+async function pdfToImages(file, maxPages = 3, maxSide = 1568) {
+  await loadScript(PDFJS_BASE + 'pdf.worker.min.js');
+  await loadScript(PDFJS_BASE + 'pdf.min.js');
+  const lib = window.pdfjsLib;
+  lib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'pdf.worker.min.js';
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, enableXfa: false }).promise;
+  try {
+    const out = [];
+    for (let n = 1; n <= Math.min(pdf.numPages, maxPages); n++) {
+      const page = await pdf.getPage(n);
+      const base = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: maxSide / Math.max(base.width, base.height) });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      out.push(await canvasToImage(canvas, { name: `${file.name} (page ${n})` }));
+    }
+    return { images: out, pages: pdf.numPages };
+  } finally {
+    pdf.destroy();
+  }
 }
 
 // Conversion d'un modèle existant (image ou PDF) par l'IA
@@ -98,27 +152,8 @@ function canvasToImage(canvas, extra) {
 async function documentToImage(file, maxSide = 1800) {
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
   if (!isPdf) return prepareImage(file, maxSide);
-  // pdf.js tourne dans la page (pdfjsWorker) ; isEvalSupported: false neutralise l'exécution de code des PDF piégés
-  await loadScript(PDFJS_BASE + 'pdf.worker.min.js');
-  await loadScript(PDFJS_BASE + 'pdf.min.js');
-  const lib = window.pdfjsLib;
-  lib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'pdf.worker.min.js';
-  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, enableXfa: false }).promise;
-  try {
-    const page = await pdf.getPage(1);
-    const base = page.getViewport({ scale: 1 });
-    const viewport = page.getViewport({ scale: maxSide / Math.max(base.width, base.height) });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(viewport.width);
-    canvas.height = Math.round(viewport.height);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    return canvasToImage(canvas, { name: file.name, pages: pdf.numPages });
-  } finally {
-    pdf.destroy();
-  }
+  const { images, pages } = await pdfToImages(file, 1, maxSide);
+  return { ...images[0], name: file.name, pages };
 }
 
 // Réduit une photo (1568 px maximum par défaut, JPEG) avant l'envoi
@@ -243,6 +278,8 @@ const ICONS = {
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  clip: '<path d="m21 11.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/>',
+  file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>',
   pin: '<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   check: '<path d="m5 12 5 5 9-10"/>',

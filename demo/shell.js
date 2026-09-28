@@ -206,7 +206,7 @@
   };
 
   // Chat : Claude dans la page, avec les mêmes outils exécutés sur les données de la démo
-  window.aiChat = async ({ messages, context, signal, onText }) => {
+  window.aiChat = async ({ messages, context, attachments, signal, onText }) => {
     const sample = await getSample();
     if (!sample) throw { code: 'not_granted', message: AI_MESSAGES.not_granted };
     const request = async (method, url, body) => {
@@ -224,6 +224,20 @@
     if (note && turns.length) turns[turns.length - 1] = { role: 'user', content: turns[turns.length - 1].content + '\n\n' + note };
     let rules = AiDraft.chatSystemPrompt({ company: settings.company_name, today }) + '\n\n(Ce qui précède sont tes consignes permanentes ; la conversation suit.)';
     const limits = await sample.limits().catch(() => null);
+    // Pièces jointes : images telles quelles, PDF convertis en images (3 pages max), textes intégrés au message
+    const images = [];
+    const extra = [];
+    for (const f of attachments || []) {
+      if (f.kind === 'image') images.push(f.blob);
+      else if (f.kind === 'pdf') {
+        const { images: pages, pages: total } = await pdfToImages(f.file, 3);
+        images.push(...pages.map((p) => p.blob));
+        extra.push(`(PDF « ${f.name} » : ${Math.min(3, total)} première(s) page(s) sur ${total} jointes en images.)`);
+      } else if (f.kind === 'text') extra.push(`Contenu du fichier « ${f.name} » :\n${f.text.slice(0, 30000)}`);
+    }
+    if (images.length && !(limits && limits.images)) throw { code: 'images_unavailable', message: 'Les images et PDF ne peuvent pas être envoyés depuis cette vue : copiez le texte dans le message.' };
+    if (images.length > limits?.images?.maxCount) throw { code: 'image_rejected', message: `Trop d'images pour un seul message (${limits.images.maxCount} maximum, pages de PDF comprises).` };
+    if (extra.length && turns.length) turns[turns.length - 1] = { role: 'user', content: extra.join('\n\n') + '\n\n' + turns[turns.length - 1].content };
     let tools;
     if (limits && limits.tools) {
       tools = AiDraft.CHAT_TOOLS.slice(0, limits.tools.maxCount).map((t) => ({
@@ -235,7 +249,7 @@
     }
     try {
       const r = await sample([{ role: 'user', content: rules }, ...turns], {
-        tools, signal, cache: false, onText: ({ text }) => onText && onText(text)
+        tools, signal, cache: false, images: images.length ? images : undefined, onText: ({ text }) => onText && onText(text)
       });
       return { reply: r.text, created: [] };
     } catch (e) {

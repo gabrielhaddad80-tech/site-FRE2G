@@ -206,7 +206,16 @@
           designation: { type: 'string' }, description: { type: 'string' },
           quantite: { type: 'number' }, unite: { type: 'string' }, prix_unitaire_ht: { type: 'number' }, tva: { type: 'number' }
         }, ['designation']) }
-      }, ['objet', 'lignes']) }
+      }, ['objet', 'lignes']) },
+    { name: 'ajouter_articles', description: "Ajoute des articles au catalogue (par exemple lus dans un tarif fournisseur joint). Un article dont la référence existe déjà est MIS À JOUR avec les nouvelles valeurs. N'appelle cet outil qu'après avoir montré la liste à l'utilisateur et obtenu son accord explicite. Renvoie le nombre d'articles créés et mis à jour.",
+      input_schema: obj({
+        catalogue: { type: 'string', description: 'Nom du catalogue / fournisseur' },
+        articles: { type: 'array', items: obj({
+          reference: { type: 'string' }, designation: { type: 'string' }, description: { type: 'string' },
+          type: { type: 'string', enum: ['prestation', 'main_oeuvre', 'fourniture', 'materiel'] },
+          unite: { type: 'string' }, prix_achat_ht: { type: 'number' }, prix_vente_ht: { type: 'number' }, tva: { type: 'number' }, categorie: { type: 'string' }
+        }, ['designation']) }
+      }, ['articles']) }
   ];
 
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined && o[k] !== null && o[k] !== '').map((k) => [k, o[k]]));
@@ -267,6 +276,16 @@
         });
         return { id: d.id, numero: d.number, total_ht: d.total_ht, total_ttc: d.total_ttc, link: 'document.html?id=' + d.id };
       }
+      case 'ajouter_articles': {
+        const rows = (Array.isArray(input.articles) ? input.articles : []).slice(0, 500).map((a) => ({
+          reference: a.reference || '', designation: String(a.designation || ''), description: a.description || '',
+          type: a.type || 'fourniture', unit: a.unite || 'u', purchase_price: a.prix_achat_ht ?? '', sale_price: a.prix_vente_ht ?? '',
+          vat_rate: a.tva ?? '', category: a.categorie || ''
+        })).filter((a) => a.designation);
+        if (!rows.length) throw new Error('Aucun article valide.');
+        const r = await request('POST', '/items/import', { rows, catalog: input.catalogue || '' });
+        return { crees: r.created, mis_a_jour: r.updated, ignores: r.skipped, link: 'catalogue.html' };
+      }
       default:
         throw new Error('Outil inconnu : ' + name);
     }
@@ -280,6 +299,8 @@
       "- Pour préparer un devis, cherche d'abord le client et les articles du catalogue, reprends leurs id et leurs prix, puis crée-le avec creer_devis. Dis que c'est un brouillon à vérifier.",
       "- Cite les documents par leur numéro. Quand un document est concerné, ajoute un lien Markdown vers le logiciel, par exemple [DEV-2026-0003](document.html?id=12). Liens possibles : document.html?id=…, clients.html?id=…, catalogue.html?id=…",
       "- Réponds en français, de façon brève et concrète (quelques phrases ou une courte liste). Montants au format français (1 234,50 €).",
+      "- L'utilisateur peut joindre des photos, des PDF ou des fichiers texte : lis-les attentivement (devis ou tarif fournisseur, photo de chantier, ancien devis, courrier…) et sers-t'en pour répondre, chiffrer ou préparer un devis.",
+      "- Avant d'ajouter des articles au catalogue (ajouter_articles), présente la liste (référence, désignation, prix) et attends l'accord explicite de l'utilisateur ; préviens que les références existantes seront mises à jour.",
       "- Tu ne peux ni émettre une facture, ni enregistrer un règlement, ni supprimer quoi que ce soit : indique à l'utilisateur où le faire dans le logiciel."
     ].join('\n');
   }

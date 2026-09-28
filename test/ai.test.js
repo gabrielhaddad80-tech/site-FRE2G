@@ -178,3 +178,49 @@ test('chat : Claude utilise les outils puis répond', async () => {
     srv.close();
   }
 });
+
+test('chat : pièces jointes et ajout d\'articles au catalogue', async () => {
+  const replies = [
+    { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'a1', name: 'ajouter_articles', input: { catalogue: 'Tarif Leroy 2026', articles: [
+      { reference: 'LR-10', designation: 'Colle carrelage 25 kg', type: 'fourniture', unite: 'u', prix_achat_ht: 18.9, prix_vente_ht: 27.5, tva: 20 },
+      { reference: 'MO-01', designation: "Main d'œuvre ouvrier qualifié", prix_vente_ht: 48 }
+    ] } }] },
+    { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Catalogue mis à jour.' }] }
+  ];
+  const seen = [];
+  const scripted = () => ({ beta: { messages: { create: async (params) => { seen.push(JSON.parse(JSON.stringify(params))); return replies.shift(); } } } });
+  const db = openDatabase(':memory:');
+  const srv = createApp(db, { ai: { createClient: scripted } }).listen(0);
+  await new Promise((r) => srv.once('listening', r));
+  const url = `http://127.0.0.1:${srv.address().port}/api`;
+  const post = (path, body) => fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  try {
+    await fetch(url + '/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anthropic_api_key: 'sk-ant-x' }) });
+    const bad = await post('/ai/chat', { messages: [{ role: 'user', content: 'x' }], attachments: [{ kind: 'exe', name: 'virus.exe', data: 'AA' }] });
+    assert.strictEqual(bad.status, 400);
+    const res = await post('/ai/chat', {
+      messages: [{ role: 'user', content: 'Ancien message\n[Pièces jointes : plan.jpg]' }, { role: 'assistant', content: 'OK' }, { role: 'user', content: 'Ajoute ce tarif' }],
+      attachments: [
+        { kind: 'image', name: 'photo.jpg', media_type: 'image/jpeg', data: 'AAAA' },
+        { kind: 'pdf', name: 'tarif.pdf', media_type: 'application/pdf', data: 'JVBERi0=' },
+        { kind: 'text', name: 'prix.csv', text: 'ref;prix\nLR-10;27,5' }
+      ]
+    });
+    const body = await res.json();
+    assert.strictEqual(res.status, 200, JSON.stringify(body));
+    const last = seen[0].messages.at(-1).content;
+    assert.deepStrictEqual(last.map((b) => b.type), ['image', 'text', 'document', 'text', 'text']);
+    assert.strictEqual(last[2].source.media_type, 'application/pdf');
+    assert.strictEqual(last[2].title, 'tarif.pdf');
+    assert.match(last[3].text, /LR-10;27,5/);
+    assert.match(last[4].text, /Ajoute ce tarif/);
+    assert.strictEqual(typeof seen[0].messages[0].content, 'string', 'les anciens messages restent du texte');
+    const result = JSON.parse(seen[1].messages.at(-1).content[0].content);
+    assert.deepStrictEqual([result.crees, result.mis_a_jour], [1, 1]);
+    const items = await (await fetch(url + '/items?limit=100')).json();
+    assert.strictEqual(items.find((i) => i.reference === 'LR-10').catalog, 'Tarif Leroy 2026');
+    assert.strictEqual(items.find((i) => i.reference === 'MO-01').sale_price, 48);
+  } finally {
+    srv.close();
+  }
+});

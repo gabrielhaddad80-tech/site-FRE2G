@@ -78,7 +78,12 @@ pour répondre — clients, catalogue, devis, factures, tableau de bord — et p
 à partir de votre catalogue (à vérifier avant envoi). Exemples : « Quelles factures sont en retard ? »,
 « Quel est mon CA de mars ? », « Rédige une relance pour la facture FAC-2026-0004 », « Prépare un devis pour
 20 m² de carrelage chez Mme Martin ». Elle sait sur quelle page vous êtes (« ce devis », « ce client »),
-répond avec des liens vers les documents, et accepte la dictée. Elle ne peut ni émettre une facture, ni
+répond avec des liens vers les documents, et accepte la dictée.
+**Fichiers et photos dans le chat** : trombone, glisser-déposer ou coller une capture (5 fichiers par message) —
+photos (réduites avant l'envoi), PDF de 10 Mo maximum (lus en entier : devis ou tarif fournisseur, plan, ancien
+devis…) et fichiers texte/CSV. Exemples : « Fais-moi un devis d'après cette photo », « Compare ce devis
+fournisseur avec mes prix », « Ajoute ce tarif à mon catalogue » (l'assistant montre la liste et attend votre accord
+avant d'importer ; les références existantes sont mises à jour). Elle ne peut ni émettre une facture, ni
 enregistrer un règlement, ni supprimer quoi que ce soit. La conversation est conservée dans le navigateur ;
 le bouton crayon en démarre une nouvelle. Même clé API que l'assistant de rédaction.
 
