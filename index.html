@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Electroclim — Climatisation à Paris et en Île-de-France</title>
   <meta name="description" content="Electroclim, entreprise familiale depuis 30 ans : installation, entretien et dépannage de climatisation, pompes à chaleur et traitement d'air à Paris et en Île-de-France. Particuliers et professionnels.">
-  <meta name="theme-color" content="#0E1A2B">
+  <meta name="theme-color" content="#FFFFFF">
 
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_FR">
@@ -17,7 +17,6 @@
   <link rel="icon" type="image/png" sizes="32x32" href="logo/favicon-32.png">
   <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
 
-  <link rel="preload" href="fonts/cormorant-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" as="image" href="images/chambre-gainable-1600.webp" imagesrcset="images/chambre-gainable-900.webp 900w, images/chambre-gainable-1600.webp 1600w" imagesizes="100vw" type="image/webp">
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="fonts/fonts.css">
@@ -46,29 +45,23 @@
   }
   </script>
 </head>
-<body>
-  <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[100] focus:bg-nuit focus:px-3 focus:py-2 focus:text-ivoire">Aller au contenu</a>
+<body class="bg-white">
+  <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[100] focus:bg-nuit focus:px-3 focus:py-2 focus:text-white">Aller au contenu</a>
 
   <!-- En-tête -->
-  <header id="header" class="header fixed inset-x-0 top-0 z-50">
-    <div class="wrap flex h-[72px] items-center gap-10 lg:h-[88px]">
-      <a href="#" class="shrink-0" aria-label="Electroclim, retour en haut de page">
-        <picture><source type="image/webp" srcset="logo/logo-compact-white.webp"><img src="logo/logo-compact-white.png" alt="Electroclim" width="1137" height="220" class="h-10 w-auto lg:h-12"></picture>
-      </a>
-
+  <header id="header" class="site-header sticky top-0 z-50 bg-white/95 backdrop-blur transition-shadow duration-300">
+    <div class="wrap flex h-[72px] items-center gap-8 lg:h-[84px]">
+      <a href="#" class="shrink-0" aria-label="Electroclim, retour en haut de page"><picture><source type="image/webp" srcset="logo/logo-compact.webp"><img src="logo/logo-compact.png" alt="Electroclim" width="1137" height="220" class="h-10 w-auto lg:h-12"></picture></a>
       <nav id="nav" aria-label="Navigation principale"
-           class="absolute inset-x-0 top-full hidden flex-col bg-nuit px-6 pb-8 pt-4 lg:static lg:ml-auto lg:flex lg:flex-row lg:gap-9 lg:bg-transparent lg:p-0 [&.is-open]:flex">
-        <a class="nav-link border-b border-ivoire/10 py-4 lg:border-0 lg:py-2" href="#services">Services</a>
-        <a class="nav-link border-b border-ivoire/10 py-4 lg:border-0 lg:py-2" href="#clients">Pour qui</a>
-        <a class="nav-link border-b border-ivoire/10 py-4 lg:border-0 lg:py-2" href="#realisations">Réalisations</a>
-        <a class="nav-link py-4 lg:py-2" href="#contact">Contact</a>
+           class="absolute inset-x-0 top-full hidden flex-col border-b border-sable-300 bg-white px-6 pb-6 pt-2 shadow-lg lg:static lg:ml-auto lg:flex lg:flex-row lg:gap-8 lg:border-0 lg:p-0 lg:shadow-none [&.is-open]:flex">
+        <a class="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-nuit transition-colors hover:text-eclair border-b border-sable-300 py-4 lg:border-0 lg:py-2" href="#services">Services</a>
+        <a class="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-nuit transition-colors hover:text-eclair border-b border-sable-300 py-4 lg:border-0 lg:py-2" href="#realisations">Réalisations</a>
+        <a class="text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-nuit transition-colors hover:text-eclair py-4 lg:py-2" href="#contact">Contact</a>
       </nav>
-
-      <a class="ml-auto hidden text-[0.8rem] tracking-[0.12em] text-ivoire/85 transition-colors hover:text-ivoire sm:inline lg:ml-0" href="tel:+33664621231">06 64 62 12 31</a>
-      <button id="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav"
-              class="group ml-auto grid h-11 w-11 place-content-center gap-2 sm:ml-0 lg:hidden">
-        <span class="block h-px w-7 bg-ivoire transition-transform duration-300 group-aria-expanded:translate-y-[4.5px] group-aria-expanded:rotate-45"></span>
-        <span class="block h-px w-7 bg-ivoire transition-transform duration-300 group-aria-expanded:-translate-y-[4.5px] group-aria-expanded:-rotate-45"></span>
+      <a class="ml-auto inline-flex h-11 items-center gap-2 rounded-full bg-eclair px-4 text-sm font-semibold text-white transition-colors hover:bg-eclair-700 lg:ml-0 lg:px-5" href="tel:+33664621231" aria-label="Appeler le 06 64 62 12 31"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg><span class="hidden sm:inline">06 64 62 12 31</span></a>
+      <button id="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav" class="group grid h-11 w-11 place-content-center gap-1.5 lg:hidden">
+        <span class="block h-0.5 w-6 bg-nuit transition-transform duration-300 group-aria-expanded:translate-y-1 group-aria-expanded:rotate-45"></span>
+        <span class="block h-0.5 w-6 bg-nuit transition-transform duration-300 group-aria-expanded:-translate-y-1 group-aria-expanded:-rotate-45"></span>
       </button>
     </div>
   </header>
@@ -76,196 +69,75 @@
   <main id="contenu">
 
     <!-- Accueil -->
-    <section class="relative isolate flex min-h-[100svh] items-end overflow-hidden text-ivoire">
-      <div class="absolute inset-0 -z-20"><picture><source type="image/webp" srcset="images/chambre-gainable-900.webp 900w, images/chambre-gainable-1600.webp 1600w" sizes="100vw"><img src="images/chambre-gainable-900.jpg" alt="" width="1600" height="1200" fetchpriority="high" class="hero-img h-full w-full object-cover object-[60%_center]"></picture></div>
-      <div class="absolute inset-0 -z-10 bg-gradient-to-tr from-nuit/90 via-nuit/55 to-nuit/25" aria-hidden="true"></div>
-
-      <div class="wrap pb-20 pt-40 md:pb-28">
-        <p class="kicker kicker-light flex items-center gap-4" data-reveal><span class="rule"></span>De père en fils · depuis 30 ans</p>
-        <h1 class="display-xl mt-7 max-w-[11em] text-ivoire" data-reveal style="--delay:120ms">
-          Votre confort, <em class="font-display italic">notre métier</em> depuis trente ans.
-        </h1>
-        <p class="mt-7 text-[0.72rem] uppercase tracking-[0.28em] text-ivoire/70" data-reveal style="--delay:240ms">Climatisation · Chauffage · Traitement d’air — Paris &amp; Île-de-France</p>
-        <div class="mt-11 flex flex-col items-start gap-7 sm:flex-row sm:items-center sm:gap-10" data-reveal style="--delay:360ms">
-          <a class="btn btn-ivoire" href="#contact">Demander un devis <span class="arrow" aria-hidden="true">→</span></a>
-          <a class="link-line text-ivoire" href="#realisations">Nos réalisations</a>
+    <section class="relative isolate flex min-h-[78vh] items-center overflow-hidden text-white">
+      <div class="absolute inset-0 -z-20"><picture><source type="image/webp" srcset="images/chambre-gainable-900.webp 900w, images/chambre-gainable-1600.webp 1600w" sizes="100vw"><img src="images/chambre-gainable-900.jpg" alt="" width="1600" height="1200" fetchpriority="high" class="hero-img h-full w-full object-cover object-[55%_center]"></picture></div>
+      <div class="absolute inset-0 -z-10 bg-gradient-to-r from-nuit/85 via-nuit/55 to-nuit/10" aria-hidden="true"></div>
+      <div class="wrap py-20">
+        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/80" data-reveal>De père en fils · depuis 30 ans</p>
+        <h1 class="mt-4 max-w-[13em] text-[clamp(2.3rem,5.2vw,4rem)] font-extrabold leading-[1.08] tracking-tight text-white" data-reveal style="--delay:100ms">Votre confort, notre métier.</h1>
+        <p class="mt-5 max-w-[30em] text-lg text-white/85" data-reveal style="--delay:200ms">Climatisation et ventilation à Paris et en Île-de-France.</p>
+        <div class="mt-9 flex flex-col gap-3 sm:flex-row" data-reveal style="--delay:300ms">
+          <a class="inline-flex h-14 items-center justify-center rounded-full bg-eclair px-8 font-semibold text-white transition-colors hover:bg-eclair-700" href="#contact">Demander un devis</a>
+          <a class="inline-flex h-14 items-center justify-center rounded-full border border-white/60 px-8 font-semibold text-white transition-colors hover:bg-white hover:text-nuit" href="#realisations">Nos réalisations</a>
         </div>
       </div>
-      <span class="absolute bottom-0 right-6 hidden h-20 w-px bg-ivoire/20 sm:right-10 md:block lg:right-12" aria-hidden="true"><span class="scroll-cue block h-full w-px bg-ivoire"></span></span>
     </section>
 
-    <!-- Manifeste -->
-    <section class="py-[clamp(88px,12vw,160px)]">
-      <div class="wrap text-center">
-        <p class="kicker" data-reveal>Electroclim</p>
-        <p class="display-lg text-balance mx-auto mt-6 max-w-[17em]" data-reveal style="--delay:100ms">
-          Des installations que l’on ne voit pas, <em class="italic text-electro">un confort que l’on ressent.</em>
-        </p>
-        <ul class="mt-[clamp(56px,8vw,96px)] grid grid-cols-2 divide-nuit/10 border-y border-nuit/10 lg:grid-cols-4 lg:divide-x [&>li:nth-child(odd)]:border-r [&>li:nth-child(odd)]:border-nuit/10 lg:[&>li:nth-child(odd)]:border-r-0 [&>li:nth-child(-n+2)]:border-b [&>li:nth-child(-n+2)]:border-nuit/10 lg:[&>li:nth-child(-n+2)]:border-b-0 lg:py-10">
-          <li class="px-4 py-8 text-center lg:py-2" data-reveal style="--delay:0ms">
-            <span class="block font-display text-[clamp(2.6rem,4.5vw,3.6rem)] leading-none text-nuit">30</span>
-            <span class="mt-3 block text-[0.72rem] font-medium uppercase tracking-[0.24em] text-ardoise">ans d’expérience</span>
+    <!-- Services -->
+    <section id="services" class="py-[clamp(64px,8vw,104px)]">
+      <div class="wrap">
+        <h2 class="text-center text-[clamp(1.7rem,3vw,2.4rem)] font-bold tracking-tight text-nuit" data-reveal>Nos services</h2>
+        <ul class="mt-12 grid gap-12 sm:grid-cols-3">
+          <li class="text-center" data-reveal style="--delay:0ms">
+            <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-electro-50 text-electro"><svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18v8H3z"/><path d="M6 10h12"/><path d="M8 18l-1 3M12 18v3M16 18l1 3"/></svg></span>
+            <h3 class="mt-5 text-xl font-bold text-nuit">Installation</h3>
+            <p class="mt-1.5 text-ardoise">Pose soignée et discrète</p>
           </li>
-          <li class="px-4 py-8 text-center lg:py-2" data-reveal style="--delay:100ms">
-            <span class="block font-display text-[clamp(2.6rem,4.5vw,3.6rem)] leading-none text-nuit">2</span>
-            <span class="mt-3 block text-[0.72rem] font-medium uppercase tracking-[0.24em] text-ardoise">générations, de père en fils</span>
+          <li class="text-center" data-reveal style="--delay:100ms">
+            <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-electro-50 text-electro"><svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7"/><path d="M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5"/></svg></span>
+            <h3 class="mt-5 text-xl font-bold text-nuit">Entretien</h3>
+            <p class="mt-1.5 text-ardoise">Pour durer et consommer moins</p>
           </li>
-          <li class="px-4 py-8 text-center lg:py-2" data-reveal style="--delay:200ms">
-            <span class="block font-display text-[clamp(2.6rem,4.5vw,3.6rem)] leading-none text-nuit">Pros</span>
-            <span class="mt-3 block text-[0.72rem] font-medium uppercase tracking-[0.24em] text-ardoise">& particuliers</span>
-          </li>
-          <li class="px-4 py-8 text-center lg:py-2" data-reveal style="--delay:300ms">
-            <span class="block font-display text-[clamp(2.6rem,4.5vw,3.6rem)] leading-none text-nuit">IDF</span>
-            <span class="mt-3 block text-[0.72rem] font-medium uppercase tracking-[0.24em] text-ardoise">Paris & Île-de-France</span>
+          <li class="text-center" data-reveal style="--delay:200ms">
+            <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-electro-50 text-electro"><svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></span>
+            <h3 class="mt-5 text-xl font-bold text-nuit">Dépannage</h3>
+            <p class="mt-1.5 text-ardoise">Diagnostic et réparation</p>
           </li>
         </ul>
       </div>
     </section>
 
-    <!-- Services -->
-    <section id="services" class="bg-white py-[clamp(88px,11vw,150px)]">
-      <div class="wrap">
-        <header class="mb-[clamp(48px,6vw,80px)] flex flex-col justify-between gap-6 md:flex-row md:items-end" data-reveal>
-          <div>
-            <p class="kicker">Savoir-faire</p>
-            <h2 class="display-lg mt-5">Ce que nous faisons</h2>
-          </div>
-          <p class="max-w-[22em] text-ardoise">Particuliers et professionnels, du premier rendez-vous à l’entretien.</p>
-        </header>
-        <div class="grid gap-14 md:grid-cols-3 md:gap-8 lg:gap-12">
-          <article class="group" data-reveal style="--delay:0ms">
-            <div class="media aspect-[3/4]"><picture><source type="image/webp" srcset="images/gainable-haussmannien-900.webp 900w, images/gainable-haussmannien-1600.webp 1600w" sizes="(max-width: 768px) 100vw, 33vw"><img src="images/gainable-haussmannien-900.jpg" alt="Grilles de soufflage d’un gainable intégrées sous les moulures" width="900" height="1200" loading="lazy" class=""></picture></div>
-            <div class="mt-6 flex items-baseline gap-5">
-              <span class="font-display text-xl italic text-eclair">01</span>
-              <div>
-                <h3 class="display-md">Installation</h3>
-                <p class="mt-1.5 text-ardoise">Gainable, mural, console, cassette.</p>
-              </div>
-            </div>
-          </article>
-          <article class="group" data-reveal style="--delay:120ms">
-            <div class="media aspect-[3/4]"><picture><source type="image/webp" srcset="images/unite-exterieure-900.webp 900w" sizes="(max-width: 768px) 100vw, 33vw"><img src="images/unite-exterieure-900.jpg" alt="Unité extérieure sur supports antivibratiles" width="900" height="1200" loading="lazy" class=""></picture></div>
-            <div class="mt-6 flex items-baseline gap-5">
-              <span class="font-display text-xl italic text-eclair">02</span>
-              <div>
-                <h3 class="display-md">Entretien</h3>
-                <p class="mt-1.5 text-ardoise">Nettoyage, contrôle, performances.</p>
-              </div>
-            </div>
-          </article>
-          <article class="group" data-reveal style="--delay:240ms">
-            <div class="media aspect-[3/4]"><picture><source type="image/webp" srcset="images/mural-eclairage-900.webp 900w, images/mural-eclairage-1600.webp 1600w" sizes="(max-width: 768px) 100vw, 33vw"><img src="images/mural-eclairage-900.jpg" alt="Climatiseur mural sous un éclairage indirect" width="900" height="1200" loading="lazy" class=""></picture></div>
-            <div class="mt-6 flex items-baseline gap-5">
-              <span class="font-display text-xl italic text-eclair">03</span>
-              <div>
-                <h3 class="display-md">Dépannage</h3>
-                <p class="mt-1.5 text-ardoise">Diagnostic et réparation sur place.</p>
-              </div>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- Pour qui -->
-    <section id="clients" class="grid bg-nuit md:grid-cols-2" aria-label="Particuliers et professionnels">
-        <a href="#realisations" class="group relative isolate flex min-h-[70vh] items-end overflow-hidden p-8 text-ivoire md:min-h-[88vh] md:p-14" data-reveal style="--delay:0ms">
-          <div class="media absolute inset-0 -z-20"><picture><source type="image/webp" srcset="images/diffuseur-lineaire-900.webp 900w, images/diffuseur-lineaire-1600.webp 1600w" sizes="(max-width: 768px) 100vw, 50vw"><img src="images/diffuseur-lineaire-900.jpg" alt="Diffuseur linéaire intégré à la boiserie d’un appartement ancien" width="900" height="1200" loading="lazy" class=""></picture></div>
-          <span class="absolute inset-0 -z-10 bg-gradient-to-t from-nuit/90 via-nuit/30 to-nuit/10" aria-hidden="true"></span>
-          <span class="block">
-            <span class="kicker kicker-light">Appartements · Maisons · Lofts</span>
-            <span class="mt-3 block font-display text-[clamp(2.4rem,4.4vw,3.8rem)] leading-none">Particuliers</span>
-            <span class="link-line mt-6 text-ivoire">Voir les réalisations <span aria-hidden="true">→</span></span>
-          </span>
-        </a>
-        <a href="#realisations" class="group relative isolate flex min-h-[70vh] items-end overflow-hidden p-8 text-ivoire md:min-h-[88vh] md:p-14" data-reveal style="--delay:120ms">
-          <div class="media absolute inset-0 -z-20"><picture><source type="image/webp" srcset="images/plenum-chantier-900.webp 900w, images/plenum-chantier-1600.webp 1600w" sizes="(max-width: 768px) 100vw, 50vw"><img src="images/plenum-chantier-900.jpg" alt="Plénum de soufflage en cours de pose sur un chantier neuf" width="900" height="1200" loading="lazy" class=""></picture></div>
-          <span class="absolute inset-0 -z-10 bg-gradient-to-t from-nuit/90 via-nuit/30 to-nuit/10" aria-hidden="true"></span>
-          <span class="block">
-            <span class="kicker kicker-light">Bureaux · Commerces · Bâtiments</span>
-            <span class="mt-3 block font-display text-[clamp(2.4rem,4.4vw,3.8rem)] leading-none">Professionnels</span>
-            <span class="link-line mt-6 text-ivoire">Voir les réalisations <span aria-hidden="true">→</span></span>
-          </span>
-        </a>
-    </section>
-
     <!-- Réalisations -->
-    <section id="realisations" class="py-[clamp(88px,11vw,150px)]">
+    <section id="realisations" class="bg-sable py-[clamp(64px,8vw,104px)]">
       <div class="wrap">
-        <header class="mb-[clamp(48px,6vw,80px)] text-center" data-reveal>
-          <p class="kicker">Réalisations</p>
-          <h2 class="display-lg mt-5">Nos chantiers <em class="italic">en images</em></h2>
-        </header>
-
-        <h3 class="kicker mb-8 flex items-center gap-4"><span class="rule"></span>Chez les particuliers</h3>
-        <div class="gallery-home">
-          <figure class="shot area-a" data-reveal style="--delay:0ms">
-            <div class="media"><picture><source type="image/webp" srcset="images/diffuseur-lineaire-900.webp 900w, images/diffuseur-lineaire-1600.webp 1200w" sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw"><img src="images/diffuseur-lineaire-900.jpg" alt="Diffuseur linéaire discret intégré dans un panneau mural au-dessus d’un tableau ancien" width="900" height="1200" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Diffusion linéaire</strong><span>Paris</span></figcaption>
+        <h2 class="text-center text-[clamp(1.7rem,3vw,2.4rem)] font-bold tracking-tight text-nuit" data-reveal>Nos réalisations</h2>
+        <p class="mt-3 text-center text-ardoise" data-reveal>Des installations qui se font oublier.</p>
+        <div class="gallery-simple mt-12">
+          <figure class="group ga" data-reveal style="--delay:0ms">
+            <div class="overflow-hidden rounded-lg bg-sable"><picture><source type="image/webp" srcset="images/gainable-haussmannien-900.webp 900w, images/gainable-haussmannien-1600.webp 1600w" sizes="(max-width: 768px) 100vw, 66vw"><img src="images/gainable-haussmannien-900.jpg" alt="Deux grilles de gainable intégrées dans un caisson sous les moulures" width="900" height="675" loading="lazy" class="w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"></picture></div>
+            <figcaption class="mt-3 text-sm font-medium text-nuit">Gainable sous moulures</figcaption>
           </figure>
-          <figure class="shot area-b" data-reveal style="--delay:100ms">
-            <div class="media"><picture><source type="image/webp" srcset="images/gainable-haussmannien-900.webp 900w, images/gainable-haussmannien-1600.webp 1600w" sizes="(max-width: 900px) 100vw, 66vw"><img src="images/gainable-haussmannien-900.jpg" alt="Deux grilles de soufflage d’un gainable intégrées dans un caisson sous les moulures" width="900" height="675" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Gainable</strong><span>Haussmannien</span></figcaption>
+          <figure class="group gb" data-reveal style="--delay:100ms">
+            <div class="overflow-hidden rounded-lg bg-sable"><picture><source type="image/webp" srcset="images/grille-boiserie-900.webp 900w, images/grille-boiserie-1600.webp 1600w" sizes="(max-width: 768px) 100vw, 33vw"><img src="images/grille-boiserie-900.jpg" alt="Grille de soufflage intégrée dans une bibliothèque en bois" width="900" height="900" loading="lazy" class="w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"></picture></div>
+            <figcaption class="mt-3 text-sm font-medium text-nuit">Grille intégrée à la boiserie</figcaption>
           </figure>
-          <figure class="shot area-c" data-reveal style="--delay:0ms">
-            <div class="media"><picture><source type="image/webp" srcset="images/mural-eclairage-900.webp 900w, images/mural-eclairage-1600.webp 1600w" sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw"><img src="images/mural-eclairage-900.jpg" alt="Climatiseur mural blanc posé sous un bandeau d’éclairage indirect" width="900" height="675" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Mural</strong><span>Éclairage indirect</span></figcaption>
+          <figure class="group gc" data-reveal style="--delay:0ms">
+            <div class="overflow-hidden rounded-lg bg-sable"><picture><source type="image/webp" srcset="images/console-habillage-900.webp 900w, images/console-habillage-1600.webp 1600w" sizes="(max-width: 768px) 100vw, 66vw"><img src="images/console-habillage-900.jpg" alt="Console de climatisation et son habillage blanc sur mesure" width="900" height="675" loading="lazy" class="w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"></picture></div>
+            <figcaption class="mt-3 text-sm font-medium text-nuit">Console et habillage sur mesure</figcaption>
           </figure>
-          <figure class="shot area-d" data-reveal style="--delay:100ms">
-            <div class="media"><picture><source type="image/webp" srcset="images/console-habillage-900.webp 900w, images/console-habillage-1600.webp 1600w" sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw"><img src="images/console-habillage-900.jpg" alt="Unité console en cours de pose à côté de son habillage blanc réalisé sur mesure" width="900" height="675" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Console</strong><span>Sur mesure</span></figcaption>
-          </figure>
-          <figure class="shot area-e" data-reveal style="--delay:0ms">
-            <div class="media"><picture><source type="image/webp" srcset="images/unite-exterieure-900.webp 900w" sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw"><img src="images/unite-exterieure-900.jpg" alt="Unité extérieure posée au sol sur supports antivibratiles, liaisons en goulotte le long du mur" width="900" height="1199" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Unité extérieure</strong><span>Maison</span></figcaption>
-          </figure>
-          <figure class="shot area-f" data-reveal style="--delay:100ms">
-            <div class="media"><picture><source type="image/webp" srcset="images/liaisons-facade-900.webp 900w, images/liaisons-facade-1600.webp 1600w" sizes="(max-width: 900px) 100vw, 66vw"><img src="images/liaisons-facade-900.jpg" alt="Goulottes blanches des liaisons frigorifiques posées le long de la façade d’une maison" width="900" height="675" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Liaisons</strong><span>Façade</span></figcaption>
-          </figure>
-          <figure class="shot area-g" data-reveal style="--delay:0ms">
-            <div class="media"><picture><source type="image/webp" srcset="images/gainable-cuisine-900.webp 900w, images/gainable-cuisine-1600.webp 1600w" sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw"><img src="images/gainable-cuisine-900.jpg" alt="Grille de soufflage de gainable au-dessus de l’ouverture vers la cuisine" width="900" height="675" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Gainable</strong><span>Rénovation</span></figcaption>
-          </figure>
-          <figure class="shot area-h" data-reveal style="--delay:100ms">
-            <div class="media"><picture><source type="image/webp" srcset="images/chambre-gainable-900.webp 900w, images/chambre-gainable-1600.webp 1600w" sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw"><img src="images/chambre-gainable-900.jpg" alt="Chambre d’un appartement ancien, grille de climatisation gainable intégrée sous les moulures" width="900" height="675" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Gainable</strong><span>Sous moulures</span></figcaption>
-          </figure>
-        </div>
-
-        <h3 class="kicker mb-8 mt-[clamp(72px,9vw,120px)] flex items-center gap-4"><span class="rule"></span>Chez les professionnels</h3>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-8 lg:grid-cols-4">
-          <figure class="shot" data-reveal>
-            <div class="media aspect-[3/4]"><picture><source type="image/webp" srcset="images/toiture-groupe-900.webp 900w" sizes="(max-width: 1024px) 50vw, 25vw"><img src="images/toiture-groupe-900.jpg" alt="Groupe extérieur sur châssis et réseau de gaines sur la toiture d’un bâtiment" width="900" height="1200" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Toiture</strong><span>Bâtiment d’activité</span></figcaption>
-          </figure>
-          <figure class="shot" data-reveal style="--delay:100ms">
-            <div class="media aspect-[3/4]">
-              <video poster="videos/cassettes-batiment.jpg" width="720" height="1280" muted loop playsinline preload="none" aria-label="Vidéo : cassettes de climatisation suspendues sous la charpente d’un bâtiment en construction">
-                <source src="videos/cassettes-batiment.mp4" type='video/mp4; codecs="avc1.64001F"'>
-                <source src="videos/cassettes-batiment.webm" type='video/webm; codecs="vp9"'>
-              </video>
-              <span class="badge">Vidéo</span>
-            </div>
-            <figcaption><strong>Cassettes</strong><span>Bâtiment neuf</span></figcaption>
-          </figure>
-          <figure class="shot" data-reveal style="--delay:200ms">
-            <div class="media aspect-[3/4]"><picture><source type="image/webp" srcset="images/plenum-chantier-900.webp 900w, images/plenum-chantier-1600.webp 1600w" sizes="(max-width: 1024px) 50vw, 25vw"><img src="images/plenum-chantier-900.jpg" alt="Plénum de soufflage suspendu au-dessus d’une grande baie vitrée, sur un chantier en cours" width="900" height="1200" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Gainable</strong><span>Construction neuve</span></figcaption>
-          </figure>
-          <figure class="shot" data-reveal style="--delay:300ms">
-            <div class="media aspect-[3/4]"><picture><source type="image/webp" srcset="images/centrale-traitement-air-900.webp 900w, images/centrale-traitement-air-1600.webp 1600w" sizes="(max-width: 1024px) 50vw, 25vw"><img src="images/centrale-traitement-air-900.jpg" alt="Centrale de traitement d’air et gaines isolées dans un local industriel" width="900" height="1200" loading="lazy" class=""></picture></div>
-            <figcaption><strong>Traitement d’air</strong><span>Local industriel</span></figcaption>
+          <figure class="group gd" data-reveal style="--delay:100ms">
+            <div class="overflow-hidden rounded-lg bg-sable"><picture><source type="image/webp" srcset="images/bibliotheque-900.webp 900w, images/bibliotheque-1600.webp 1600w" sizes="(max-width: 768px) 100vw, 33vw"><img src="images/bibliotheque-900.jpg" alt="Bibliothèque éclairée dans un appartement rénové" width="900" height="585" loading="lazy" class="w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"></picture></div>
+            <figcaption class="mt-3 text-sm font-medium text-nuit">Agencement intégré</figcaption>
           </figure>
         </div>
       </div>
     </section>
 
     <!-- Marques -->
-    <section class="border-y border-nuit/10 bg-white" aria-label="Marques installées">
-      <div class="wrap flex flex-col items-center gap-8 py-12 lg:flex-row lg:gap-16">
-        <p class="kicker shrink-0">Nos marques</p>
-        <ul class="flex flex-1 flex-wrap items-center justify-center gap-x-12 gap-y-8 lg:justify-between">
+    <section class="py-14" aria-label="Marques installées">
+      <div class="wrap">
+        <p class="text-center text-xs font-semibold uppercase tracking-[0.2em] text-ardoise">Nos marques</p>
+        <ul class="mt-8 flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
           <li><picture><source type="image/webp" srcset="logos-marques/daikin.webp"><img src="logos-marques/daikin.png" alt="Daikin" width="520" height="109" loading="lazy" class="brand-logo h-7 w-auto"></picture></li>
           <li><picture><source type="image/webp" srcset="logos-marques/mitsubishi-electric.webp"><img src="logos-marques/mitsubishi-electric.png" alt="Mitsubishi Electric" width="445" height="130" loading="lazy" class="brand-logo h-9 w-auto"></picture></li>
           <li><picture><source type="image/webp" srcset="logos-marques/airwell.webp"><img src="logos-marques/airwell.png" alt="Airwell" width="520" height="126" loading="lazy" class="brand-logo h-7 w-auto"></picture></li>
@@ -275,92 +147,39 @@
       </div>
     </section>
 
-    <!-- Méthode -->
-    <section id="methode" class="bg-nuit py-[clamp(88px,11vw,150px)] text-ivoire">
-      <div class="wrap">
-        <header class="mb-[clamp(48px,6vw,80px)]" data-reveal>
-          <p class="kicker kicker-light">Méthode</p>
-          <h2 class="display-lg mt-5 text-ivoire">Simple, <em class="italic">en quatre temps</em></h2>
-        </header>
-        <ol class="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-          <li class="border-t border-ivoire/15 pt-6" data-reveal style="--delay:0ms">
-            <span class="font-display text-lg italic text-eclair-300">01</span>
-            <h3 class="mt-4 font-display text-[1.9rem] text-ivoire">Visite</h3>
-            <p class="mt-1.5 text-ivoire/60">Sur place, sans engagement.</p>
-          </li>
-          <li class="border-t border-ivoire/15 pt-6" data-reveal style="--delay:100ms">
-            <span class="font-display text-lg italic text-eclair-300">02</span>
-            <h3 class="mt-4 font-display text-[1.9rem] text-ivoire">Devis</h3>
-            <p class="mt-1.5 text-ivoire/60">Clair et détaillé.</p>
-          </li>
-          <li class="border-t border-ivoire/15 pt-6" data-reveal style="--delay:200ms">
-            <span class="font-display text-lg italic text-eclair-300">03</span>
-            <h3 class="mt-4 font-display text-[1.9rem] text-ivoire">Installation</h3>
-            <p class="mt-1.5 text-ivoire/60">Propre et soignée.</p>
-          </li>
-          <li class="border-t border-ivoire/15 pt-6" data-reveal style="--delay:300ms">
-            <span class="font-display text-lg italic text-eclair-300">04</span>
-            <h3 class="mt-4 font-display text-[1.9rem] text-ivoire">Suivi</h3>
-            <p class="mt-1.5 text-ivoire/60">Mise en service et entretien.</p>
-          </li>
-        </ol>
-      </div>
-    </section>
-
     <!-- Contact -->
-    <section id="contact" class="bg-nuit-950 py-[clamp(88px,11vw,150px)] text-ivoire">
-      <div class="wrap grid gap-16 lg:grid-cols-2 lg:gap-24">
+    <section id="contact" class="bg-electro py-[clamp(64px,8vw,104px)] text-white">
+      <div class="wrap grid gap-12 lg:grid-cols-2 lg:gap-20">
         <div data-reveal>
-          <p class="kicker kicker-light">Contact</p>
-          <h2 class="display-lg mt-5 text-ivoire">Parlons de <em class="italic">votre projet</em></h2>
-          <a href="tel:+33664621231" class="mt-12 block font-display text-[clamp(2.2rem,4vw,3.2rem)] leading-none text-ivoire transition-colors hover:text-eclair-300">06 64 62 12 31</a>
-          <dl class="mt-12 grid gap-7 border-t border-ivoire/15 pt-8 text-ivoire/80">
-            <div><dt class="kicker kicker-light mb-2">E-mail</dt><dd class="break-all"><a class="hover:text-ivoire" href="mailto:electroclimconcept@gmail.com">electroclimconcept@gmail.com</a></dd></div>
-            <div><dt class="kicker kicker-light mb-2">Adresse</dt><dd>42, rue du Port — 93300 Aubervilliers</dd></div>
-            <div><dt class="kicker kicker-light mb-2">Zone</dt><dd>Paris &amp; Île-de-France</dd></div>
-          </dl>
+          <h2 class="text-[clamp(1.7rem,3vw,2.4rem)] font-bold tracking-tight text-white">Contactez-nous</h2>
+          <p class="mt-3 text-white/75">Devis gratuit, particuliers et professionnels.</p>
+          <ul class="mt-10 grid gap-6">
+            <li><a class="flex items-center gap-4 text-2xl font-bold hover:underline" href="tel:+33664621231"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></span>06 64 62 12 31</a></li>
+            <li><a class="flex items-center gap-4 break-all hover:underline" href="mailto:electroclimconcept@gmail.com"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v14H3z"/><path d="m3 6 9 7 9-7"/></svg></span>electroclimconcept@gmail.com</a></li>
+            <li class="flex items-center gap-4"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span>42, rue du Port, 93300 Aubervilliers</li>
+          </ul>
         </div>
-
-        <form id="contact-form" class="grid content-start gap-9" data-reveal style="--delay:120ms">
-          <fieldset class="flex flex-wrap gap-8">
+        <form id="contact-form" class="grid gap-4 rounded-2xl bg-white p-6 text-nuit md:p-9" data-reveal style="--delay:100ms">
+          <fieldset class="flex flex-wrap gap-6 text-sm">
             <legend class="sr-only">Vous êtes</legend>
-            <label class="choice"><input class="h-4 w-4 accent-eclair" type="radio" name="profil" value="Particulier" checked> Particulier</label>
-            <label class="choice"><input class="h-4 w-4 accent-eclair" type="radio" name="profil" value="Professionnel"> Professionnel</label>
+            <label class="flex cursor-pointer items-center gap-2"><input class="h-4 w-4 accent-eclair" type="radio" name="profil" value="Particulier" checked> Particulier</label>
+            <label class="flex cursor-pointer items-center gap-2"><input class="h-4 w-4 accent-eclair" type="radio" name="profil" value="Professionnel"> Professionnel</label>
           </fieldset>
-          <div class="grid gap-9 sm:grid-cols-2">
-            <label class="field">Nom <input class="input" type="text" name="nom" required autocomplete="name"></label>
-            <label class="field">Téléphone <input class="input" type="tel" name="telephone" required autocomplete="tel"></label>
-          </div>
-          <label class="field">Votre besoin
-            <select class="input" name="besoin">
-              <option>Installation</option>
-              <option>Entretien</option>
-              <option>Dépannage</option>
-              <option>Autre</option>
-            </select>
-          </label>
-          <label class="field">Message
-            <textarea class="input resize-none" name="message" rows="3" placeholder="En quelques mots…"></textarea>
-          </label>
-          <button type="submit" class="btn btn-ivoire justify-self-start">Envoyer la demande <span class="arrow" aria-hidden="true">→</span></button>
+          <input class="input-simple" type="text" name="nom" placeholder="Nom" required autocomplete="name" aria-label="Nom">
+          <input class="input-simple" type="tel" name="telephone" placeholder="Téléphone" required autocomplete="tel" aria-label="Téléphone">
+          <select class="input-simple" name="besoin" aria-label="Votre besoin"><option>Installation</option><option>Entretien</option><option>Dépannage</option><option>Autre</option></select>
+          <textarea class="input-simple resize-none" name="message" rows="3" placeholder="Votre message" aria-label="Message"></textarea>
+          <button type="submit" class="h-14 rounded-full bg-eclair font-semibold text-white transition-colors hover:bg-eclair-700">Envoyer</button>
         </form>
       </div>
     </section>
   </main>
 
   <!-- Pied de page -->
-  <footer class="bg-nuit-950 text-[0.85rem] text-ivoire/55">
-    <div class="wrap flex flex-col gap-8 border-t border-ivoire/10 py-12 md:flex-row md:items-center md:justify-between">
-      <picture><source type="image/webp" srcset="logo/logo-compact-white.webp"><img src="logo/logo-compact-white.png" alt="Electroclim" width="1137" height="220" loading="lazy" class="h-11 w-auto"></picture>
-      <nav class="flex flex-wrap gap-x-8 gap-y-3 text-[0.7rem] uppercase tracking-[0.24em]" aria-label="Liens du pied de page">
-        <a class="hover:text-ivoire" href="#services">Services</a>
-        <a class="hover:text-ivoire" href="#realisations">Réalisations</a>
-        <a class="hover:text-ivoire" href="#contact">Contact</a>
-        <a class="hover:text-ivoire" href="mentions-legales.html">Mentions légales</a>
-      </nav>
-    </div>
-    <div class="wrap pb-10 text-[0.75rem] text-ivoire/35">
-      <p>© <span id="year">2026</span> Electroclim — De père en fils depuis 30 ans — SASU FRE2G au capital de 5 000 € — RCS Bobigny 844 794 057</p>
+  <footer class="bg-nuit py-10 text-sm text-white/60">
+    <div class="wrap flex flex-col items-center gap-5 text-center md:flex-row md:justify-between md:text-left">
+      <picture><source type="image/webp" srcset="logo/logo-compact-white.webp"><img src="logo/logo-compact-white.png" alt="Electroclim" width="1137" height="220" loading="lazy" class="h-9 w-auto"></picture>
+      <p>© <span id="year">2026</span> Electroclim — SASU FRE2G — RCS Bobigny 844 794 057 · <a class="underline hover:text-white" href="mentions-legales.html">Mentions légales</a></p>
     </div>
   </footer>
 

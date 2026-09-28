@@ -6,7 +6,7 @@
 
 @layer base {
   html { scroll-behavior: smooth; scroll-padding-top: 80px; -webkit-font-smoothing: antialiased; }
-  body { @apply bg-ivoire font-sans text-nuit-800 leading-relaxed; }
+  body { @apply bg-white font-sans text-nuit-800 leading-relaxed; }
   h1, h2, h3, h4 { @apply font-display font-medium text-nuit; letter-spacing: -0.005em; line-height: 1.08; }
   :focus-visible { @apply outline outline-1 outline-offset-4 outline-electro; }
   ::selection { @apply bg-nuit text-ivoire; }
@@ -85,6 +85,22 @@
   @media (max-width: 560px) {
     .gallery-home { grid-template-columns: 1fr; grid-template-areas: "b" "a" "c" "e" "d" "f" "g" "h"; }
     .gallery-home .area-b img, .gallery-home .area-f img { aspect-ratio: 4 / 3; }
+  }
+
+  /* Version simple */
+  .site-header.is-scrolled { @apply shadow-[0_4px_20px_rgba(14,26,43,0.08)]; }
+  .input-simple {
+    @apply w-full rounded-xl border border-sable-400 bg-white px-4 py-3.5 text-base text-nuit placeholder:text-ardoise/70
+           transition-colors focus:border-electro focus:outline-none focus:ring-2 focus:ring-electro/20;
+  }
+  .gallery-simple { @apply grid gap-6; grid-template-columns: 2fr 1fr; grid-template-areas: "a b" "c d"; }
+  .gallery-simple .ga { grid-area: a; } .gallery-simple .gb { grid-area: b; }
+  .gallery-simple .gc { grid-area: c; } .gallery-simple .gd { grid-area: d; }
+  .gallery-simple .ga img, .gallery-simple .gc img { aspect-ratio: 16 / 10; }
+  .gallery-simple .gb img, .gallery-simple .gd img { aspect-ratio: 4 / 5; }
+  @media (max-width: 767px) {
+    .gallery-simple { grid-template-columns: 1fr; grid-template-areas: "a" "b" "c" "d"; }
+    .gallery-simple .gb img, .gallery-simple .gd img { aspect-ratio: 4 / 3; }
   }
 
   /* Logos des marques */
