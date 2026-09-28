@@ -11,7 +11,7 @@
 </head>
 <body>
 <nav id="nav"></nav>
-<main x-data="catalogPage()" x-init="init()" x-cloak>
+<main x-data="catalogPage()" x-cloak>
   <div class="toolbar">
     <h1 style="margin:0">Catalogue & tarifs</h1>
     <div class="spacer"></div>
@@ -289,7 +289,7 @@ function catalogPage() {
     },
     async duplicate(it) { await api(`/items/${it.id}/duplicate`, { body: {} }); this.load(); toast('Article dupliqué'); },
     async remove() {
-      if (!confirm('Supprimer cet article du catalogue ? (Les devis et factures existants ne sont pas modifiés.)')) return;
+      if (!(await uiConfirm('Supprimer cet article du catalogue ? (Les devis et factures existants ne sont pas modifiés.)'))) return;
       await api('/items/' + this.form.id, { method: 'DELETE' });
       this.form = null; this.load();
     },
@@ -309,7 +309,7 @@ function catalogPage() {
     },
     async saveCategory(c) { await api('/categories/' + c.id, { method: 'PUT', body: c }); },
     async deleteCategory(c) {
-      if (!confirm(`Supprimer la catégorie « ${c.name} » ? Les articles seront conservés sans catégorie.`)) return;
+      if (!(await uiConfirm(`Supprimer la catégorie « ${c.name} » ? Les articles seront conservés sans catégorie.`))) return;
       await api('/categories/' + c.id, { method: 'DELETE' }); this.loadCategories();
     },
 
@@ -355,7 +355,7 @@ function catalogPage() {
 
     async runReprice() {
       if (!Calc.num(this.reprice.percent)) return;
-      if (!confirm(`Appliquer une variation de ${this.reprice.percent} % ?`)) return;
+      if (!(await uiConfirm(`Appliquer une variation de ${this.reprice.percent} % ?`))) return;
       const res = await api('/items/reprice', { body: this.reprice });
       toast(res.updated + ' article(s) mis à jour');
       this.reprice = null; this.load();

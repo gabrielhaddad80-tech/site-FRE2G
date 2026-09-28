@@ -2,3 +2,5 @@ node_modules/
 data/*.db
 data/*.db-*
 !data/.gitkeep
+demo/node_modules/
+demo/dist/

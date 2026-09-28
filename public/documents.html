@@ -10,7 +10,7 @@
 </head>
 <body>
 <nav id="nav"></nav>
-<main x-data="docList()" x-init="init()" x-cloak>
+<main x-data="docList()" x-cloak>
   <div class="toolbar">
     <h1 style="margin:0" x-text="title"></h1>
     <div class="spacer"></div>
@@ -32,7 +32,7 @@
       <thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Objet</th><th>Statut</th><th class="num">Total HT</th><th class="num">Total TTC</th><th class="num" x-show="type === 'facture'">Reste dû</th></tr></thead>
       <tbody>
         <template x-for="d in rows" :key="d.id">
-          <tr class="clickable" @click="location.href='document.html?id=' + d.id">
+          <tr class="clickable" @click="go('document.html?id=' + d.id)">
             <td x-text="d.number || '(brouillon)'" :class="!d.number && 'muted'"></td>
             <td x-text="fdate(d.date)"></td>
             <td x-text="d.client_name"></td>

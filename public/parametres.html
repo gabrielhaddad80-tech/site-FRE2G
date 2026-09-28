@@ -10,7 +10,7 @@
 </head>
 <body>
 <nav id="nav"></nav>
-<main x-data="settingsPage()" x-init="init()" x-cloak>
+<main x-data="settingsPage()" x-cloak>
   <div class="toolbar">
     <h1 style="margin:0">Paramètres</h1>
     <div class="spacer"></div>
@@ -134,7 +134,7 @@ function settingsPage() {
     async restore(e) {
       const f = e.target.files[0];
       if (!f) return;
-      if (!confirm('Restaurer cette sauvegarde ? TOUTES les données actuelles seront remplacées.')) { e.target.value = ''; return; }
+      if (!(await uiConfirm('Restaurer cette sauvegarde ? TOUTES les données actuelles seront remplacées.'))) { e.target.value = ''; return; }
       let data;
       try { data = JSON.parse(await f.text()); } catch { toast('Fichier illisible', 'error'); return; }
       await api('/restore', { body: data });

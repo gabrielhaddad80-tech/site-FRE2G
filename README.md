@@ -80,6 +80,15 @@ public/js/calc.js       calcul des totaux (partagé navigateur / serveur)
 test/                   tests automatisés (npm test)
 ```
 
+## Démo en ligne
+
+Le dossier `demo/` construit une version autonome du logiciel (une seule page HTML) où le serveur et la base SQLite
+tournent directement dans le navigateur. Elle sert à essayer le logiciel sans rien installer.
+
+```bash
+cd demo && npm install && npm run build   # produit demo/dist/facturation-demo.html
+```
+
 ## Tests
 
 ```bash

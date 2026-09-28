@@ -73,7 +73,7 @@
             <table class="list">
               <tbody>
                 <template x-for="d in history" :key="d.id">
-                  <tr class="clickable" @click="location.href = 'document.html?id=' + d.id">
+                  <tr class="clickable" @click="go('document.html?id=' + d.id)">
                     <td x-text="LABELS.type[d.type]"></td><td x-text="d.number || '(brouillon)'"></td><td x-text="fdate(d.date)"></td>
                     <td><span class="badge" :class="d.status" x-text="LABELS.status[d.status]"></span></td><td class="num" x-text="money(d.total_ttc)"></td>
                   </tr>
@@ -109,7 +109,7 @@ function clientsPage() {
       this.load();
     },
     async remove() {
-      if (!confirm('Supprimer ce client ?')) return;
+      if (!(await uiConfirm('Supprimer ce client ?'))) return;
       await api('/clients/' + this.form.id, { method: 'DELETE' });
       this.form = null;
       this.load();

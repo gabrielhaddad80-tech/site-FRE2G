@@ -48,7 +48,7 @@
             <thead><tr><th>N°</th><th>Client</th><th>Échéance</th><th class="num">Reste dû</th></tr></thead>
             <tbody>
               <template x-for="f in d.open_invoices" :key="f.id">
-                <tr class="clickable" @click="location.href='document.html?id='+f.id">
+                <tr class="clickable" @click="go('document.html?id='+f.id)">
                   <td x-text="f.number"></td>
                   <td x-text="f.client_name"></td>
                   <td><span x-text="fdate(f.due_date)"></span> <span class="badge late" x-show="f.due_date && f.due_date < today">En retard</span></td>
@@ -65,7 +65,7 @@
             <thead><tr><th>N°</th><th>Client</th><th>Statut</th><th class="num">Total HT</th></tr></thead>
             <tbody>
               <template x-for="q in d.pending_quotes" :key="q.id">
-                <tr class="clickable" @click="location.href='document.html?id='+q.id">
+                <tr class="clickable" @click="go('document.html?id='+q.id)">
                   <td x-text="q.number"></td>
                   <td x-text="q.client_name"></td>
                   <td><span class="badge" :class="q.status" x-text="LABELS.status[q.status]"></span></td>

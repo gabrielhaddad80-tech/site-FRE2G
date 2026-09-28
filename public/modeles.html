@@ -11,13 +11,13 @@
   .tpl-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
   @media (max-width: 1200px) { .tpl-layout { grid-template-columns: 1fr; } }
   .tpl-list { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-  .tpl-list button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .tpl-list button.active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
   details summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
 </style>
 </head>
 <body>
 <nav id="nav"></nav>
-<main x-data="templatesPage()" x-init="init()" x-cloak>
+<main x-data="templatesPage()" x-cloak>
   <div class="toolbar">
     <h1 style="margin:0">Modèles de devis & factures</h1>
     <div class="spacer"></div>
@@ -134,7 +134,7 @@ function templatesPage() {
       this.open(t.id);
     },
     async remove() {
-      if (!confirm(`Supprimer le modèle « ${this.current.name} » ?`)) return;
+      if (!(await uiConfirm(`Supprimer le modèle « ${this.current.name} » ?`))) return;
       await api('/templates/' + this.current.id, { method: 'DELETE' });
       this.templates = await api('/templates');
       this.current = null;

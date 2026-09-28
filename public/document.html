@@ -19,7 +19,7 @@
 </head>
 <body>
 <nav id="nav"></nav>
-<main x-data="editor()" x-init="init()" x-cloak>
+<main x-data="editor()" x-cloak>
   <template x-if="doc">
   <div>
     <div class="doc-head">
@@ -357,7 +357,7 @@ function editor() {
         if (this.doc.id) d = await api('/documents/' + this.doc.id, { method: 'PUT', body: this.payload() });
         else {
           d = await api('/documents', { body: this.payload() });
-          history.replaceState(null, '', 'document.html?id=' + d.id);
+          setUrl('document.html?id=' + d.id);
         }
         this.setDoc(d);
         toast('Enregistré');
@@ -372,7 +372,7 @@ function editor() {
 
     async print() {
       await this.ensureSaved();
-      window.open(`/api/documents/${this.doc.id}/print`, '_blank');
+      openPrint(this.doc.id);
     },
 
     async setStatus(status) {
@@ -382,38 +382,38 @@ function editor() {
     },
 
     async convert() {
-      if (!confirm('Créer une facture à partir de ce devis ?')) return;
+      if (!(await uiConfirm('Créer une facture à partir de ce devis ?'))) return;
       await this.ensureSaved();
       const d = await api(`/documents/${this.doc.id}/convert`, { body: {} });
-      location.href = 'document.html?id=' + d.id;
+      go('document.html?id=' + d.id);
     },
 
     async issue() {
       const what = this.doc.type === 'facture' ? 'cette facture' : 'cet avoir';
-      if (!confirm(`Émettre ${what} ? Un numéro définitif sera attribué et le document ne pourra plus être modifié.`)) return;
+      if (!(await uiConfirm(`Émettre ${what} ? Un numéro définitif sera attribué et le document ne pourra plus être modifié.`))) return;
       await this.ensureSaved();
       this.setDoc(await api(`/documents/${this.doc.id}/issue`, { body: {} }));
       toast('Document émis : ' + this.doc.number);
     },
 
     async credit() {
-      if (!confirm('Créer un avoir (annulation totale ou partielle) pour cette facture ?')) return;
+      if (!(await uiConfirm('Créer un avoir (annulation totale ou partielle) pour cette facture ?'))) return;
       const d = await api(`/documents/${this.doc.id}/credit`, { body: {} });
-      location.href = 'document.html?id=' + d.id;
+      go('document.html?id=' + d.id);
     },
 
     async duplicate() {
       await this.ensureSaved();
       const type = this.doc.type === 'devis' ? 'devis' : 'facture';
       const d = await api(`/documents/${this.doc.id}/duplicate`, { body: { type } });
-      location.href = 'document.html?id=' + d.id;
+      go('document.html?id=' + d.id);
     },
 
     async remove() {
-      if (!confirm('Supprimer définitivement ce document ?')) return;
+      if (!(await uiConfirm('Supprimer définitivement ce document ?'))) return;
       await api('/documents/' + this.doc.id, { method: 'DELETE' });
       this.snapshot = JSON.stringify(this.payload());
-      location.href = 'documents.html?type=' + this.doc.type;
+      go('documents.html?type=' + this.doc.type);
     },
 
     // ----- Lignes -----
@@ -495,7 +495,7 @@ function editor() {
       toast('Règlement enregistré');
     },
     async deletePayment(p) {
-      if (!confirm('Supprimer ce règlement ?')) return;
+      if (!(await uiConfirm('Supprimer ce règlement ?'))) return;
       this.setDoc(await api('/payments/' + p.id, { method: 'DELETE' }));
     }
   };

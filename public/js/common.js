@@ -35,6 +35,37 @@ function fdate(v) { if (!v) return ''; const [y, m, d] = String(v).slice(0, 10).
 function todayIso() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function clientName(c) { if (!c) return ''; return c.company || [c.first_name, c.last_name].filter(Boolean).join(' '); }
 function qs(name) { return new URLSearchParams(location.search).get(name); }
+function currentPage() { return location.pathname.split('/').pop() || 'index.html'; }
+
+// Navigation et impression (redéfinissables, ex. pour la démo en ligne)
+function go(url) { location.href = url; }
+function setUrl(url) { history.replaceState(null, '', url); }
+function openPrint(id) { window.open(`/api/documents/${id}/print`, '_blank'); }
+
+// Fenêtre de confirmation intégrée à la page (remplace confirm())
+function uiConfirm(message, okLabel = 'Confirmer') {
+  return new Promise((resolve) => {
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = '<div class="modal confirm" role="alertdialog" aria-modal="true"><p class="confirm-msg"></p>'
+      + '<div class="actions"><button type="button" data-v="0">Annuler</button><button type="button" class="primary" data-v="1"></button></div></div>';
+    bg.querySelector('.confirm-msg').textContent = message;
+    bg.querySelector('[data-v="1"]').textContent = okLabel;
+    const close = (v) => { document.removeEventListener('keydown', onKey, true); bg.remove(); resolve(v); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); close(false); }
+      if (e.key === 'Enter') { e.preventDefault(); close(true); }
+    };
+    bg.addEventListener('click', (e) => {
+      if (e.target === bg) close(false);
+      const b = e.target.closest('button[data-v]');
+      if (b) close(b.dataset.v === '1');
+    });
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(bg);
+    bg.querySelector('[data-v="1"]').focus();
+  });
+}
 
 function toast(message, kind = 'ok') {
   let box = document.getElementById('toasts');
@@ -93,7 +124,7 @@ const NAV = [
 function renderNav() {
   const nav = document.getElementById('nav');
   if (!nav) return;
-  const current = location.pathname.split('/').pop() || 'index.html';
+  const current = currentPage();
   const type = qs('type');
   nav.innerHTML = '<div class="brand">Facturation</div>' + NAV.map(([href, label]) => {
     const [page, query] = href.split('?');
