@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS templates (
   name       TEXT NOT NULL,
   html       TEXT NOT NULL,
   css        TEXT,
+  background TEXT,                -- papier à en-tête (image en data: URL)
   is_default INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
@@ -196,8 +197,15 @@ function openDatabase(file) {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
+  migrate(db);
   initData(db);
   return db;
+}
+
+// Colonnes ajoutées après la première version (bases déjà créées)
+function migrate(db) {
+  const cols = new Set(db.prepare('PRAGMA table_info(templates)').all().map((c) => c.name));
+  if (!cols.has('background')) db.exec('ALTER TABLE templates ADD COLUMN background TEXT');
 }
 
 function initData(db) {

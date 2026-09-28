@@ -11,7 +11,10 @@ const saved = process.env.ANTHROPIC_API_KEY;
 
 // Faux client Anthropic : enregistre la requête et renvoie une réponse préparée
 const fakeClient = (apiKey) => ({
-  beta: { messages: { create: async (params) => { lastRequest = { apiKey, params }; return nextReply; } } }
+  beta: { messages: {
+    create: async (params) => { lastRequest = { apiKey, params }; return nextReply; },
+    stream: (params) => ({ finalMessage: async () => { lastRequest = { apiKey, params }; return nextReply; } })
+  } }
 });
 
 before(async () => {
@@ -93,4 +96,39 @@ test('le texte de la demande reprend les règles et le format', () => {
   assert.match(p, /2 photo/);
   assert.match(p, /franchise de TVA/);
   assert.match(p, /Peinture 30 m²/);
+});
+
+test('reproduit un modèle à partir d\'une image', async () => {
+  nextReply = { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({
+    name: 'Modèle Dupont', notes: '',
+    html: '<div class="doc" onclick="alert(1)"><h1>{{upper doc.type_label}} {{doc.number}}</h1><script>alert(1)</script>{{#each lines}}{{#if isItem}}<p>{{designation}} {{money total_ht}}</p>{{/if}}{{/each}}<b>{{money totals.ttc}}</b></div>',
+    css: '<style>.doc h1 { color: #c0392b; }</style>'
+  }) }] };
+  const bad = await call('/ai/template', 'POST', { image: { media_type: 'application/pdf', data: 'x' } });
+  assert.strictEqual(bad.status, 400);
+  const r = await call('/ai/template', 'POST', { image: { media_type: 'image/jpeg', data: 'AAAA' } });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(lastRequest.params.messages[0].content[0].type, 'image');
+  assert.match(lastRequest.params.messages[0].content[1].text, /\{\{#each lines\}\}/, 'le modèle d\'exemple est fourni');
+  assert.doesNotMatch(r.body.html, /<script|onclick/, 'scripts et attributs on* retirés');
+  assert.doesNotMatch(r.body.css, /<style/);
+  const saved = (await call('/templates', 'POST', { name: r.body.name, html: r.body.html, css: r.body.css })).body;
+  const invalid = await call('/templates', 'POST', { name: 'x', html: '{{#if x}}', css: '' });
+  assert.strictEqual(invalid.status, 400);
+  assert.ok(saved.id);
+  nextReply = { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ name: 'x', notes: '', html: '{{#if}}', css: '' }) }] };
+  assert.strictEqual((await call('/ai/template', 'POST', { image: { media_type: 'image/png', data: 'AAAA' } })).status, 502);
+});
+
+test('papier à en-tête : image de fond non échappée à l\'impression', async () => {
+  const bg = 'data:image/jpeg;base64,/9j/AA+b==';
+  const tpl = (await call('/templates', 'POST', { name: 'En-tête', html: '<div class="doc">{{doc.number}}</div>', css: '.doc { background: url({{{template.background}}}); }', background: bg })).body;
+  assert.strictEqual(tpl.background, bg);
+  const doc = (await call('/documents', 'POST', { type: 'devis', template_id: tpl.id, lines: [] })).body;
+  const html = await (await fetch(`${base}/documents/${doc.id}/print`)).text();
+  assert.ok(html.includes(`url(${bg})`), 'l\'URL data: est intacte');
+  const list = (await call('/templates')).body;
+  assert.strictEqual(list.find((t) => t.id === tpl.id).has_background, 1);
+  const cleared = (await call(`/templates/${tpl.id}`, 'PUT', { background: '' })).body;
+  assert.strictEqual(cleared.background, null);
 });

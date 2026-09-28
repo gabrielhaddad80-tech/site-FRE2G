@@ -77,8 +77,16 @@ Chaque modèle est une page HTML + CSS avec des variables (`{{client.display_nam
 éditable directement dans l'application avec **aperçu en direct**. Plusieurs modèles possibles, un par défaut,
 choix du modèle document par document. La liste complète des variables est affichée dans l'éditeur.
 
-**Reproduire votre modèle existant** : chargez un fichier HTML via « Charger un fichier HTML… » ou modifiez le modèle
-classique ; logo, couleurs, coordonnées, mentions légales et pied de page se règlent aussi dans `Paramètres`.
+**Importer votre modèle existant (image ou PDF)** — bouton « Importer mon modèle » de la page Modèles
+(pour un PDF, la première page est utilisée) :
+- **Reproduire la mise en page avec l'IA** : l'IA recrée la disposition, les couleurs, le tableau et les totaux de
+  votre modèle, puis le remplit avec vos données ; l'original et la reproduction s'affichent côte à côte avant
+  l'enregistrement. Le modèle obtenu reste modifiable (HTML/CSS). Nécessite la clé API de l'assistant IA.
+- **Utiliser comme papier à en-tête** : l'image ou le PDF est imprimé en fond de la première page et le document
+  s'écrit par-dessus ; marges haute et basse réglables, option pour masquer vos coordonnées déjà présentes sur le papier.
+
+Vous pouvez aussi charger un fichier HTML ou modifier directement le modèle classique ; logo, couleurs, coordonnées,
+mentions légales et pied de page se règlent aussi dans `Paramètres`.
 
 ### Tableau de bord
 CA HT de l'année, encaissements, reste à encaisser, factures en retard, devis en cours, taux de transformation,
@@ -101,6 +109,7 @@ src/routes/             API : catalogue & clients, documents, paramètres / mod�
 templates/              modèle d'impression par défaut (HTML + CSS)
 public/                 interface web (Alpine.js), police Plus Jakarta Sans hébergée localement (public/fonts, licence OFL)
 public/js/calc.js       calcul des totaux (partagé navigateur / serveur)
+public/vendor/pdfjs/    pdf.js 3.11 (lecture des PDF importés, exécuté avec isEvalSupported: false)
 test/                   tests automatisés (npm test)
 ```
 

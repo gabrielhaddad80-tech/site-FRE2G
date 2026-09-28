@@ -121,5 +121,66 @@
     };
   }
 
-  return { SCHEMA, buildPrompt, normalize, MAX_CATALOG_ITEMS };
+  // ---------- Conversion d'un modèle existant (image / page de PDF) en modèle d'impression ----------
+  const TEMPLATE_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['name', 'html', 'css', 'notes'],
+    properties: {
+      name: { type: 'string', description: 'Nom court du modèle, ex. « Modèle Dupont Rénovation »' },
+      html: { type: 'string', description: 'Gabarit Handlebars (contenu de la page, sans html/head/body/style/script)' },
+      css: { type: 'string', description: 'Feuille de style, règles préfixées par .doc' },
+      notes: { type: 'string', description: "Ce qui n'a pas pu être reproduit fidèlement, en une ou deux phrases (chaîne vide sinon)" }
+    }
+  };
+
+  const TEMPLATE_VARIABLES = [
+    'Entreprise : company.name, company.legal_form, company.capital, company.address, company.postal_code, company.city, company.phone, company.email, company.website, company.siret, company.rcs, company.ape, company.vat_number, company.insurance, company.logo (image en data: URL), company.bank_name, company.iban, company.bic',
+    'Client : client.display_name, client.contact_name, client.full_address (multi-lignes : {{nl2br client.full_address}}), client.code, client.email, client.phone, client.siret, client.vat_number',
+    'Document : doc.type_label (« Devis », « Facture » ou « Avoir »), doc.number, doc.date, doc.validity_date (devis), doc.due_date (facture), doc.title (objet), doc.site_address, doc.intro, doc.notes, doc.conditions ; booléens isQuote, isInvoice, isCredit ; source.number (devis ou facture d\'origine)',
+    'Lignes : {{#each lines}} … {{/each}} ; chaque ligne a isSection, isText ou isItem ; pour isItem : reference, designation, description, quantity, unit, unit_price, discount_pct, vat_rate, total_ht, index ; fin de section : closing_section et closing_section_total. Dans la boucle, les variables globales se lisent avec ../ (ex. {{#unless ../vat_exempt}})',
+    'Totaux : totals.ht_brut, totals.discount_pct, totals.discount_amount, totals.ht, totals.total_vat, totals.ttc, totals.deposit_pct, totals.deposit_amount, totals.paid, totals.due ; détail TVA : {{#each totals.vat}} rate, base, amount {{/each}}',
+    'Divers : vat_exempt (franchise de TVA), vat_exempt_mention, legal_mentions, footer_text, colors.primary, colors.accent',
+    'Fonctions : {{money x}} (montant en euros), {{number x}}, {{percent x}}, {{date x}} (jj/mm/aaaa), {{nl2br x}} (retours à la ligne), {{upper x}}, conditions {{#if (gt x 0)}}, {{#if (eq a b)}}'
+  ].join('\n');
+
+  function buildTemplatePrompt(p) {
+    return [
+      "Voici l'image d'un devis ou d'une facture qu'utilise déjà un artisan. Recrée sa mise en page sous forme de gabarit Handlebars (HTML + CSS) pour son logiciel de facturation, afin que ses futurs documents ressemblent le plus possible à l'original.",
+      '',
+      'Exigences :',
+      "- Reproduis fidèlement la disposition (position de l'en-tête, du bloc client, des références, du tableau, des totaux, du pied de page), les couleurs (codes hexadécimaux relevés sur l'image), les graisses, tailles relatives, bordures, fonds et colonnes du tableau.",
+      "- Remplace TOUTES les informations variables de l'image par les variables ci-dessous (nom et adresse de l'entreprise, client, numéro, dates, lignes, montants…). Ne recopie aucune donnée de l'exemple (aucun nom de client, montant ou ligne en dur).",
+      "- Garde les libellés fixes de l'original (ex. « Désignation », « Total HT », « Bon pour accord ») et leur ordre.",
+      "- Si l'original a un logo, place {{#if company.logo}}<img class=\"logo\" src=\"{{company.logo}}\" alt=\"\">{{/if}} au même endroit.",
+      '- Le gabarit sert pour les devis, factures et avoirs : titre avec {{upper doc.type_label}} ou {{doc.type_label}}, validité seulement si isQuote, échéance et coordonnées bancaires si isInvoice, zone de signature seulement pour isQuote si l\'original en a une, mentions légales pour les factures.',
+      '- La boucle des lignes doit gérer les sections (avec sous-total en fin de section), les lignes de texte et les articles ; le détail de TVA et les totaux doivent disparaître proprement si vat_exempt (afficher alors vat_exempt_mention).',
+      "- HTML : un seul élément racine <div class=\"doc\"> ; pas de <html>, <head>, <body>, <style> ni <script>, aucune ressource externe (pas d'URL d'image ou de police). CSS : toutes les règles commencent par .doc ; polices web sûres (Arial, Helvetica, Georgia, « Times New Roman »…) ; largeur utile A4 de 186 mm ; ajoute page-break-inside: avoid sur les lignes et les totaux.",
+      "- Si un élément de l'original ne peut pas être reproduit, dis-le dans « notes ».",
+      '',
+      'VARIABLES DISPONIBLES :',
+      TEMPLATE_VARIABLES,
+      '',
+      "EXEMPLE d'un autre gabarit qui fonctionne (pour la syntaxe et les variables, PAS pour le style) :",
+      '--- HTML ---',
+      p.exampleHtml || '',
+      '--- CSS ---',
+      p.exampleCss || '',
+      '',
+      'Réponds uniquement avec un objet JSON : {"name": string, "html": string, "css": string, "notes": string}'
+    ].join('\n');
+  }
+
+  function normalizeTemplate(result) {
+    const r = result && typeof result === 'object' ? result : {};
+    const clean = (html) => String(html || '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<\/?(html|head|body)[^>]*>/gi, '')
+      .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      .trim();
+    const css = String(r.css || '').replace(/<\/?style[^>]*>/gi, '').replace(/@import[^;]*;/gi, '').trim();
+    return { name: String(r.name || 'Mon modèle').trim().slice(0, 80), html: clean(r.html), css, notes: String(r.notes || '').trim() };
+  }
+
+  return { SCHEMA, buildPrompt, normalize, MAX_CATALOG_ITEMS, TEMPLATE_SCHEMA, buildTemplatePrompt, normalizeTemplate };
 });

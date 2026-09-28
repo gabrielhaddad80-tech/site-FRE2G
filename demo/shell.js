@@ -205,6 +205,27 @@
     }
   };
 
+  // Conversion d'un modèle existant par Claude (image ou 1re page de PDF)
+  PDFJS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  window.aiTemplate = async ({ image, signal }) => {
+    const sample = await getSample();
+    if (!sample) throw { code: 'not_granted', message: AI_MESSAGES.not_granted };
+    const limits = await sample.limits().catch(() => null);
+    if (!limits || !limits.images) throw { code: 'images_unavailable', message: "L'image du modèle ne peut pas être envoyée depuis cette vue." };
+    const prompt = AiDraft.buildTemplatePrompt({ exampleHtml: window.__DEMO_FILES['classique.hbs'], exampleCss: window.__DEMO_FILES['classique.css'] });
+    let tpl;
+    try {
+      tpl = AiDraft.normalizeTemplate(await sample.json(prompt, { images: [image.blob], signal, cache: false }));
+    } catch (e) {
+      const code = e && e.code;
+      throw { code, message: AI_MESSAGES[code] || "L'IA n'a pas pu reproduire ce modèle : réessayez." };
+    }
+    try { Handlebars.precompile(tpl.html); Handlebars.precompile(tpl.css); } catch (e) {
+      throw { code: 'invalid_template', message: 'Le modèle généré contient une erreur de syntaxe : réessayez.' };
+    }
+    return tpl;
+  };
+
   document.getElementById('demo-reset').addEventListener('click', async () => {
     if (!(await uiConfirm('Effacer toutes les données saisies et repartir des exemples ?', 'Réinitialiser'))) return;
     try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }

@@ -42,7 +42,7 @@ module.exports = function adminRoutes(db) {
 
   // ---------- Modèles de document ----------
   r.get('/templates', (req, res) => {
-    res.json(db.prepare('SELECT id, name, is_default, updated_at FROM templates ORDER BY is_default DESC, name').all());
+    res.json(db.prepare('SELECT id, name, is_default, updated_at, background IS NOT NULL AND background <> \'\' AS has_background FROM templates ORDER BY is_default DESC, name').all());
   });
   r.get('/templates/:id', (req, res) => {
     const t = db.prepare('SELECT * FROM templates WHERE id = ?').get(req.params.id);
@@ -54,7 +54,11 @@ module.exports = function adminRoutes(db) {
     const html = req.body.html ?? src?.html ?? '<div>{{doc.type_label}} {{doc.number}}</div>';
     const css = req.body.css ?? src?.css ?? '';
     const name = req.body.name || (src ? `${src.name} (copie)` : 'Nouveau modèle');
-    const info = db.prepare('INSERT INTO templates (name, html, css, is_default) VALUES (?, ?, ?, 0)').run(name, html, css);
+    const background = req.body.background ?? src?.background ?? null;
+    try { handlebars.precompile(html); handlebars.precompile(css); } catch (e) {
+      return res.status(400).json({ error: 'Erreur dans le modèle : ' + e.message });
+    }
+    const info = db.prepare('INSERT INTO templates (name, html, css, background, is_default) VALUES (?, ?, ?, ?, 0)').run(name, html, css, background);
     res.status(201).json(db.prepare('SELECT * FROM templates WHERE id = ?').get(info.lastInsertRowid));
   });
   r.put('/templates/:id', (req, res) => {
@@ -68,8 +72,8 @@ module.exports = function adminRoutes(db) {
       return res.status(400).json({ error: 'Erreur dans le modèle : ' + e.message });
     }
     db.transaction(() => {
-      db.prepare("UPDATE templates SET name = ?, html = ?, css = ?, updated_at = datetime('now') WHERE id = ?")
-        .run(req.body.name ?? t.name, req.body.html ?? t.html, req.body.css ?? t.css, t.id);
+      db.prepare("UPDATE templates SET name = ?, html = ?, css = ?, background = ?, updated_at = datetime('now') WHERE id = ?")
+        .run(req.body.name ?? t.name, req.body.html ?? t.html, req.body.css ?? t.css, req.body.background !== undefined ? (req.body.background || null) : t.background, t.id);
       if (req.body.is_default) {
         db.prepare('UPDATE templates SET is_default = 0').run();
         db.prepare('UPDATE templates SET is_default = 1 WHERE id = ?').run(t.id);
@@ -96,7 +100,7 @@ module.exports = function adminRoutes(db) {
       return res.type('html').send(pageHtml({ title: 'Aperçu', css: '', body: '<p style="font-family:sans-serif">Créez d\'abord un devis ou une facture pour prévisualiser le modèle.</p>' }));
     }
     try {
-      const { body, css } = renderDocument(db, doc, { html: req.body.html || '', css: req.body.css || '' });
+      const { body, css } = renderDocument(db, doc, { html: req.body.html || '', css: req.body.css || '', background: req.body.background || '' });
       res.type('html').send(pageHtml({ title: 'Aperçu', body, css }));
     } catch (e) {
       res.type('html').send(pageHtml({ title: 'Erreur', css: '', body: `<pre style="color:#b00;white-space:pre-wrap">Erreur dans le modèle :\n${String(e.message).replace(/</g, '&lt;')}</pre>` }));

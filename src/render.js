@@ -120,7 +120,8 @@ function buildContext(db, doc) {
     vat_exempt_mention: settings.vat_exempt_mention,
     legal_mentions: settings.legal_mentions,
     footer_text: settings.footer_text,
-    colors: { primary: settings.primary_color, accent: settings.accent_color }
+    colors: { primary: settings.primary_color, accent: settings.accent_color },
+    template: { background: '' }
   };
 }
 
@@ -129,6 +130,7 @@ function renderDocument(db, doc, templateOverride) {
   if (!tpl && doc.template_id) tpl = db.prepare('SELECT * FROM templates WHERE id = ?').get(doc.template_id);
   if (!tpl) tpl = db.prepare('SELECT * FROM templates ORDER BY is_default DESC, id LIMIT 1').get();
   const ctx = buildContext(db, doc);
+  ctx.template = { background: tpl.background || '' };
   const body = hb.compile(tpl.html)(ctx);
   // Le CSS peut aussi utiliser les variables (ex. {{colors.primary}})
   const css = hb.compile(tpl.css || '')(ctx);
@@ -142,6 +144,7 @@ function pageHtml({ title, body, css, toolbar }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${Handlebars.escapeExpression(title)}</title>
+<link rel="icon" href="data:,">
 <style>
 @page { size: A4; margin: 12mm; }
 body { margin: 0; }

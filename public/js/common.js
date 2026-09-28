@@ -61,13 +61,68 @@ function aiDraft({ text, images, docType, signal }) {
 function aiUnavailableHint() {
   return 'Pour activer l\'assistant, ajoutez votre clé API Anthropic dans <a href="parametres.html">Paramètres</a>.';
 }
-// Réduit une photo (1568 px maximum, JPEG) avant l'envoi
-function prepareImage(file) {
+// Conversion d'un modèle existant (image ou PDF) par l'IA
+function aiTemplate({ image, signal }) {
+  return api('/ai/template', { signal, body: { image: { media_type: image.media_type, data: image.data } } });
+}
+
+// Chargement à la demande d'un script (pdf.js)
+const loadedScripts = {};
+function loadScript(src) {
+  return loadedScripts[src] || (loadedScripts[src] = new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src;
+    el.onload = resolve;
+    el.onerror = () => { delete loadedScripts[src]; reject(new Error('Chargement impossible : ' + src)); };
+    document.head.appendChild(el);
+  }));
+}
+let PDFJS_BASE = 'vendor/pdfjs/';
+
+function canvasToImage(canvas, extra) {
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => {
+    if (!blob) return reject(new Error('Image illisible'));
+    const reader = new FileReader();
+    reader.onload = () => resolve({ blob, media_type: 'image/jpeg', data: String(reader.result).split(',')[1], dataUrl: String(reader.result), preview: URL.createObjectURL(blob), width: canvas.width, height: canvas.height, ...extra });
+    reader.onerror = () => reject(new Error('Image illisible'));
+    reader.readAsDataURL(blob);
+  }, 'image/jpeg', 0.9));
+}
+
+// Image (ou 1re page d'un PDF) d'un document, en JPEG de bonne résolution
+async function documentToImage(file, maxSide = 1800) {
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  if (!isPdf) return prepareImage(file, maxSide);
+  // pdf.js tourne dans la page (pdfjsWorker) ; isEvalSupported: false neutralise l'exécution de code des PDF piégés
+  await loadScript(PDFJS_BASE + 'pdf.worker.min.js');
+  await loadScript(PDFJS_BASE + 'pdf.min.js');
+  const lib = window.pdfjsLib;
+  lib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'pdf.worker.min.js';
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, enableXfa: false }).promise;
+  try {
+    const page = await pdf.getPage(1);
+    const base = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: maxSide / Math.max(base.width, base.height) });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    return canvasToImage(canvas, { name: file.name, pages: pdf.numPages });
+  } finally {
+    pdf.destroy();
+  }
+}
+
+// Réduit une photo (1568 px maximum par défaut, JPEG) avant l'envoi
+function prepareImage(file, maxSide = 1568) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      const scale = Math.min(1, 1568 / Math.max(img.naturalWidth, img.naturalHeight));
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.naturalWidth * scale);
       canvas.height = Math.round(img.naturalHeight * scale);
@@ -76,7 +131,7 @@ function prepareImage(file) {
       canvas.toBlob((blob) => {
         if (!blob) return reject(new Error('Photo illisible'));
         const reader = new FileReader();
-        reader.onload = () => resolve({ blob, media_type: 'image/jpeg', data: String(reader.result).split(',')[1], preview: URL.createObjectURL(blob), name: file.name });
+        reader.onload = () => resolve({ blob, media_type: 'image/jpeg', data: String(reader.result).split(',')[1], dataUrl: String(reader.result), preview: URL.createObjectURL(blob), name: file.name, width: canvas.width, height: canvas.height });
         reader.onerror = () => reject(new Error('Photo illisible'));
         reader.readAsDataURL(blob);
       }, 'image/jpeg', 0.85);
