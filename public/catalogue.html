@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalogue & tarifs — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/calc.js"></script>
+<script defer src="vendor/alpine.js"></script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="catalogPage()" x-init="init()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0">Catalogue & tarifs</h1>
+    <div class="spacer"></div>
+    <button @click="importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {} }">Importer (CSV / Excel)</button>
+    <a class="btn" href="/api/items/export.csv">Exporter CSV</a>
+    <button @click="reprice = { percent: 0, field: 'sale_price', type: '', category_id: '', catalog: '' }">Mise à jour des prix</button>
+    <button class="primary" @click="edit({ type: filters.type || 'prestation' })">+ Nouvel article</button>
+  </div>
+
+  <div class="tabs">
+    <button :class="tab === 'items' && 'active'" @click="tab = 'items'">Articles, prestations & main d'œuvre</button>
+    <button :class="tab === 'categories' && 'active'" @click="tab = 'categories'">Catégories</button>
+  </div>
+
+  <div x-show="tab === 'items'" class="card">
+    <div class="grid grid-4" style="margin-bottom:12px">
+      <div><label>Recherche</label><input type="search" x-model="filters.q" @input.debounce.300ms="load()" placeholder="Référence, désignation…"></div>
+      <div><label>Type</label><select x-model="filters.type" @change="load()">
+        <option value="">Tous</option>
+        <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v"></option></template>
+      </select></div>
+      <div><label>Catégorie</label><select x-model="filters.category_id" @change="load()">
+        <option value="">Toutes</option>
+        <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
+      </select></div>
+      <div><label>Catalogue / fournisseur</label><select x-model="filters.catalog" @change="load()">
+        <option value="">Tous</option>
+        <template x-for="c in catalogs" :key="c"><option :value="c" x-text="c"></option></template>
+      </select></div>
+    </div>
+    <label style="display:flex; gap:6px; align-items:center; font-weight:normal; margin-bottom:10px"><input type="checkbox" x-model="filters.all" @change="load()"> Afficher les articles désactivés</label>
+    <table class="list">
+      <thead><tr><th>Réf.</th><th>Désignation</th><th>Type</th><th>Catégorie</th><th>Catalogue</th><th>Unité</th><th class="num">Achat HT</th><th class="num">Vente HT</th><th class="num">Marge</th><th class="num">TVA</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="it in items" :key="it.id">
+          <tr class="clickable" @click="edit(it)" :style="!it.active && 'opacity:.5'">
+            <td x-text="it.reference"></td>
+            <td x-text="it.designation"></td>
+            <td><span class="badge" x-text="LABELS.itemType[it.type]"></span></td>
+            <td x-text="it.category_name || ''"></td>
+            <td x-text="it.catalog || ''"></td>
+            <td x-text="it.unit"></td>
+            <td class="num" x-text="money(it.purchase_price)"></td>
+            <td class="num"><strong x-text="money(it.sale_price)"></strong></td>
+            <td class="num" x-text="it.sale_price ? num(Calc.round2((it.sale_price - it.purchase_price) / it.sale_price * 100)) + ' %' : ''"></td>
+            <td class="num" x-text="num(it.vat_rate) + ' %'"></td>
+            <td class="num" @click.stop><button class="small" @click="duplicate(it)">Dupliquer</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="empty" x-show="!items.length">Aucun article.</div>
+    <div class="small muted" style="margin-top:8px" x-text="items.length + ' article(s)'"></div>
+  </div>
+
+  <div x-show="tab === 'categories'" class="card" style="max-width:700px">
+    <div style="display:flex; gap:8px; margin-bottom:12px">
+      <input x-model="newCategory" placeholder="Nouvelle catégorie" @keydown.enter="addCategory()">
+      <button class="primary" @click="addCategory()">Ajouter</button>
+    </div>
+    <table class="list">
+      <thead><tr><th>Nom</th><th style="width:90px">Ordre</th><th class="num">Articles</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="c in categories" :key="c.id">
+          <tr>
+            <td><input x-model="c.name" @change="saveCategory(c)"></td>
+            <td><input type="number" x-model="c.position" @change="saveCategory(c)"></td>
+            <td class="num" x-text="c.items_count"></td>
+            <td class="num"><button class="small danger" @click="deleteCategory(c)">Supprimer</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Fiche article -->
+  <div class="modal-bg" x-show="form" @keydown.escape.window="form = null">
+    <template x-if="form">
+      <div class="modal wide">
+        <h2 x-text="form.id ? 'Article ' + (form.reference || '') : 'Nouvel article'"></h2>
+        <div class="grid grid-4">
+          <div><label>Type</label><select x-model="form.type">
+            <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v" :selected="k === form.type"></option></template>
+          </select></div>
+          <div><label>Référence</label><input x-model="form.reference"></div>
+          <div style="grid-column: span 2"><label>Désignation *</label><input x-model="form.designation"></div>
+          <div style="grid-column: span 4"><label>Description (reprise sur le devis)</label><textarea x-model="form.description" rows="2"></textarea></div>
+          <div><label>Unité</label><input x-model="form.unit" list="units"></div>
+          <div><label>Catégorie</label><select x-model.number="form.category_id">
+            <option value="">—</option>
+            <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.name" :selected="c.id == form.category_id"></option></template>
+          </select></div>
+          <div><label>Catalogue</label><input x-model="form.catalog" list="catalogs"></div>
+          <div><label>Fournisseur</label><input x-model="form.supplier"></div>
+          <div><label>Prix d'achat HT</label><input type="number" step="any" x-model="form.purchase_price"></div>
+          <div><label>Coefficient</label>
+            <div style="display:flex; gap:4px"><input type="number" step="any" x-model="coef"><button type="button" class="small" @click="form.sale_price = Calc.round2(Calc.num(form.purchase_price) * Calc.num(coef))" title="Prix de vente = achat × coefficient">→</button></div>
+          </div>
+          <div><label>Prix de vente HT</label><input type="number" step="any" x-model="form.sale_price"></div>
+          <div><label>TVA (%)</label><select x-model.number="form.vat_rate">
+            <template x-for="r in vatRates" :key="r"><option :value="r" x-text="num(r) + ' %'" :selected="r == form.vat_rate"></option></template>
+          </select></div>
+          <div style="grid-column: span 4" class="small muted" x-show="Calc.num(form.sale_price)"
+               x-text="'Marge : ' + money(Calc.num(form.sale_price) - Calc.num(form.purchase_price)) + ' (' + num(Calc.round2((Calc.num(form.sale_price) - Calc.num(form.purchase_price)) / Calc.num(form.sale_price) * 100)) + ' %) · Prix TTC : ' + money(Calc.num(form.sale_price) * (1 + Calc.num(form.vat_rate) / 100))"></div>
+          <div><label style="display:flex; gap:6px; align-items:center"><input type="checkbox" x-model="form.active" :checked="form.active"> Actif</label></div>
+        </div>
+
+        <template x-if="form.type === 'ouvrage'">
+          <div style="margin-top:16px">
+            <h2>Composition de l'ouvrage</h2>
+            <table class="list">
+              <thead><tr><th>Réf.</th><th>Composant</th><th>Unité</th><th style="width:100px">Quantité</th><th class="num">P.U. vente</th><th class="num">Total vente</th><th class="num">Total achat</th><th></th></tr></thead>
+              <tbody>
+                <template x-for="(c, i) in form.components" :key="i">
+                  <tr>
+                    <td x-text="c.reference"></td><td x-text="c.designation"></td><td x-text="c.unit"></td>
+                    <td><input type="number" step="any" x-model="c.quantity"></td>
+                    <td class="num" x-text="money(c.sale_price)"></td>
+                    <td class="num" x-text="money(Calc.num(c.quantity) * c.sale_price)"></td>
+                    <td class="num" x-text="money(Calc.num(c.quantity) * c.purchase_price)"></td>
+                    <td class="num"><button class="small danger" @click="form.components.splice(i, 1)">✕</button></td>
+                  </tr>
+                </template>
+              </tbody>
+              <tfoot><tr><td colspan="5"><strong>Prix calculé</strong></td>
+                <td class="num"><strong x-text="money(componentsSale)"></strong></td><td class="num" x-text="money(componentsBuy)"></td>
+                <td><button class="small" @click="form.sale_price = componentsSale; form.purchase_price = componentsBuy">Appliquer</button></td></tr></tfoot>
+            </table>
+            <div style="display:flex; gap:8px; margin-top:8px">
+              <input type="search" x-model="compSearch" @input.debounce.200ms="searchComponents()" placeholder="Ajouter un composant : rechercher un article…">
+            </div>
+            <div class="search-results" x-show="compResults.length" style="max-height:200px">
+              <table class="list"><tbody>
+                <template x-for="r in compResults" :key="r.id">
+                  <tr class="clickable" @click="addComponent(r)"><td x-text="r.reference"></td><td x-text="r.designation"></td><td x-text="LABELS.itemType[r.type]"></td><td class="num" x-text="money(r.sale_price) + ' / ' + r.unit"></td></tr>
+                </template>
+              </tbody></table>
+            </div>
+          </div>
+        </template>
+
+        <div class="actions">
+          <button class="danger" x-show="form.id" @click="remove()" style="margin-right:auto">Supprimer</button>
+          <button @click="form = null">Annuler</button>
+          <button class="primary" @click="save()">Enregistrer</button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Import -->
+  <div class="modal-bg" x-show="importer" @keydown.escape.window="importer = null">
+    <template x-if="importer">
+      <div class="modal wide">
+        <h2>Importer un catalogue / une liste de tarifs</h2>
+        <p class="small muted">Fichier CSV (depuis Excel : « Enregistrer sous » → « CSV UTF-8 (délimité par des points-virgules) »). La première ligne doit contenir les en-têtes.
+          Les articles dont la référence existe déjà sont mis à jour (pratique pour appliquer un nouveau tarif fournisseur).</p>
+        <div class="grid grid-2">
+          <div><label>Fichier</label><input type="file" accept=".csv,.txt" @change="readFile($event)"></div>
+          <div><label>Nom du catalogue (facultatif)</label><input x-model="importer.catalog" placeholder="Ex. Tarif fournisseur 2026"></div>
+        </div>
+        <template x-if="importer.headers.length">
+          <div style="margin-top:14px">
+            <h2>Correspondance des colonnes</h2>
+            <div class="grid grid-4">
+              <template x-for="f in importFields" :key="f.key">
+                <div><label x-text="f.label"></label>
+                  <select x-model="importer.mapping[f.key]">
+                    <option value="">— ignorer —</option>
+                    <template x-for="(h, i) in importer.headers" :key="i"><option :value="i" x-text="h" :selected="importer.mapping[f.key] == i"></option></template>
+                  </select>
+                </div>
+              </template>
+            </div>
+            <div class="grid grid-2" style="margin-top:10px">
+              <div><label>Type par défaut (si pas de colonne type)</label><select x-model="importer.defaultType">
+                <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v"></option></template>
+              </select></div>
+            </div>
+            <p class="small muted" x-text="importer.rows.length + ' ligne(s) détectée(s). Aperçu :'"></p>
+            <table class="list small">
+              <thead><tr><template x-for="f in importFields" :key="f.key"><th x-show="importer.mapping[f.key] !== ''" x-text="f.label"></th></template></tr></thead>
+              <tbody><template x-for="(r, i) in mappedRows().slice(0, 5)" :key="i">
+                <tr><template x-for="f in importFields" :key="f.key"><td x-show="importer.mapping[f.key] !== ''" x-text="r[f.key]"></td></template></tr>
+              </template></tbody>
+            </table>
+          </div>
+        </template>
+        <div class="actions">
+          <button @click="importer = null">Annuler</button>
+          <button class="primary" :disabled="!importer.rows.length" @click="runImport()">Importer</button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Mise à jour des prix -->
+  <div class="modal-bg" x-show="reprice" @keydown.escape.window="reprice = null">
+    <template x-if="reprice">
+      <div class="modal" style="max-width:560px">
+        <h2>Mise à jour des prix en masse</h2>
+        <div class="grid grid-2">
+          <div><label>Variation (%)</label><input type="number" step="any" x-model="reprice.percent" placeholder="Ex. 3.5 ou -2"></div>
+          <div><label>Prix concerné</label><select x-model="reprice.field"><option value="sale_price">Prix de vente</option><option value="purchase_price">Prix d'achat</option></select></div>
+          <div><label>Type</label><select x-model="reprice.type"><option value="">Tous</option>
+            <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v" x-show="k !== 'ouvrage'"></option></template></select></div>
+          <div><label>Catégorie</label><select x-model="reprice.category_id"><option value="">Toutes</option>
+            <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.name"></option></template></select></div>
+          <div><label>Catalogue</label><select x-model="reprice.catalog"><option value="">Tous</option>
+            <template x-for="c in catalogs" :key="c"><option :value="c" x-text="c"></option></template></select></div>
+        </div>
+        <p class="small muted">Les ouvrages ne sont pas modifiés : ouvrez-les et cliquez sur « Appliquer » pour recalculer leur prix.</p>
+        <div class="actions"><button @click="reprice = null">Annuler</button><button class="primary" @click="runReprice()">Appliquer</button></div>
+      </div>
+    </template>
+  </div>
+
+  <datalist id="units"><template x-for="u in units" :key="u"><option :value="u"></option></template></datalist>
+  <datalist id="catalogs"><template x-for="c in catalogs" :key="c"><option :value="c"></option></template></datalist>
+</main>
+<script>
+const IMPORT_FIELDS = [
+  { key: 'reference', label: 'Référence', match: /^(r[ée]f|code|article)/i },
+  { key: 'designation', label: 'Désignation *', match: /^(d[ée]signation|libell|nom|intitul)/i },
+  { key: 'description', label: 'Description', match: /^(description|d[ée]tail)/i },
+  { key: 'type', label: 'Type', match: /^type/i },
+  { key: 'unit', label: 'Unité', match: /^(unit|u$|unité)/i },
+  { key: 'purchase_price', label: 'Prix d\'achat HT', match: /(achat|co[uû]t|purchase)/i },
+  { key: 'sale_price', label: 'Prix de vente HT', match: /(vente|prix|p\.?u|tarif|sale)/i },
+  { key: 'vat_rate', label: 'TVA %', match: /(tva|vat)/i },
+  { key: 'category', label: 'Catégorie', match: /(cat[ée]gor|famille|rubrique)/i },
+  { key: 'supplier', label: 'Fournisseur', match: /(fournisseur|supplier|marque)/i },
+  { key: 'catalog', label: 'Catalogue', match: /^catalog/i }
+];
+const TYPE_ALIASES = { "main d'oeuvre": 'main_oeuvre', "main d'œuvre": 'main_oeuvre', 'mo': 'main_oeuvre', 'prestation': 'prestation', 'fourniture': 'fourniture', 'materiel': 'materiel', 'matériel': 'materiel', 'ouvrage': 'ouvrage' };
+
+function catalogPage() {
+  return {
+    tab: 'items', items: [], categories: [], catalogs: [], settings: {},
+    filters: { q: '', type: '', category_id: '', catalog: '', all: false },
+    form: null, coef: 1.3, compSearch: '', compResults: [], newCategory: '',
+    importer: null, reprice: null, importFields: IMPORT_FIELDS,
+
+    get vatRates() { return (this.settings.vat_rates || '20,10,5.5,0').split(',').map(Number); },
+    get units() { return (this.settings.units || 'u,h').split(',').map((s) => s.trim()); },
+    get componentsSale() { return Calc.round2((this.form?.components || []).reduce((s, c) => s + Calc.num(c.quantity) * c.sale_price, 0)); },
+    get componentsBuy() { return Calc.round2((this.form?.components || []).reduce((s, c) => s + Calc.num(c.quantity) * c.purchase_price, 0)); },
+
+    async init() {
+      this.settings = await api('/settings');
+      this.coef = Number(this.settings.default_margin_coef || 1.3);
+      await Promise.all([this.load(), this.loadCategories()]);
+    },
+    async load() {
+      const p = new URLSearchParams();
+      for (const k of ['q', 'type', 'category_id', 'catalog']) if (this.filters[k]) p.set(k, this.filters[k]);
+      if (this.filters.all) p.set('active', 'all');
+      [this.items, this.catalogs] = await Promise.all([api('/items?' + p), api('/items/catalogs')]);
+    },
+    async loadCategories() { this.categories = await api('/categories'); },
+
+    async edit(it) {
+      this.compSearch = ''; this.compResults = [];
+      if (it.id) this.form = { ...(await api('/items/' + it.id)) };
+      else this.form = { type: it.type, unit: 'u', vat_rate: Number(this.settings.default_vat_rate || 20), purchase_price: 0, sale_price: 0, active: 1, components: [] };
+      this.form.active = !!this.form.active;
+      this.form.components = this.form.components || [];
+    },
+    async save() {
+      if (this.form.id) await api('/items/' + this.form.id, { method: 'PUT', body: this.form });
+      else await api('/items', { body: this.form });
+      this.form = null;
+      toast('Article enregistré');
+      this.load(); this.loadCategories();
+    },
+    async duplicate(it) { await api(`/items/${it.id}/duplicate`, { body: {} }); this.load(); toast('Article dupliqué'); },
+    async remove() {
+      if (!confirm('Supprimer cet article du catalogue ? (Les devis et factures existants ne sont pas modifiés.)')) return;
+      await api('/items/' + this.form.id, { method: 'DELETE' });
+      this.form = null; this.load();
+    },
+    async searchComponents() {
+      if (!this.compSearch) { this.compResults = []; return; }
+      this.compResults = (await api('/items?limit=30&q=' + encodeURIComponent(this.compSearch))).filter((r) => r.id !== this.form.id);
+    },
+    addComponent(r) {
+      this.form.components.push({ child_id: r.id, reference: r.reference, designation: r.designation, unit: r.unit, quantity: 1, sale_price: r.sale_price, purchase_price: r.purchase_price });
+      this.compSearch = ''; this.compResults = [];
+    },
+
+    async addCategory() {
+      if (!this.newCategory) return;
+      await api('/categories', { body: { name: this.newCategory, position: this.categories.length + 1 } });
+      this.newCategory = ''; this.loadCategories();
+    },
+    async saveCategory(c) { await api('/categories/' + c.id, { method: 'PUT', body: c }); },
+    async deleteCategory(c) {
+      if (!confirm(`Supprimer la catégorie « ${c.name} » ? Les articles seront conservés sans catégorie.`)) return;
+      await api('/categories/' + c.id, { method: 'DELETE' }); this.loadCategories();
+    },
+
+    // ----- Import -----
+    async readFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const buf = await file.arrayBuffer();
+      let text = new TextDecoder('utf-8').decode(buf);
+      if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
+      const rows = parseCSV(text);
+      this.importer.headers = rows[0] || [];
+      this.importer.rows = rows.slice(1);
+      this.importer.defaultType = this.importer.defaultType || 'fourniture';
+      if (!this.importer.catalog) this.importer.catalog = file.name.replace(/\.[^.]+$/, '');
+      const mapping = {};
+      const used = new Set();
+      for (const f of IMPORT_FIELDS) {
+        const idx = this.importer.headers.findIndex((h, i) => !used.has(i) && f.match.test(h.trim()));
+        mapping[f.key] = idx >= 0 ? String(idx) : '';
+        if (idx >= 0) used.add(idx);
+      }
+      this.importer.mapping = mapping;
+    },
+    mappedRows() {
+      const m = this.importer.mapping;
+      return this.importer.rows.map((r) => {
+        const o = {};
+        for (const f of IMPORT_FIELDS) o[f.key] = m[f.key] !== '' && m[f.key] !== undefined ? (r[Number(m[f.key])] || '').trim() : '';
+        const t = (o.type || '').toLowerCase();
+        o.type = LABELS.itemType[t] ? t : (TYPE_ALIASES[t] || this.importer.defaultType);
+        for (const k of ['purchase_price', 'sale_price', 'vat_rate']) o[k] = o[k].replace(/[€%\s ]/g, '');
+        if (o.vat_rate === '') o.vat_rate = this.settings.default_vat_rate || '20';
+        return o;
+      });
+    },
+    async runImport() {
+      const res = await api('/items/import', { body: { rows: this.mappedRows(), catalog: this.importer.catalog } });
+      toast(`Import terminé : ${res.created} créé(s), ${res.updated} mis à jour, ${res.skipped} ignoré(s)`);
+      this.importer = null;
+      this.load(); this.loadCategories();
+    },
+
+    async runReprice() {
+      if (!Calc.num(this.reprice.percent)) return;
+      if (!confirm(`Appliquer une variation de ${this.reprice.percent} % ?`)) return;
+      const res = await api('/items/reprice', { body: this.reprice });
+      toast(res.updated + ' article(s) mis à jour');
+      this.reprice = null; this.load();
+    }
+  };
+}
+</script>
+</body>
+</html>

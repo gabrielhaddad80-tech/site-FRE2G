@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documents — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script defer src="vendor/alpine.js"></script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="docList()" x-init="init()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0" x-text="title"></h1>
+    <div class="spacer"></div>
+    <a class="btn primary" x-show="type !== 'avoir'" :href="'document.html?new=' + type" x-text="type === 'devis' ? '+ Nouveau devis' : '+ Nouvelle facture'"></a>
+  </div>
+  <div class="card">
+    <div class="grid grid-4" style="margin-bottom:12px">
+      <div><label>Recherche</label><input type="search" x-model="q" @input.debounce.300ms="load()" placeholder="N°, client, objet…"></div>
+      <div><label>Statut</label>
+        <select x-model="status" @change="load()">
+          <option value="">Tous</option>
+          <template x-for="s in statuses" :key="s"><option :value="s" x-text="LABELS.status[s]"></option></template>
+        </select>
+      </div>
+      <div><label>Du</label><input type="date" x-model="from" @change="load()"></div>
+      <div><label>Au</label><input type="date" x-model="to" @change="load()"></div>
+    </div>
+    <table class="list">
+      <thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Objet</th><th>Statut</th><th class="num">Total HT</th><th class="num">Total TTC</th><th class="num" x-show="type === 'facture'">Reste dû</th></tr></thead>
+      <tbody>
+        <template x-for="d in rows" :key="d.id">
+          <tr class="clickable" @click="location.href='document.html?id=' + d.id">
+            <td x-text="d.number || '(brouillon)'" :class="!d.number && 'muted'"></td>
+            <td x-text="fdate(d.date)"></td>
+            <td x-text="d.client_name"></td>
+            <td x-text="d.title"></td>
+            <td>
+              <span class="badge" :class="d.status" x-text="LABELS.status[d.status]"></span>
+              <span class="badge late" x-show="type === 'facture' && ['emise','partielle'].includes(d.status) && d.due_date && d.due_date < today">En retard</span>
+            </td>
+            <td class="num" x-text="money(d.total_ht)"></td>
+            <td class="num" x-text="money(d.total_ttc)"></td>
+            <td class="num" x-show="type === 'facture'" x-text="d.number && !['annulee'].includes(d.status) ? money(d.total_ttc - d.paid) : ''"></td>
+          </tr>
+        </template>
+      </tbody>
+      <tfoot x-show="rows.length">
+        <tr><td colspan="5"><strong x-text="rows.length + ' document(s)'"></strong></td>
+          <td class="num"><strong x-text="money(rows.reduce((s, d) => s + d.total_ht, 0))"></strong></td>
+          <td class="num"><strong x-text="money(rows.reduce((s, d) => s + d.total_ttc, 0))"></strong></td>
+          <td x-show="type === 'facture'"></td></tr>
+      </tfoot>
+    </table>
+    <div class="empty" x-show="!rows.length">Aucun document.</div>
+  </div>
+</main>
+<script>
+function docList() {
+  const type = ['devis', 'facture', 'avoir'].includes(qs('type')) ? qs('type') : 'devis';
+  const STATUSES = { devis: ['brouillon', 'envoye', 'accepte', 'refuse', 'facture'], facture: ['brouillon', 'emise', 'partielle', 'payee', 'annulee'], avoir: ['brouillon', 'emise'] };
+  return {
+    type, rows: [], q: '', status: '', from: '', to: '', today: todayIso(),
+    statuses: STATUSES[type],
+    title: { devis: 'Devis', facture: 'Factures', avoir: 'Avoirs' }[type],
+    init() { document.title = this.title + ' — Facturation'; this.load(); },
+    async load() {
+      const p = new URLSearchParams({ type: this.type });
+      for (const k of ['q', 'status', 'from', 'to']) if (this[k]) p.set(k, this[k]);
+      this.rows = await api('/documents?' + p);
+    }
+  };
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "fre2g-facturation",
+  "version": "1.0.0",
+  "description": "Logiciel de devis et factures personnalisable avec base de données (catalogue, prestations, main d'oeuvre, ouvrages, clients)",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "alpinejs": "^3.14.0",
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.21.0",
+    "handlebars": "^4.7.8"
+  }
+}

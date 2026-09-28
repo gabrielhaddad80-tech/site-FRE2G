@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modèles de document — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script defer src="vendor/alpine.js"></script>
+<style>
+  .tpl-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 1200px) { .tpl-layout { grid-template-columns: 1fr; } }
+  .tpl-list { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tpl-list button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  details summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="templatesPage()" x-init="init()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0">Modèles de devis & factures</h1>
+    <div class="spacer"></div>
+    <button @click="create()">+ Nouveau modèle (copie)</button>
+  </div>
+  <p class="muted" style="margin-top:-8px">Chaque modèle est une page HTML/CSS avec des variables <code>{{…}}</code> remplacées automatiquement (syntaxe Handlebars).
+    Vous pouvez reproduire votre modèle existant à l'identique. Couleurs, logo et coordonnées se règlent aussi dans <a href="parametres.html">Paramètres</a>.</p>
+
+  <div class="tpl-list">
+    <template x-for="t in templates" :key="t.id">
+      <button :class="current && current.id === t.id && 'active'" @click="open(t.id)" x-text="t.name + (t.is_default ? ' ★' : '')"></button>
+    </template>
+  </div>
+
+  <template x-if="current">
+    <div class="tpl-layout">
+      <div>
+        <div class="card">
+          <div class="grid grid-2">
+            <div><label>Nom du modèle</label><input x-model="current.name"></div>
+            <div><label>&nbsp;</label><label style="display:flex; gap:6px; align-items:center; font-weight:normal"><input type="checkbox" x-model="current.is_default" :checked="current.is_default"> Modèle par défaut</label></div>
+          </div>
+          <div class="tabs" style="margin-top:12px">
+            <button :class="tab === 'html' && 'active'" @click="tab = 'html'">HTML</button>
+            <button :class="tab === 'css' && 'active'" @click="tab = 'css'">CSS (mise en forme)</button>
+            <button :class="tab === 'vars' && 'active'" @click="tab = 'vars'">Variables disponibles</button>
+          </div>
+          <textarea class="code" x-show="tab === 'html'" x-model="current.html" @input.debounce.600ms="preview()" spellcheck="false"></textarea>
+          <textarea class="code" x-show="tab === 'css'" x-model="current.css" @input.debounce.600ms="preview()" spellcheck="false"></textarea>
+          <div x-show="tab === 'vars'" class="var-list small" style="max-height:440px; overflow:auto">
+            <table>
+              <tr><td colspan="2"><strong>Entreprise</strong></td></tr>
+              <tr><td><code>{{company.name}}</code> <code>{{company.address}}</code> <code>{{company.postal_code}}</code> <code>{{company.city}}</code></td><td>Coordonnées</td></tr>
+              <tr><td><code>{{company.phone}}</code> <code>{{company.email}}</code> <code>{{company.website}}</code></td><td>Contact</td></tr>
+              <tr><td><code>{{company.siret}}</code> <code>{{company.rcs}}</code> <code>{{company.ape}}</code> <code>{{company.vat_number}}</code> <code>{{company.legal_form}}</code> <code>{{company.capital}}</code> <code>{{company.insurance}}</code></td><td>Mentions légales</td></tr>
+              <tr><td><code>{{company.logo}}</code></td><td>Logo (à utiliser dans <code>&lt;img src="{{company.logo}}"&gt;</code>)</td></tr>
+              <tr><td><code>{{company.iban}}</code> <code>{{company.bic}}</code> <code>{{company.bank_name}}</code></td><td>Banque</td></tr>
+              <tr><td colspan="2"><strong>Client</strong></td></tr>
+              <tr><td><code>{{client.display_name}}</code> <code>{{client.contact_name}}</code> <code>{{nl2br client.full_address}}</code></td><td>Nom et adresse formatés</td></tr>
+              <tr><td><code>{{client.code}}</code> <code>{{client.email}}</code> <code>{{client.phone}}</code> <code>{{client.siret}}</code> <code>{{client.vat_number}}</code></td><td></td></tr>
+              <tr><td colspan="2"><strong>Document</strong></td></tr>
+              <tr><td><code>{{doc.type_label}}</code> <code>{{doc.number}}</code> <code>{{date doc.date}}</code></td><td>Type (Devis / Facture / Avoir), numéro, date</td></tr>
+              <tr><td><code>{{date doc.validity_date}}</code> <code>{{date doc.due_date}}</code></td><td>Validité (devis), échéance (facture)</td></tr>
+              <tr><td><code>{{doc.title}}</code> <code>{{nl2br doc.site_address}}</code> <code>{{nl2br doc.intro}}</code> <code>{{nl2br doc.notes}}</code> <code>{{nl2br doc.conditions}}</code></td><td>Objet, chantier, textes</td></tr>
+              <tr><td><code>{{#if isQuote}}…{{/if}}</code> <code>isInvoice</code> <code>isCredit</code></td><td>Afficher selon le type</td></tr>
+              <tr><td><code>{{source.number}}</code></td><td>Devis d'origine / facture d'origine</td></tr>
+              <tr><td colspan="2"><strong>Lignes</strong> — <code>{{#each lines}}…{{/each}}</code></td></tr>
+              <tr><td><code>isSection</code> <code>isText</code> <code>isItem</code></td><td>Type de ligne</td></tr>
+              <tr><td><code>{{reference}}</code> <code>{{designation}}</code> <code>{{nl2br description}}</code> <code>{{number quantity}}</code> <code>{{unit}}</code></td><td></td></tr>
+              <tr><td><code>{{money unit_price}}</code> <code>{{percent discount_pct}}</code> <code>{{percent vat_rate}}</code> <code>{{money total_ht}}</code> <code>{{index}}</code></td><td></td></tr>
+              <tr><td><code>{{closing_section}}</code> <code>{{money closing_section_total}}</code></td><td>Sous-total en fin de section</td></tr>
+              <tr><td colspan="2"><strong>Totaux</strong></td></tr>
+              <tr><td><code>{{money totals.ht_brut}}</code> <code>{{money totals.discount_amount}}</code> <code>{{money totals.ht}}</code> <code>{{money totals.total_vat}}</code> <code>{{money totals.ttc}}</code></td><td></td></tr>
+              <tr><td><code>{{#each totals.vat}}{{percent rate}} {{money base}} {{money amount}}{{/each}}</code></td><td>Détail TVA par taux</td></tr>
+              <tr><td><code>{{money totals.deposit_amount}}</code> <code>{{money totals.paid}}</code> <code>{{money totals.due}}</code></td><td>Acompte, déjà réglé, reste à payer</td></tr>
+              <tr><td colspan="2"><strong>Divers</strong></td></tr>
+              <tr><td><code>{{legal_mentions}}</code> <code>{{footer_text}}</code> <code>{{vat_exempt}}</code> <code>{{vat_exempt_mention}}</code></td><td></td></tr>
+              <tr><td><code>{{colors.primary}}</code> <code>{{colors.accent}}</code></td><td>Couleurs (utilisables dans le CSS)</td></tr>
+              <tr><td><code>{{money x}}</code> <code>{{number x}}</code> <code>{{percent x}}</code> <code>{{date x}}</code> <code>{{nl2br x}}</code> <code>{{upper x}}</code> <code>(eq a b)</code> <code>(gt a b)</code></td><td>Fonctions de mise en forme</td></tr>
+            </table>
+          </div>
+          <div class="toolbar" style="margin:12px 0 0">
+            <button class="primary" @click="save()">Enregistrer</button>
+            <label class="btn" style="margin:0; font-weight:normal; color:inherit; font-size:14px">Charger un fichier HTML…<input type="file" accept=".html,.htm,.hbs" style="display:none" @change="loadFile($event)"></label>
+            <div class="spacer"></div>
+            <button class="danger" @click="remove()">Supprimer</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="toolbar">
+          <label style="margin:0">Aperçu avec :</label>
+          <select x-model="previewDoc" @change="preview()" style="max-width:320px">
+            <option value="">Dernier document</option>
+            <template x-for="d in docs" :key="d.id"><option :value="d.id" x-text="LABELS.type[d.type] + ' ' + (d.number || '(brouillon)') + ' — ' + (d.client_name || '')"></option></template>
+          </select>
+        </div>
+        <iframe class="preview-frame" x-ref="frame"></iframe>
+      </div>
+    </div>
+  </template>
+</main>
+<script>
+function templatesPage() {
+  return {
+    templates: [], current: null, tab: 'html', docs: [], previewDoc: '',
+    async init() {
+      [this.templates, this.docs] = await Promise.all([api('/templates'), api('/documents')]);
+      const def = this.templates.find((t) => t.is_default) || this.templates[0];
+      if (def) this.open(def.id);
+    },
+    async open(id) {
+      this.current = await api('/templates/' + id);
+      this.current.is_default = !!this.current.is_default;
+      this.$nextTick(() => this.preview());
+    },
+    async preview() {
+      if (!this.current) return;
+      const res = await fetch('/api/templates/preview', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: this.current.html, css: this.current.css, document_id: this.previewDoc || null })
+      });
+      this.$refs.frame.srcdoc = await res.text();
+    },
+    async save() {
+      const t = await api('/templates/' + this.current.id, { method: 'PUT', body: this.current });
+      this.templates = await api('/templates');
+      this.current = { ...t, is_default: !!t.is_default };
+      toast('Modèle enregistré');
+    },
+    async create() {
+      const t = await api('/templates', { body: { copy_of: this.current?.id } });
+      this.templates = await api('/templates');
+      this.open(t.id);
+    },
+    async remove() {
+      if (!confirm(`Supprimer le modèle « ${this.current.name} » ?`)) return;
+      await api('/templates/' + this.current.id, { method: 'DELETE' });
+      this.templates = await api('/templates');
+      this.current = null;
+      if (this.templates[0]) this.open(this.templates[0].id);
+    },
+    async loadFile(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      let text = await f.text();
+      // Si un fichier HTML complet est chargé, extrait le <style> et le <body>
+      const style = [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+      const body = text.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+      if (body) text = body[1];
+      this.current.html = text.trim();
+      if (style) this.current.css = style.trim();
+      e.target.value = '';
+      this.preview();
+      toast('Fichier chargé : pensez à enregistrer');
+    }
+  };
+}
+</script>
+</body>
+</html>

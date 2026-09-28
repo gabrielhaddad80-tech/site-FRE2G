@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paramètres — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script defer src="vendor/alpine.js"></script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="settingsPage()" x-init="init()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0">Paramètres</h1>
+    <div class="spacer"></div>
+    <button class="primary" @click="save()">Enregistrer</button>
+  </div>
+
+  <template x-if="s">
+  <div>
+    <div class="card">
+      <h2>Entreprise</h2>
+      <div class="grid grid-3">
+        <div><label>Raison sociale</label><input x-model="s.company_name"></div>
+        <div><label>Forme juridique</label><input x-model="s.company_legal_form" placeholder="SARL, SAS, EI…"></div>
+        <div><label>Capital</label><input x-model="s.company_capital" placeholder="10 000 €"></div>
+        <div style="grid-column: span 3"><label>Adresse</label><input x-model="s.company_address"></div>
+        <div><label>Code postal</label><input x-model="s.company_postal_code"></div>
+        <div><label>Ville</label><input x-model="s.company_city"></div>
+        <div><label>Pays</label><input x-model="s.company_country"></div>
+        <div><label>Téléphone</label><input x-model="s.company_phone"></div>
+        <div><label>E-mail</label><input x-model="s.company_email"></div>
+        <div><label>Site web</label><input x-model="s.company_website"></div>
+        <div><label>SIRET</label><input x-model="s.company_siret"></div>
+        <div><label>RCS / RM</label><input x-model="s.company_rcs"></div>
+        <div><label>Code APE / NAF</label><input x-model="s.company_ape"></div>
+        <div><label>N° TVA intracommunautaire</label><input x-model="s.company_vat_number"></div>
+        <div style="grid-column: span 2"><label>Assurance professionnelle (décennale…)</label><input x-model="s.company_insurance" placeholder="Assurance décennale n° … — Compagnie … — Couverture : France"></div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:16px; align-items:center">
+        <div>
+          <label>Logo</label>
+          <input type="file" accept="image/*" @change="loadLogo($event)">
+        </div>
+        <img x-show="s.company_logo" :src="s.company_logo" style="max-height:70px; max-width:200px; border:1px solid var(--border); padding:4px; border-radius:4px">
+        <button class="small danger" x-show="s.company_logo" @click="s.company_logo = ''">Retirer le logo</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Banque (imprimée sur les factures)</h2>
+      <div class="grid grid-3">
+        <div><label>Banque</label><input x-model="s.bank_name"></div>
+        <div><label>IBAN</label><input x-model="s.bank_iban"></div>
+        <div><label>BIC</label><input x-model="s.bank_bic"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>TVA, unités & tarifs</h2>
+      <div class="grid grid-3">
+        <div><label style="display:flex; gap:6px; align-items:center"><input type="checkbox" :checked="s.vat_exempt === '1'" @change="s.vat_exempt = $event.target.checked ? '1' : '0'"> Franchise en base de TVA (auto-entrepreneur)</label></div>
+        <div style="grid-column: span 2"><label>Mention d'exonération</label><input x-model="s.vat_exempt_mention"></div>
+        <div><label>Taux de TVA disponibles (séparés par des virgules)</label><input x-model="s.vat_rates"></div>
+        <div><label>Taux de TVA par défaut</label><input x-model="s.default_vat_rate"></div>
+        <div><label>Coefficient de marge par défaut</label><input x-model="s.default_margin_coef"></div>
+        <div style="grid-column: span 3"><label>Unités proposées (séparées par des virgules)</label><input x-model="s.units"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Numérotation & délais</h2>
+      <p class="small muted">Jetons : <code>{AAAA}</code> année, <code>{AA}</code> année sur 2 chiffres, <code>{MM}</code> mois, <code>{NUM:4}</code> compteur sur 4 chiffres. Le compteur repart à 1 chaque année (ou chaque mois si <code>{MM}</code> est utilisé).</p>
+      <div class="grid grid-3">
+        <div><label>Format des devis</label><input x-model="s.quote_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.quote_number_format)"></div></div>
+        <div><label>Format des factures</label><input x-model="s.invoice_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.invoice_number_format)"></div></div>
+        <div><label>Format des avoirs</label><input x-model="s.credit_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.credit_number_format)"></div></div>
+        <div><label>Validité des devis (jours)</label><input type="number" x-model="s.quote_validity_days"></div>
+        <div><label>Délai de paiement des factures (jours)</label><input type="number" x-model="s.invoice_payment_days"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Textes par défaut</h2>
+      <div class="grid grid-2">
+        <div><label>Introduction des devis</label><textarea x-model="s.quote_default_intro" rows="3"></textarea></div>
+        <div><label>Introduction des factures</label><textarea x-model="s.invoice_default_intro" rows="3"></textarea></div>
+        <div><label>Conditions des devis</label><textarea x-model="s.quote_default_conditions" rows="3"></textarea></div>
+        <div><label>Conditions des factures</label><textarea x-model="s.invoice_default_conditions" rows="3"></textarea></div>
+        <div><label>Mentions légales (factures : pénalités de retard, indemnité 40 €…)</label><textarea x-model="s.legal_mentions" rows="4"></textarea></div>
+        <div><label>Pied de page</label><textarea x-model="s.footer_text" rows="4"></textarea></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Apparence</h2>
+      <div class="grid grid-4">
+        <div><label>Couleur principale</label><input type="color" x-model="s.primary_color" style="height:38px"></div>
+        <div><label>Couleur secondaire (fonds)</label><input type="color" x-model="s.accent_color" style="height:38px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sauvegarde</h2>
+      <p class="small muted">Toutes les données sont stockées localement dans <code>data/facturation.db</code>. Téléchargez régulièrement une sauvegarde.</p>
+      <div class="toolbar">
+        <a class="btn" href="/api/backup">Télécharger une sauvegarde</a>
+        <label class="btn" style="margin:0; font-weight:normal; color:inherit; font-size:14px">Restaurer une sauvegarde…<input type="file" accept=".json" style="display:none" @change="restore($event)"></label>
+      </div>
+    </div>
+  </div>
+  </template>
+</main>
+<script>
+function settingsPage() {
+  return {
+    s: null,
+    async init() { this.s = await api('/settings'); },
+    example(fmt) {
+      const d = todayIso();
+      return (fmt || '').replace(/\{AAAA\}/g, d.slice(0, 4)).replace(/\{AA\}/g, d.slice(2, 4)).replace(/\{MM\}/g, d.slice(5, 7))
+        .replace(/\{NUM(?::(\d+))?\}/g, (_, w) => '1'.padStart(w ? Number(w) : 1, '0'));
+    },
+    async save() { this.s = await api('/settings', { method: 'PUT', body: this.s }); toast('Paramètres enregistrés'); },
+    loadLogo(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      if (f.size > 2 * 1024 * 1024) { toast('Logo trop lourd (2 Mo maximum)', 'error'); return; }
+      const reader = new FileReader();
+      reader.onload = () => { this.s.company_logo = reader.result; };
+      reader.readAsDataURL(f);
+    },
+    async restore(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      if (!confirm('Restaurer cette sauvegarde ? TOUTES les données actuelles seront remplacées.')) { e.target.value = ''; return; }
+      let data;
+      try { data = JSON.parse(await f.text()); } catch { toast('Fichier illisible', 'error'); return; }
+      await api('/restore', { body: data });
+      toast('Sauvegarde restaurée');
+      setTimeout(() => location.reload(), 800);
+    }
+  };
+}
+</script>
+</body>
+</html>

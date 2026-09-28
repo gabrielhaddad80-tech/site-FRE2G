@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/calc.js"></script>
+<script defer src="vendor/alpine.js"></script>
+<style>
+  fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .doc-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .doc-head h1 { margin: 0; }
+  .add-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .margin-info { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: right; }
+  .client-card { font-size: 13px; line-height: 1.4; margin-top: 6px; color: var(--muted); }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="editor()" x-init="init()" x-cloak>
+  <template x-if="doc">
+  <div>
+    <div class="doc-head">
+      <h1 x-text="LABELS.type[doc.type] + ' ' + (doc.number || (doc.id ? '(brouillon)' : '(nouveau)'))"></h1>
+      <span class="badge" :class="doc.status" x-show="doc.id" x-text="LABELS.status[doc.status]"></span>
+      <template x-if="doc.source">
+        <a class="small" :href="'document.html?id=' + doc.source.id" x-text="'← ' + LABELS.type[doc.source.type] + ' ' + (doc.source.number || '')"></a>
+      </template>
+      <template x-for="c in doc.children || []" :key="c.id">
+        <a class="small" :href="'document.html?id=' + c.id" x-text="'→ ' + LABELS.type[c.type] + ' ' + (c.number || '(brouillon)')"></a>
+      </template>
+      <div class="spacer" style="flex:1"></div>
+      <button class="primary" @click="save()" x-show="!doc.locked" :disabled="saving">Enregistrer</button>
+      <button @click="print()">Aperçu / PDF</button>
+      <template x-if="doc.id && doc.type === 'devis' && doc.status !== 'facture'">
+        <span style="display:contents">
+          <select @change="setStatus($event.target.value); $event.target.value = ''" style="width:auto">
+            <option value="">Changer le statut…</option>
+            <option value="brouillon">Brouillon</option><option value="envoye">Envoyé</option>
+            <option value="accepte">Accepté</option><option value="refuse">Refusé</option>
+          </select>
+          <button class="primary" @click="convert()">Transformer en facture</button>
+        </span>
+      </template>
+      <template x-if="doc.id && doc.type !== 'devis' && !doc.number">
+        <button class="primary" @click="issue()" x-text="doc.type === 'facture' ? 'Émettre la facture' : 'Émettre l\'avoir'"></button>
+      </template>
+      <template x-if="doc.type === 'facture' && doc.number && doc.status !== 'annulee'">
+        <span style="display:contents">
+          <button @click="openPayment()">+ Règlement</button>
+          <button @click="credit()">Créer un avoir</button>
+        </span>
+      </template>
+      <button x-show="doc.id" @click="duplicate()">Dupliquer</button>
+      <button class="danger" x-show="doc.id && (doc.type === 'devis' || !doc.number)" @click="remove()">Supprimer</button>
+    </div>
+
+    <div class="locked-banner" x-show="doc.locked" x-text="doc.type === 'devis' ? 'Ce devis a été transformé en facture : il n\'est plus modifiable.' : 'Document émis : il n\'est plus modifiable (obligation légale). Pour le corriger, créez un avoir puis une nouvelle facture.'"></div>
+
+    <fieldset :disabled="doc.locked">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2>Client</h2>
+          <div style="display:flex; gap:8px">
+            <select x-model.number="doc.client_id" @change="onClientChange()">
+              <option value="">— Choisir un client —</option>
+              <template x-for="c in clients" :key="c.id"><option :value="c.id" x-text="clientName(c) + (c.city ? ' — ' + c.city : '')" :selected="c.id == doc.client_id"></option></template>
+            </select>
+            <button type="button" @click="newClient = { kind: 'professionnel', country: 'France' }">+ Nouveau</button>
+          </div>
+          <template x-if="currentClient">
+            <div class="client-card">
+              <div x-text="currentClient.address"></div>
+              <div x-text="[currentClient.postal_code, currentClient.city].filter(Boolean).join(' ')"></div>
+              <div x-text="[currentClient.email, currentClient.phone].filter(Boolean).join(' · ')"></div>
+            </div>
+          </template>
+          <div style="margin-top:12px"><label>Adresse du chantier / lieu de la prestation</label><textarea x-model="doc.site_address" rows="2"></textarea></div>
+        </div>
+        <div class="card">
+          <h2>Informations</h2>
+          <div class="grid grid-2">
+            <div><label>Date</label><input type="date" x-model="doc.date"></div>
+            <div x-show="doc.type === 'devis'"><label>Valable jusqu'au</label><input type="date" x-model="doc.validity_date"></div>
+            <div x-show="doc.type === 'facture'"><label>Échéance</label><input type="date" x-model="doc.due_date"></div>
+            <div x-show="doc.type === 'avoir'"></div>
+            <div style="grid-column: span 2"><label>Objet</label><input x-model="doc.title" placeholder="Ex. Rénovation salle de bain"></div>
+            <div><label>Modèle d'impression</label>
+              <select x-model.number="doc.template_id">
+                <option value="">Modèle par défaut</option>
+                <template x-for="t in templates" :key="t.id"><option :value="t.id" x-text="t.name" :selected="t.id == doc.template_id"></option></template>
+              </select>
+            </div>
+            <div x-show="doc.type === 'devis'"><label>Acompte demandé (%)</label><input type="number" step="any" min="0" max="100" x-model="doc.deposit_pct"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <label>Texte d'introduction</label>
+        <textarea x-model="doc.intro" rows="2"></textarea>
+      </div>
+
+      <div class="card">
+        <h2>Lignes</h2>
+        <table class="lines">
+          <thead><tr>
+            <th style="width:20px"></th><th style="width:90px">Réf.</th><th>Désignation</th>
+            <th class="w-qty num">Qté</th><th class="w-unit">Unité</th><th class="w-price num">P.U. HT</th>
+            <th class="w-disc num">Rem. %</th><th class="w-vat" x-show="!vatExempt">TVA %</th><th class="w-total num">Total HT</th><th class="w-actions"></th>
+          </tr></thead>
+          <tbody>
+            <template x-for="(l, i) in doc.lines" :key="l._key">
+              <tr :class="l.kind" draggable="true" @dragstart="dragFrom = i" @dragover.prevent @drop="drop(i)">
+                <td><span class="handle" title="Glisser pour déplacer">⋮⋮</span></td>
+                <template x-if="l.kind === 'section'">
+                  <td :colspan="vatExempt ? 7 : 8"><input x-model="l.designation" placeholder="Titre de section (ex. Lot 1 — Démolition)"></td>
+                </template>
+                <template x-if="l.kind === 'text'">
+                  <td :colspan="vatExempt ? 7 : 8"><textarea x-model="l.designation" rows="2" placeholder="Texte libre / commentaire"></textarea></td>
+                </template>
+                <template x-if="l.kind === 'item'">
+                  <td><input x-model="l.reference"></td>
+                </template>
+                <template x-if="l.kind === 'item'">
+                  <td>
+                    <input x-model="l.designation" placeholder="Désignation">
+                    <textarea x-model="l.description" rows="1" placeholder="Description (facultatif)"></textarea>
+                  </td>
+                </template>
+                <template x-if="l.kind === 'item'"><td><input class="num" type="number" step="any" x-model="l.quantity"></td></template>
+                <template x-if="l.kind === 'item'">
+                  <td><input x-model="l.unit" list="units"></td>
+                </template>
+                <template x-if="l.kind === 'item'"><td><input class="num" type="number" step="any" x-model="l.unit_price"></td></template>
+                <template x-if="l.kind === 'item'"><td><input class="num" type="number" step="any" x-model="l.discount_pct"></td></template>
+                <template x-if="l.kind === 'item' && !vatExempt">
+                  <td><select x-model.number="l.vat_rate">
+                    <template x-for="r in vatRates" :key="r"><option :value="r" x-text="num(r) + ' %'" :selected="r == l.vat_rate"></option></template>
+                  </select></td>
+                </template>
+                <template x-if="l.kind === 'item'"><td class="num" style="padding-top:10px" x-text="money(Calc.lineTotal(l))"></td></template>
+                <td class="w-actions">
+                  <button type="button" class="small" @click="move(i, -1)" title="Monter">↑</button>
+                  <button type="button" class="small" @click="move(i, 1)" title="Descendre">↓</button>
+                  <button type="button" class="small" @click="dup(i)" title="Dupliquer">⧉</button>
+                  <button type="button" class="small danger" @click="doc.lines.splice(i, 1)" title="Supprimer">✕</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="empty" x-show="!doc.lines.length">Aucune ligne. Ajoutez des articles depuis le catalogue ou des lignes libres.</div>
+        <datalist id="units"><template x-for="u in units" :key="u"><option :value="u"></option></template></datalist>
+        <div class="add-bar" x-show="!doc.locked">
+          <button type="button" class="primary" @click="openPicker()">+ Depuis le catalogue</button>
+          <button type="button" @click="addLine('item')">+ Ligne libre</button>
+          <button type="button" @click="addLine('section')">+ Titre / section</button>
+          <button type="button" @click="addLine('text')">+ Texte</button>
+        </div>
+
+        <div style="display:flex; gap:20px; margin-top:20px; flex-wrap:wrap">
+          <div style="flex:1; min-width:280px">
+            <label>Remise globale (%)</label>
+            <input type="number" step="any" min="0" max="100" x-model="doc.discount_pct" style="max-width:140px">
+          </div>
+          <div class="totals-box">
+            <table>
+              <template x-if="totals.discount_amount > 0">
+                <tbody>
+                  <tr><th>Total HT brut</th><td x-text="money(totals.ht_brut)"></td></tr>
+                  <tr><th x-text="'Remise ' + num(totals.discount_pct) + ' %'"></th><td x-text="'- ' + money(totals.discount_amount)"></td></tr>
+                </tbody>
+              </template>
+              <tr><th>Total HT</th><td x-text="money(totals.ht)"></td></tr>
+              <template x-for="v in totals.vat" :key="v.rate"><tr><th x-text="'TVA ' + num(v.rate) + ' % sur ' + money(v.base)"></th><td x-text="money(v.amount)"></td></tr></template>
+              <tr class="grand"><th x-text="vatExempt ? 'Net à payer' : 'Total TTC'"></th><td x-text="money(totals.ttc)"></td></tr>
+              <tr x-show="doc.type === 'devis' && totals.deposit_pct > 0"><th x-text="'Acompte ' + num(totals.deposit_pct) + ' %'"></th><td x-text="money(totals.deposit_amount)"></td></tr>
+              <tr x-show="doc.type === 'facture' && totals.paid > 0"><th>Déjà réglé</th><td x-text="'- ' + money(totals.paid)"></td></tr>
+              <tr x-show="doc.type === 'facture' && totals.paid > 0" class="grand"><th>Reste à payer</th><td x-text="money(totals.due)"></td></tr>
+            </table>
+            <div class="margin-info" x-show="totals.cost > 0" x-text="'Coût d\'achat ' + money(totals.cost) + ' · Marge ' + money(totals.margin) + ' (' + num(totals.margin_pct) + ' %) — information interne, non imprimée'"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card"><label>Notes (imprimées sous les totaux)</label><textarea x-model="doc.notes" rows="3"></textarea></div>
+        <div class="card"><label>Conditions</label><textarea x-model="doc.conditions" rows="3"></textarea></div>
+      </div>
+    </fieldset>
+
+    <template x-if="doc.type === 'facture' && doc.number">
+      <div class="card">
+        <h2>Règlements</h2>
+        <table class="list" x-show="doc.payments.length">
+          <thead><tr><th>Date</th><th>Mode</th><th>Référence</th><th class="num">Montant</th><th></th></tr></thead>
+          <tbody>
+            <template x-for="p in doc.payments" :key="p.id">
+              <tr><td x-text="fdate(p.date)"></td><td x-text="LABELS.paymentMethod[p.method] || p.method || ''"></td><td x-text="p.reference || ''"></td>
+                <td class="num" x-text="money(p.amount)"></td><td class="num"><button class="small danger" @click="deletePayment(p)">Supprimer</button></td></tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="empty" x-show="!doc.payments.length">Aucun règlement enregistré.</div>
+      </div>
+    </template>
+  </div>
+  </template>
+
+  <!-- Sélection d'articles du catalogue -->
+  <div class="modal-bg" x-show="picker.open" @keydown.escape.window="picker.open = false">
+    <div class="modal wide" @click.outside="picker.open = false">
+      <h2>Ajouter depuis le catalogue</h2>
+      <div class="grid grid-3" style="margin-bottom:10px">
+        <div><label>Recherche</label><input type="search" x-model="picker.q" @input.debounce.200ms="searchItems()" x-ref="pickerSearch" placeholder="Référence, désignation…"></div>
+        <div><label>Type</label><select x-model="picker.type" @change="searchItems()">
+          <option value="">Tous</option>
+          <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v"></option></template>
+        </select></div>
+        <div><label>Catégorie</label><select x-model="picker.category_id" @change="searchItems()">
+          <option value="">Toutes</option>
+          <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
+        </select></div>
+      </div>
+      <label style="display:flex; gap:6px; align-items:center; font-weight:normal"><input type="checkbox" x-model="picker.detail"> Détailler les ouvrages (insérer chaque composant sur une ligne)</label>
+      <div class="search-results" style="margin-top:8px">
+        <table class="list">
+          <thead><tr><th>Réf.</th><th>Désignation</th><th>Type</th><th>Unité</th><th class="num">P.U. HT</th><th style="width:90px">Qté</th><th></th></tr></thead>
+          <tbody>
+            <template x-for="it in picker.results" :key="it.id">
+              <tr>
+                <td x-text="it.reference"></td>
+                <td><div x-text="it.designation"></div><div class="small muted" x-text="it.category_name || ''"></div></td>
+                <td x-text="LABELS.itemType[it.type]"></td>
+                <td x-text="it.unit"></td>
+                <td class="num" x-text="money(it.sale_price)"></td>
+                <td><input type="number" step="any" x-model="it._qty" @keydown.enter="insertItem(it)"></td>
+                <td><button class="small primary" @click="insertItem(it)">Ajouter</button></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="empty" x-show="!picker.results.length">Aucun article trouvé.</div>
+      </div>
+      <div class="actions"><button @click="picker.open = false">Fermer</button></div>
+    </div>
+  </div>
+
+  <!-- Nouveau client rapide -->
+  <div class="modal-bg" x-show="newClient" @keydown.escape.window="newClient = null">
+    <template x-if="newClient">
+      <div class="modal">
+        <h2>Nouveau client</h2>
+        <div class="grid grid-2">
+          <div><label>Type</label><select x-model="newClient.kind"><option value="professionnel">Professionnel</option><option value="particulier">Particulier</option></select></div>
+          <div><label>Raison sociale</label><input x-model="newClient.company"></div>
+          <div><label>Prénom</label><input x-model="newClient.first_name"></div>
+          <div><label>Nom</label><input x-model="newClient.last_name"></div>
+          <div style="grid-column: span 2"><label>Adresse</label><input x-model="newClient.address"></div>
+          <div><label>Code postal</label><input x-model="newClient.postal_code"></div>
+          <div><label>Ville</label><input x-model="newClient.city"></div>
+          <div><label>E-mail</label><input type="email" x-model="newClient.email"></div>
+          <div><label>Téléphone</label><input x-model="newClient.phone"></div>
+        </div>
+        <div class="actions"><button @click="newClient = null">Annuler</button><button class="primary" @click="createClient()">Créer</button></div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Règlement -->
+  <div class="modal-bg" x-show="payment" @keydown.escape.window="payment = null">
+    <template x-if="payment">
+      <div class="modal" style="max-width:480px">
+        <h2>Enregistrer un règlement</h2>
+        <div class="grid grid-2">
+          <div><label>Date</label><input type="date" x-model="payment.date"></div>
+          <div><label>Montant</label><input type="number" step="any" x-model="payment.amount"></div>
+          <div><label>Mode</label><select x-model="payment.method">
+            <template x-for="(v, k) in LABELS.paymentMethod" :key="k"><option :value="k" x-text="v"></option></template>
+          </select></div>
+          <div><label>Référence</label><input x-model="payment.reference" placeholder="N° chèque, libellé…"></div>
+        </div>
+        <div class="actions"><button @click="payment = null">Annuler</button><button class="primary" @click="addPayment()">Enregistrer</button></div>
+      </div>
+    </template>
+  </div>
+</main>
+
+<script>
+let keySeq = 0;
+function withKey(l) { return { ...l, _key: ++keySeq }; }
+
+function editor() {
+  return {
+    doc: null, clients: [], templates: [], categories: [], settings: {},
+    saving: false, snapshot: null, dragFrom: null, newClient: null, payment: null,
+    picker: { open: false, q: '', type: '', category_id: '', detail: false, results: [] },
+
+    get vatExempt() { return this.settings.vat_exempt === '1'; },
+    get vatRates() { return (this.settings.vat_rates || '20,10,5.5,0').split(',').map(Number); },
+    get units() { return (this.settings.units || 'u,h').split(',').map((s) => s.trim()); },
+    get currentClient() { return this.clients.find((c) => c.id == this.doc.client_id); },
+    get dirty() { return !!this.doc && JSON.stringify(this.payload()) !== this.snapshot; },
+    get totals() {
+      const paid = (this.doc.payments || []).reduce((s, p) => s + p.amount, 0);
+      return Calc.computeTotals(this.doc.lines, { discount_pct: this.doc.discount_pct, deposit_pct: this.doc.deposit_pct, vat_exempt: this.vatExempt, paid });
+    },
+
+    async init() {
+      [this.clients, this.templates, this.categories, this.settings] = await Promise.all([
+        api('/clients'), api('/templates'), api('/categories'), api('/settings')
+      ]);
+      const id = qs('id');
+      if (id) {
+        this.setDoc(await api('/documents/' + id));
+      } else {
+        const type = ['devis', 'facture'].includes(qs('new')) ? qs('new') : 'devis';
+        this.doc = {
+          type, status: 'brouillon', date: todayIso(), client_id: qs('client_id') ? Number(qs('client_id')) : '',
+          intro: type === 'devis' ? this.settings.quote_default_intro : this.settings.invoice_default_intro,
+          conditions: type === 'devis' ? this.settings.quote_default_conditions : this.settings.invoice_default_conditions,
+          discount_pct: 0, deposit_pct: 0, lines: [], payments: [], locked: false
+        };
+        if (this.doc.client_id) this.onClientChange();
+      }
+      if (!this.doc.id) this.snapshot = JSON.stringify(this.payload());
+      window.addEventListener('beforeunload', (e) => { if (this.dirty && !this.doc.locked) { e.preventDefault(); e.returnValue = ''; } });
+      document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); this.save(); } });
+    },
+
+    setDoc(d) {
+      d.lines = d.lines.map(withKey);
+      this.doc = d;
+      document.title = `${LABELS.type[d.type]} ${d.number || ''} — Facturation`;
+      this.snapshot = JSON.stringify(this.payload());
+    },
+
+    onClientChange() {
+      const c = this.currentClient;
+      if (c && !this.doc.id && c.discount_pct && !Number(this.doc.discount_pct)) this.doc.discount_pct = c.discount_pct;
+    },
+
+    payload() {
+      const d = { ...this.doc };
+      d.lines = this.doc.lines.map(({ _key, id, document_id, ...l }) => l);
+      return d;
+    },
+
+    async save() {
+      if (!this.doc || this.doc.locked) return;
+      this.saving = true;
+      try {
+        let d;
+        if (this.doc.id) d = await api('/documents/' + this.doc.id, { method: 'PUT', body: this.payload() });
+        else {
+          d = await api('/documents', { body: this.payload() });
+          history.replaceState(null, '', 'document.html?id=' + d.id);
+        }
+        this.setDoc(d);
+        toast('Enregistré');
+        return d;
+      } finally { this.saving = false; }
+    },
+
+    async ensureSaved() {
+      if (!this.doc.id || (this.dirty && !this.doc.locked)) await this.save();
+      if (!this.doc.id) throw new Error('Document non enregistré');
+    },
+
+    async print() {
+      await this.ensureSaved();
+      window.open(`/api/documents/${this.doc.id}/print`, '_blank');
+    },
+
+    async setStatus(status) {
+      if (!status) return;
+      await this.ensureSaved();
+      this.setDoc(await api(`/documents/${this.doc.id}/status`, { body: { status } }));
+    },
+
+    async convert() {
+      if (!confirm('Créer une facture à partir de ce devis ?')) return;
+      await this.ensureSaved();
+      const d = await api(`/documents/${this.doc.id}/convert`, { body: {} });
+      location.href = 'document.html?id=' + d.id;
+    },
+
+    async issue() {
+      const what = this.doc.type === 'facture' ? 'cette facture' : 'cet avoir';
+      if (!confirm(`Émettre ${what} ? Un numéro définitif sera attribué et le document ne pourra plus être modifié.`)) return;
+      await this.ensureSaved();
+      this.setDoc(await api(`/documents/${this.doc.id}/issue`, { body: {} }));
+      toast('Document émis : ' + this.doc.number);
+    },
+
+    async credit() {
+      if (!confirm('Créer un avoir (annulation totale ou partielle) pour cette facture ?')) return;
+      const d = await api(`/documents/${this.doc.id}/credit`, { body: {} });
+      location.href = 'document.html?id=' + d.id;
+    },
+
+    async duplicate() {
+      await this.ensureSaved();
+      const type = this.doc.type === 'devis' ? 'devis' : 'facture';
+      const d = await api(`/documents/${this.doc.id}/duplicate`, { body: { type } });
+      location.href = 'document.html?id=' + d.id;
+    },
+
+    async remove() {
+      if (!confirm('Supprimer définitivement ce document ?')) return;
+      await api('/documents/' + this.doc.id, { method: 'DELETE' });
+      this.snapshot = JSON.stringify(this.payload());
+      location.href = 'documents.html?type=' + this.doc.type;
+    },
+
+    // ----- Lignes -----
+    blankLine(kind) {
+      return withKey({ kind, reference: '', designation: '', description: '', quantity: kind === 'item' ? 1 : 0, unit: 'u', unit_price: 0, discount_pct: 0, vat_rate: Number(this.settings.default_vat_rate || 20), purchase_price: 0 });
+    },
+    addLine(kind) { this.doc.lines.push(this.blankLine(kind)); },
+    move(i, delta) {
+      const j = i + delta;
+      if (j < 0 || j >= this.doc.lines.length) return;
+      const [l] = this.doc.lines.splice(i, 1);
+      this.doc.lines.splice(j, 0, l);
+    },
+    dup(i) { const { _key, id, ...l } = this.doc.lines[i]; this.doc.lines.splice(i + 1, 0, withKey(l)); },
+    drop(i) {
+      if (this.dragFrom === null || this.dragFrom === i) return;
+      const [l] = this.doc.lines.splice(this.dragFrom, 1);
+      this.doc.lines.splice(i, 0, l);
+      this.dragFrom = null;
+    },
+
+    // ----- Catalogue -----
+    openPicker() {
+      this.picker.open = true;
+      this.searchItems();
+      this.$nextTick(() => this.$refs.pickerSearch.focus());
+    },
+    async searchItems() {
+      const p = new URLSearchParams({ limit: 200 });
+      if (this.picker.q) p.set('q', this.picker.q);
+      if (this.picker.type) p.set('type', this.picker.type);
+      if (this.picker.category_id) p.set('category_id', this.picker.category_id);
+      this.picker.results = (await api('/items?' + p)).map((it) => ({ ...it, _qty: 1 }));
+    },
+    lineFromItem(it, qty) {
+      return withKey({
+        kind: 'item', item_id: it.id, item_type: it.type, reference: it.reference || '', designation: it.designation, description: it.description || '',
+        quantity: qty, unit: it.unit, unit_price: it.sale_price, discount_pct: 0,
+        vat_rate: it.vat_rate ?? Number(this.settings.default_vat_rate || 20), purchase_price: it.purchase_price || 0
+      });
+    },
+    async insertItem(it) {
+      const qty = Calc.num(it._qty) || 1;
+      if (it.type === 'ouvrage') {
+        const full = await api('/items/' + it.id);
+        if (this.picker.detail && full.components.length) {
+          this.doc.lines.push(withKey({ kind: 'section', designation: `${it.designation} (${num(qty)} ${it.unit})` }));
+          for (const c of full.components) {
+            this.doc.lines.push(this.lineFromItem({ ...c, id: c.child_id, vat_rate: it.vat_rate, description: '' }, Calc.round2(c.quantity * qty * 1000) / 1000));
+          }
+        } else {
+          const line = this.lineFromItem(it, qty);
+          if (!line.description && full.components.length) {
+            line.description = full.components.map((c) => `${c.designation} : ${num(c.quantity)} ${c.unit}`).join('\n');
+          }
+          this.doc.lines.push(line);
+        }
+      } else {
+        this.doc.lines.push(this.lineFromItem(it, qty));
+      }
+      toast('Ajouté : ' + it.designation);
+    },
+
+    // ----- Clients -----
+    async createClient() {
+      const c = await api('/clients', { body: this.newClient });
+      this.clients = await api('/clients');
+      this.doc.client_id = c.id;
+      this.newClient = null;
+    },
+
+    // ----- Règlements -----
+    openPayment() {
+      this.payment = { date: todayIso(), amount: Calc.round2(this.totals.due), method: 'virement', reference: '' };
+    },
+    async addPayment() {
+      this.setDoc(await api(`/documents/${this.doc.id}/payments`, { body: this.payment }));
+      this.payment = null;
+      toast('Règlement enregistré');
+    },
+    async deletePayment(p) {
+      if (!confirm('Supprimer ce règlement ?')) return;
+      this.setDoc(await api('/payments/' + p.id, { method: 'DELETE' }));
+    }
+  };
+}
+</script>
+</body>
+</html>

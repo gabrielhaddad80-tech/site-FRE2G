@@ -1,0 +1,164 @@
+'use strict';
+
+const express = require('express');
+const { getSettings, DEFAULT_SETTINGS } = require('../db');
+const { renderDocument, pageHtml, handlebars } = require('../render');
+
+const BACKUP_TABLES = ['settings', 'clients', 'categories', 'items', 'item_components', 'templates', 'documents', 'document_lines', 'payments', 'counters'];
+
+module.exports = function adminRoutes(db) {
+  const r = express.Router();
+
+  // ---------- Paramètres ----------
+  r.get('/settings', (req, res) => res.json(getSettings(db)));
+
+  r.put('/settings', (req, res) => {
+    const up = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
+    db.transaction(() => {
+      for (const [k, v] of Object.entries(req.body || {})) {
+        if (!(k in DEFAULT_SETTINGS)) continue;
+        up.run(k, v === null || v === undefined ? '' : String(v));
+      }
+    })();
+    res.json(getSettings(db));
+  });
+
+  // ---------- Modèles de document ----------
+  r.get('/templates', (req, res) => {
+    res.json(db.prepare('SELECT id, name, is_default, updated_at FROM templates ORDER BY is_default DESC, name').all());
+  });
+  r.get('/templates/:id', (req, res) => {
+    const t = db.prepare('SELECT * FROM templates WHERE id = ?').get(req.params.id);
+    if (!t) return res.status(404).json({ error: 'Modèle introuvable' });
+    res.json(t);
+  });
+  r.post('/templates', (req, res) => {
+    const src = req.body.copy_of ? db.prepare('SELECT * FROM templates WHERE id = ?').get(req.body.copy_of) : null;
+    const html = req.body.html ?? src?.html ?? '<div>{{doc.type_label}} {{doc.number}}</div>';
+    const css = req.body.css ?? src?.css ?? '';
+    const name = req.body.name || (src ? `${src.name} (copie)` : 'Nouveau modèle');
+    const info = db.prepare('INSERT INTO templates (name, html, css, is_default) VALUES (?, ?, ?, 0)').run(name, html, css);
+    res.status(201).json(db.prepare('SELECT * FROM templates WHERE id = ?').get(info.lastInsertRowid));
+  });
+  r.put('/templates/:id', (req, res) => {
+    const t = db.prepare('SELECT * FROM templates WHERE id = ?').get(req.params.id);
+    if (!t) return res.status(404).json({ error: 'Modèle introuvable' });
+    // Vérifie la syntaxe avant d'enregistrer
+    try {
+      handlebars.precompile(req.body.html ?? t.html);
+      handlebars.precompile(req.body.css ?? t.css ?? '');
+    } catch (e) {
+      return res.status(400).json({ error: 'Erreur dans le modèle : ' + e.message });
+    }
+    db.transaction(() => {
+      db.prepare("UPDATE templates SET name = ?, html = ?, css = ?, updated_at = datetime('now') WHERE id = ?")
+        .run(req.body.name ?? t.name, req.body.html ?? t.html, req.body.css ?? t.css, t.id);
+      if (req.body.is_default) {
+        db.prepare('UPDATE templates SET is_default = 0').run();
+        db.prepare('UPDATE templates SET is_default = 1 WHERE id = ?').run(t.id);
+      }
+    })();
+    res.json(db.prepare('SELECT * FROM templates WHERE id = ?').get(t.id));
+  });
+  r.delete('/templates/:id', (req, res) => {
+    const n = db.prepare('SELECT COUNT(*) AS n FROM templates').get().n;
+    if (n <= 1) return res.status(409).json({ error: 'Il faut conserver au moins un modèle.' });
+    const t = db.prepare('SELECT * FROM templates WHERE id = ?').get(req.params.id);
+    db.transaction(() => {
+      db.prepare('DELETE FROM templates WHERE id = ?').run(req.params.id);
+      if (t?.is_default) db.prepare('UPDATE templates SET is_default = 1 WHERE id = (SELECT MIN(id) FROM templates)').run();
+    })();
+    res.json({ ok: true });
+  });
+
+  // Aperçu d'un modèle (non enregistré) sur un document existant, ou sur un document de démonstration
+  r.post('/templates/preview', (req, res) => {
+    let doc = req.body.document_id ? db.prepare('SELECT * FROM documents WHERE id = ?').get(req.body.document_id) : null;
+    if (!doc) doc = db.prepare("SELECT * FROM documents ORDER BY (type = 'devis') DESC, id DESC LIMIT 1").get();
+    if (!doc) {
+      return res.type('html').send(pageHtml({ title: 'Aperçu', css: '', body: '<p style="font-family:sans-serif">Créez d\'abord un devis ou une facture pour prévisualiser le modèle.</p>' }));
+    }
+    try {
+      const { body, css } = renderDocument(db, doc, { html: req.body.html || '', css: req.body.css || '' });
+      res.type('html').send(pageHtml({ title: 'Aperçu', body, css }));
+    } catch (e) {
+      res.type('html').send(pageHtml({ title: 'Erreur', css: '', body: `<pre style="color:#b00;white-space:pre-wrap">Erreur dans le modèle :\n${String(e.message).replace(/</g, '&lt;')}</pre>` }));
+    }
+  });
+
+  // ---------- Tableau de bord ----------
+  r.get('/dashboard', (req, res) => {
+    const year = String(req.query.year || new Date().getFullYear());
+    const sum = (sql, ...p) => db.prepare(sql).get(...p).s || 0;
+    const invoiced = sum("SELECT SUM(total_ht) AS s FROM documents WHERE type = 'facture' AND number IS NOT NULL AND substr(date,1,4) = ?", year);
+    const credited = sum("SELECT SUM(total_ht) AS s FROM documents WHERE type = 'avoir' AND number IS NOT NULL AND substr(date,1,4) = ?", year);
+    const collected = sum('SELECT SUM(p.amount) AS s FROM payments p WHERE substr(p.date,1,4) = ?', year);
+    const openInvoices = db.prepare(`SELECT d.id, d.number, d.date, d.due_date, d.total_ttc, d.status,
+        COALESCE(NULLIF(c.company,''), TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,''))) AS client_name,
+        (SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.document_id = d.id) AS paid,
+        (SELECT COALESCE(SUM(total_ttc),0) FROM documents a WHERE a.type = 'avoir' AND a.source_id = d.id AND a.number IS NOT NULL) AS credited
+      FROM documents d LEFT JOIN clients c ON c.id = d.client_id
+      WHERE d.type = 'facture' AND d.status IN ('emise','partielle') ORDER BY d.due_date`).all();
+    const receivable = openInvoices.reduce((s, d) => s + d.total_ttc - d.paid - d.credited, 0);
+    const today = new Date().toISOString().slice(0, 10);
+    const overdue = openInvoices.filter((d) => d.due_date && d.due_date < today);
+    const pendingQuotes = db.prepare(`SELECT d.id, d.number, d.date, d.validity_date, d.total_ht, d.total_ttc, d.status, d.title,
+        COALESCE(NULLIF(c.company,''), TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,''))) AS client_name
+      FROM documents d LEFT JOIN clients c ON c.id = d.client_id
+      WHERE d.type = 'devis' AND d.status IN ('brouillon','envoye','accepte') ORDER BY d.date DESC`).all();
+    const quotesYear = db.prepare("SELECT status, COUNT(*) AS n FROM documents WHERE type = 'devis' AND substr(date,1,4) = ? GROUP BY status").all(year);
+    const qTotal = quotesYear.reduce((s, q) => s + q.n, 0);
+    const qWon = quotesYear.filter((q) => ['accepte', 'facture'].includes(q.status)).reduce((s, q) => s + q.n, 0);
+    const monthly = db.prepare(`SELECT substr(date,6,2) AS m,
+        SUM(CASE WHEN type = 'facture' THEN total_ht ELSE -total_ht END) AS ht
+      FROM documents WHERE type IN ('facture','avoir') AND number IS NOT NULL AND substr(date,1,4) = ? GROUP BY m ORDER BY m`).all(year);
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const m = String(i + 1).padStart(2, '0');
+      return { month: m, ht: Math.round((monthly.find((x) => x.m === m)?.ht || 0) * 100) / 100 };
+    });
+    res.json({
+      year,
+      revenue_ht: Math.round((invoiced - credited) * 100) / 100,
+      collected: Math.round(collected * 100) / 100,
+      receivable: Math.round(receivable * 100) / 100,
+      overdue,
+      open_invoices: openInvoices,
+      pending_quotes: pendingQuotes,
+      pending_quotes_total: Math.round(pendingQuotes.reduce((s, q) => s + q.total_ht, 0) * 100) / 100,
+      conversion_rate: qTotal ? Math.round(qWon / qTotal * 1000) / 10 : 0,
+      months
+    });
+  });
+
+  // ---------- Sauvegarde / restauration ----------
+  r.get('/backup', (req, res) => {
+    const dump = { app: 'fre2g-facturation', version: 1, exported_at: new Date().toISOString(), tables: {} };
+    for (const t of BACKUP_TABLES) dump.tables[t] = db.prepare(`SELECT * FROM ${t}`).all();
+    res.setHeader('Content-Disposition', `attachment; filename="sauvegarde-facturation-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.json(dump);
+  });
+
+  r.post('/restore', (req, res) => {
+    const dump = req.body;
+    if (!dump || dump.app !== 'fre2g-facturation' || !dump.tables) return res.status(400).json({ error: 'Fichier de sauvegarde invalide.' });
+    db.pragma('foreign_keys = OFF');
+    try {
+      db.transaction(() => {
+        for (const t of [...BACKUP_TABLES].reverse()) db.prepare(`DELETE FROM ${t}`).run();
+        for (const t of BACKUP_TABLES) {
+          const rows = dump.tables[t] || [];
+          const validCols = new Set(db.prepare(`PRAGMA table_info(${t})`).all().map((c) => c.name));
+          for (const row of rows) {
+            const cols = Object.keys(row).filter((c) => validCols.has(c));
+            db.prepare(`INSERT INTO ${t} (${cols.join(',')}) VALUES (${cols.map((c) => '@' + c).join(',')})`).run(Object.fromEntries(cols.map((c) => [c, row[c]])));
+          }
+        }
+      })();
+    } finally {
+      db.pragma('foreign_keys = ON');
+    }
+    res.json({ ok: true });
+  });
+
+  return r;
+};

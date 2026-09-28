@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clients — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script defer src="vendor/alpine.js"></script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="clientsPage()" x-init="load()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0">Clients</h1>
+    <div class="spacer"></div>
+    <input type="search" x-model="q" @input.debounce.300ms="load()" placeholder="Rechercher…" style="max-width:260px">
+    <button class="primary" @click="edit({ kind: 'professionnel', country: 'France' })">+ Nouveau client</button>
+  </div>
+  <div class="card">
+    <table class="list">
+      <thead><tr><th>Code</th><th>Nom / raison sociale</th><th>Contact</th><th>Ville</th><th>E-mail</th><th>Téléphone</th><th class="num">Documents</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="c in rows" :key="c.id">
+          <tr class="clickable" @click="edit(c)">
+            <td x-text="c.code"></td>
+            <td><strong x-text="clientName(c)"></strong> <span class="badge" x-show="c.kind === 'particulier'">Particulier</span></td>
+            <td x-text="c.company ? [c.first_name, c.last_name].filter(Boolean).join(' ') : ''"></td>
+            <td x-text="c.city"></td>
+            <td x-text="c.email"></td>
+            <td x-text="c.phone"></td>
+            <td class="num" x-text="c.documents_count"></td>
+            <td class="num" @click.stop>
+              <a class="btn small" :href="'document.html?new=devis&client_id=' + c.id">Devis</a>
+              <a class="btn small" :href="'document.html?new=facture&client_id=' + c.id">Facture</a>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="empty" x-show="!rows.length">Aucun client.</div>
+  </div>
+
+  <div class="modal-bg" x-show="form" @keydown.escape.window="form = null">
+    <template x-if="form">
+      <div class="modal">
+        <h2 x-text="form.id ? 'Client ' + (form.code || '') : 'Nouveau client'"></h2>
+        <div class="grid grid-3">
+          <div><label>Type</label><select x-model="form.kind"><option value="professionnel">Professionnel</option><option value="particulier">Particulier</option></select></div>
+          <div><label>Code client</label><input x-model="form.code" placeholder="Automatique"></div>
+          <div><label>Raison sociale</label><input x-model="form.company"></div>
+          <div><label>Civilité</label><select x-model="form.civility"><option value=""></option><option>M.</option><option>Mme</option></select></div>
+          <div><label>Prénom</label><input x-model="form.first_name"></div>
+          <div><label>Nom</label><input x-model="form.last_name"></div>
+          <div style="grid-column: span 3"><label>Adresse</label><textarea x-model="form.address" rows="2"></textarea></div>
+          <div><label>Code postal</label><input x-model="form.postal_code"></div>
+          <div><label>Ville</label><input x-model="form.city"></div>
+          <div><label>Pays</label><input x-model="form.country"></div>
+          <div><label>E-mail</label><input type="email" x-model="form.email"></div>
+          <div><label>Téléphone</label><input x-model="form.phone"></div>
+          <div></div>
+          <div><label>SIRET</label><input x-model="form.siret"></div>
+          <div><label>N° TVA intracommunautaire</label><input x-model="form.vat_number"></div>
+          <div></div>
+          <div><label>Délai de paiement (jours)</label><input type="number" x-model="form.payment_days" placeholder="Par défaut"></div>
+          <div><label>Remise habituelle (%)</label><input type="number" step="any" x-model="form.discount_pct"></div>
+          <div></div>
+          <div style="grid-column: span 3"><label>Notes internes</label><textarea x-model="form.notes" rows="2"></textarea></div>
+        </div>
+        <template x-if="form.id">
+          <div style="margin-top:14px">
+            <h2>Historique</h2>
+            <table class="list">
+              <tbody>
+                <template x-for="d in history" :key="d.id">
+                  <tr class="clickable" @click="location.href = 'document.html?id=' + d.id">
+                    <td x-text="LABELS.type[d.type]"></td><td x-text="d.number || '(brouillon)'"></td><td x-text="fdate(d.date)"></td>
+                    <td><span class="badge" :class="d.status" x-text="LABELS.status[d.status]"></span></td><td class="num" x-text="money(d.total_ttc)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <div class="empty" x-show="!history.length">Aucun document.</div>
+          </div>
+        </template>
+        <div class="actions">
+          <button class="danger" x-show="form.id" @click="remove()" style="margin-right:auto">Supprimer</button>
+          <button @click="form = null">Annuler</button>
+          <button class="primary" @click="save()">Enregistrer</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</main>
+<script>
+function clientsPage() {
+  return {
+    rows: [], q: '', form: null, history: [],
+    async load() { this.rows = await api('/clients?q=' + encodeURIComponent(this.q)); },
+    async edit(c) {
+      this.form = { ...c };
+      this.history = c.id ? await api('/documents?client_id=' + c.id) : [];
+    },
+    async save() {
+      if (this.form.id) await api('/clients/' + this.form.id, { method: 'PUT', body: this.form });
+      else await api('/clients', { body: this.form });
+      this.form = null;
+      toast('Client enregistré');
+      this.load();
+    },
+    async remove() {
+      if (!confirm('Supprimer ce client ?')) return;
+      await api('/clients/' + this.form.id, { method: 'DELETE' });
+      this.form = null;
+      this.load();
+    }
+  };
+}
+</script>
+</body>
+</html>
