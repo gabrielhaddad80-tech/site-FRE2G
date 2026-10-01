@@ -38,7 +38,18 @@ Le logiciel est protégé par une connexion (e-mail + mot de passe).
   (ferme aussi les sessions ouvertes de ce compte ; crée le compte s'il n'existe pas).
 - **Ce qui est protégé** : mots de passe hachés (scrypt) ; session dans un cookie HttpOnly / SameSite=Lax, valable
   30 jours (seule son empreinte est stockée) ; toutes les pages et l'API exigent une session ; écritures refusées
-  depuis un autre site ; 10 tentatives de connexion incorrectes bloquent l'adresse IP 15 minutes.
+  depuis un autre site ; 10 tentatives de connexion incorrectes bloquent l'adresse IP **et le compte visé** 15 minutes ;
+  avant connexion, seuls de petits envois sont acceptés.
+- **Pages** : politique de sécurité du contenu (CSP) — rien n'est chargé ni envoyé vers un autre site. Les modèles de
+  document (HTML modifiable ou créé par l'IA) s'affichent sans pouvoir exécuter de script (aperçus isolés, page
+  d'impression sans script autre que sa barre d'outils).
+- **Assistant IA** : il ne peut pas modifier le catalogue de lui-même ; un import proposé s'enregistre seulement après
+  un clic sur « Importer dans le catalogue » (un PDF piégé ne peut pas changer vos prix).
+- **Export CSV** : les textes commençant par `=`, `+`, `-`, `@` sont neutralisés pour qu'Excel ne les exécute pas.
+- **Serveur (installation automatique)** : fail2ban (SSH), correctifs de sécurité Ubuntu automatiques, sauvegardes
+  lisibles par l'administrateur seulement (`deploy/harden.sh`, relancé à chaque `facturation-update`).
+- Tous les comptes ont les mêmes droits (ajout d'utilisateurs, restauration d'une sauvegarde) : ne créez de compte
+  que pour des personnes de confiance.
 - **En ligne derrière HTTPS** (Caddy, Nginx…) : lancez avec `TRUST_PROXY=1` pour que le cookie soit marqué
   « Secure » et que le blocage utilise la vraie adresse IP des visiteurs.
 

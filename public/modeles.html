@@ -122,7 +122,7 @@
             <template x-for="d in docs" :key="d.id"><option :value="d.id" x-text="LABELS.type[d.type] + ' ' + (d.number || '(brouillon)') + ' — ' + (d.client_name || '')"></option></template>
           </select>
         </div>
-        <iframe class="preview-frame" id="tpl-frame" title="Aperçu du modèle"></iframe>
+        <iframe class="preview-frame" id="tpl-frame" title="Aperçu du modèle" sandbox></iframe>
       </div>
     </div>
   </template>
@@ -183,7 +183,7 @@
                 <p class="small muted">Basé sur le modèle « <span x-text="current ? current.name : ''"></span> ». Ajustez les marges pour que le texte ne chevauche pas l'en-tête ni le pied de page.</p>
                 <div class="compare">
                   <figure><figcaption>Votre papier</figcaption><div class="orig"><img :src="imp?.image?.preview" alt="Papier à en-tête importé"></div></figure>
-                  <figure><figcaption>Résultat</figcaption><iframe id="lh-frame" title="Aperçu avec papier à en-tête"></iframe></figure>
+                  <figure><figcaption>Résultat</figcaption><iframe id="lh-frame" title="Aperçu avec papier à en-tête" sandbox></iframe></figure>
                 </div>
                 <div class="actions">
                   <button type="button" @click="closeImport()">Annuler</button>
@@ -202,7 +202,7 @@
             <p class="small" style="margin:10px 0 0; padding:10px 12px; border-radius:12px; background:var(--warn-bg); color:var(--warn)" x-show="imp?.result?.notes" x-text="'Remarque de l\'IA : ' + (imp?.result?.notes || '')"></p>
             <div class="compare">
               <figure><figcaption>Votre modèle</figcaption><div class="orig"><img :src="imp?.image?.preview" alt="Modèle d'origine"></div></figure>
-              <figure><figcaption>Reproduction (avec vos données)</figcaption><iframe id="ai-frame" title="Aperçu du modèle reproduit"></iframe></figure>
+              <figure><figcaption>Reproduction (avec vos données)</figcaption><iframe id="ai-frame" title="Aperçu du modèle reproduit" sandbox></iframe></figure>
             </div>
             <div class="actions">
               <button type="button" @click="imp.result = null">Réessayer</button>

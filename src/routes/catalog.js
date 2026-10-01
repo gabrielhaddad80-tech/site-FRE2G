@@ -137,7 +137,9 @@ module.exports = function catalogRoutes(db) {
     const cols = ['type', 'reference', 'designation', 'description', 'unit', 'purchase_price', 'sale_price', 'vat_rate', 'category', 'catalog', 'supplier', 'active'];
     const esc = (v) => {
       if (v === null || v === undefined) return '';
-      const s = typeof v === 'number' ? String(v).replace('.', ',') : String(v);
+      let s = typeof v === 'number' ? String(v).replace('.', ',') : String(v);
+      // Texte commençant par = + - @ : neutralisé pour qu'Excel ne l'exécute pas comme une formule
+      if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
       return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const csv = '﻿' + [cols.join(';'), ...rows.map((r) => cols.map((c) => esc(r[c])).join(';'))].join('\r\n');
@@ -162,7 +164,8 @@ module.exports = function catalogRoutes(db) {
         if (!raw.designation) { skipped++; continue; }
         const existing = raw.reference ? findRef.get(raw.reference) : null;
         // Mise à jour : seules les colonnes renseignées dans le fichier remplacent les valeurs existantes
-        const provided = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+        const provided = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined && v !== null && v !== '')
+          .map(([k, v]) => [k, typeof v === 'string' && /^'[=+\-@\t\r]/.test(v) ? v.slice(1) : v])); // retour d'un export CSV
         if (!provided.catalog && catalogName) provided.catalog = catalogName;
         if (provided.category) {
           const c = findCat.get(provided.category);

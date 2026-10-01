@@ -228,6 +228,7 @@ module.exports = function aiRoutes(db, options = {}) {
       const client = createClient(key);
       const messages = withKnowledgeBlocks([...history], knowledge);
       const created = [];
+      const imports = []; // imports de catalogue proposés : enregistrés seulement si l'utilisateur confirme
       for (let round = 0; round < 8; round++) {
         const response = await client.beta.messages.create({
           model: MODEL,
@@ -242,7 +243,7 @@ module.exports = function aiRoutes(db, options = {}) {
         if (response.stop_reason === 'refusal') throw httpError(422, "L'IA n'a pas pu répondre à cette demande. Reformulez-la.");
         if (response.stop_reason !== 'tool_use') {
           const reply = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n\n').trim();
-          return res.json({ reply: reply || "Je n'ai pas de réponse à proposer. Pouvez-vous préciser ?", created });
+          return res.json({ reply: reply || "Je n'ai pas de réponse à proposer. Pouvez-vous préciser ?", created, imports });
         }
         // Tour d'outils : on renvoie tout le contenu de l'assistant, puis tous les résultats dans un seul message
         messages.push({ role: 'assistant', content: response.content });
@@ -252,6 +253,7 @@ module.exports = function aiRoutes(db, options = {}) {
           try {
             const out = await AiDraft.runChatTool(block.name, block.input, request);
             if (block.name === 'creer_devis') created.push({ number: out.numero, link: out.link });
+            if (out && out._import) { imports.push(out._import); delete out._import; }
             results.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(out).slice(0, 30000) });
           } catch (e) {
             results.push({ type: 'tool_result', tool_use_id: block.id, content: 'Erreur : ' + e.message, is_error: true });
@@ -259,7 +261,7 @@ module.exports = function aiRoutes(db, options = {}) {
         }
         messages.push({ role: 'user', content: results });
       }
-      res.json({ reply: "J'ai dû m'arrêter avant la fin : la demande demandait trop d'étapes. Pouvez-vous la découper ?", created });
+      res.json({ reply: "J'ai dû m'arrêter avant la fin : la demande demandait trop d'étapes. Pouvez-vous la découper ?", created, imports });
     } catch (e) {
       next(apiError(e));
     }

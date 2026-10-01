@@ -26,7 +26,8 @@ function handle(method, url, body) {
     json(o) { this.contentType = 'application/json'; this.body = JSON.stringify(o); return this; },
     send(s) { this.body = String(s); return this; },
     type(t) { this.contentType = t === 'html' ? 'text/html' : t; return this; },
-    setHeader() { return this; }
+    setHeader() { return this; },
+    set() { return this; }
   };
   const fail = (err) => {
     const status = err.status || 500;

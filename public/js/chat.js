@@ -51,8 +51,10 @@ function chatRender() {
   for (const m of chat.messages) {
     const b = document.createElement('div');
     b.className = 'bubble ' + m.role;
-    if (m.role === 'assistant') b.innerHTML = chatFormat(m.content);
-    else {
+    if (m.role === 'assistant') {
+      b.innerHTML = chatFormat(m.content);
+      (m.imports || []).forEach((imp) => b.appendChild(chatImportCard(imp)));
+    } else {
       if (m.content) b.textContent = m.content;
       if (m.files && m.files.length) {
         const list = document.createElement('div');
@@ -81,6 +83,49 @@ function chatRender() {
   send.hidden = chat.busy;
   document.getElementById('chat-stop').hidden = !chat.busy;
   log.scrollTop = log.scrollHeight;
+}
+
+// Import de catalogue proposé par l'assistant : rien n'est enregistré sans le clic de l'utilisateur
+function chatImportCard(imp) {
+  const card = document.createElement('div');
+  card.className = 'chat-import';
+  const title = document.createElement('strong');
+  title.textContent = `${imp.rows.length} article(s) à importer${imp.catalog ? ' — catalogue « ' + imp.catalog + ' »' : ''}`;
+  const details = document.createElement('details');
+  const sum = document.createElement('summary');
+  sum.textContent = 'Voir la liste';
+  const list = document.createElement('ul');
+  for (const r of imp.rows.slice(0, 200)) {
+    const li = document.createElement('li');
+    const price = r.sale_price !== '' && r.sale_price !== undefined ? ` — ${money(r.sale_price)} HT` : '';
+    li.textContent = `${r.reference ? r.reference + ' · ' : ''}${r.designation}${price}`;
+    list.appendChild(li);
+  }
+  details.append(sum, list);
+  const note = document.createElement('p');
+  note.className = 'small';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'primary';
+  if (imp.result) {
+    note.textContent = `Importé : ${imp.result.created} créé(s), ${imp.result.updated} mis à jour.`;
+    card.append(title, details, note);
+    return card;
+  }
+  note.textContent = 'Vérifiez la liste : les références déjà présentes au catalogue seront mises à jour.';
+  btn.textContent = 'Importer dans le catalogue';
+  btn.addEventListener('click', async () => {
+    if (!(await uiConfirm(`Importer ${imp.rows.length} article(s) dans le catalogue ? Les références existantes seront mises à jour.`))) return;
+    btn.disabled = true;
+    try {
+      imp.result = await api('/items/import', { body: { rows: imp.rows, catalog: imp.catalog || '' } });
+      toast(`Catalogue mis à jour : ${imp.result.created} créé(s), ${imp.result.updated} mis à jour`);
+      chatSave();
+      chatRender();
+    } catch (e) { btn.disabled = false; }
+  });
+  card.append(title, details, note, btn);
+  return card;
 }
 
 function chatRenderFiles() {
@@ -147,7 +192,11 @@ async function chatSend(text) {
       messages: chatHistoryForApi(), context: chatContext(), attachments, signal: chat.ctl.signal,
       onText: (t) => { chat.streaming = t; chatRender(); }
     });
-    chat.messages.push({ role: 'assistant', content: r.reply });
+    const msg = { role: 'assistant', content: r.reply };
+    if (Array.isArray(r.imports) && r.imports.length) {
+      msg.imports = r.imports.filter((i) => i && Array.isArray(i.rows)).map((i) => ({ catalog: String(i.catalog || ''), rows: i.rows }));
+    }
+    chat.messages.push(msg);
   } catch (e) {
     if (e && e.code === 'cancelled') chat.messages.push({ role: 'assistant', content: '(Réponse interrompue.)' });
     else chat.messages.push({ role: 'assistant', content: '⚠ ' + ((e && e.message) || "L'assistant n'a pas pu répondre.") });

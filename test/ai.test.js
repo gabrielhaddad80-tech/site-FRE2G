@@ -215,8 +215,18 @@ test('chat : pièces jointes et ajout d\'articles au catalogue', async () => {
     assert.match(last[3].text, /LR-10;27,5/);
     assert.match(last[4].text, /Ajoute ce tarif/);
     assert.strictEqual(typeof seen[0].messages[0].content, 'string', 'les anciens messages restent du texte');
+    // L'IA ne fait que proposer l'import : rien n'est enregistré sans la confirmation de l'utilisateur
     const result = JSON.parse(seen[1].messages.at(-1).content[0].content);
-    assert.deepStrictEqual([result.crees, result.mis_a_jour], [1, 1]);
+    assert.strictEqual(result.en_attente_de_confirmation, true);
+    assert.strictEqual(result._import, undefined, "la liste n'est pas renvoyée à l'IA");
+    const before = await (await fetch(url + '/items?limit=100')).json();
+    assert.strictEqual(before.find((i) => i.reference === 'LR-10'), undefined, 'aucun article créé avant confirmation');
+    assert.strictEqual(before.find((i) => i.reference === 'MO-01').sale_price !== 48, true, 'prix existant inchangé');
+    assert.strictEqual(body.imports.length, 1);
+    assert.strictEqual(body.imports[0].catalog, 'Tarif Leroy 2026');
+    // Clic sur « Importer dans le catalogue »
+    const done = await (await post('/items/import', { rows: body.imports[0].rows, catalog: body.imports[0].catalog })).json();
+    assert.deepStrictEqual([done.created, done.updated], [1, 1]);
     const items = await (await fetch(url + '/items?limit=100')).json();
     assert.strictEqual(items.find((i) => i.reference === 'LR-10').catalog, 'Tarif Leroy 2026');
     assert.strictEqual(items.find((i) => i.reference === 'MO-01').sale_price, 48);

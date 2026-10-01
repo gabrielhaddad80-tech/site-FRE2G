@@ -4,7 +4,7 @@ const express = require('express');
 const { computeTotals, round2 } = require('../../public/js/calc');
 const { getSettings } = require('../db');
 const { nextNumber } = require('../numbering');
-const { renderDocument, pageHtml } = require('../render');
+const { renderDocument, pageHtml, DOC_CSP } = require('../render');
 const { toNumber } = require('./catalog');
 
 const TYPES = ['devis', 'facture', 'avoir'];
@@ -293,7 +293,7 @@ module.exports = function documentRoutes(db) {
     if (!doc) return res.status(404).send('Document introuvable');
     const { body, css, ctx } = renderDocument(db, doc);
     const title = `${ctx.doc.type_label} ${ctx.doc.number} - ${ctx.client.display_name || ''}`.trim();
-    res.type('html').send(pageHtml({ title, body, css, toolbar: req.query.toolbar !== '0' }));
+    res.set('Content-Security-Policy', DOC_CSP).type('html').send(pageHtml({ title, body, css, toolbar: req.query.toolbar !== '0' }));
   });
 
   return r;

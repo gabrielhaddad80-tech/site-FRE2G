@@ -86,6 +86,8 @@ function checkPassword(password) {
   if (password.length > 200) throw httpError(400, 'Mot de passe trop long.');
 }
 
+const DUMMY_HASH = hashPassword('compte-inexistant');
+
 const publicUser = (u) => u && { id: u.id, email: u.email, name: u.name || '', created_at: u.created_at, last_login_at: u.last_login_at };
 
 /**
@@ -113,16 +115,23 @@ function createAuth(db) {
   };
   if (!userCount()) newSetupCode();
 
-  const failures = new Map(); // ip -> { count, until }
-  const isLocked = (ip) => {
-    const f = failures.get(ip);
-    return f && f.until && f.until > Date.now();
+  // Échecs par adresse IP et par compte (« ip:… », « mail:… ») : bloque aussi les essais venant de nombreuses adresses
+  const failures = new Map(); // clé -> { count, until, last }
+  const isLocked = (key) => {
+    const f = failures.get(key);
+    return !!(f && f.until && f.until > Date.now());
   };
-  const fail = (ip) => {
-    const f = failures.get(ip) || { count: 0, until: 0 };
+  const fail = (key) => {
+    const now = Date.now();
+    if (failures.size > 10000) { // mémoire bornée : on oublie les entrées anciennes
+      for (const [k, f] of failures) if (f.until < now && now - f.last > LOCK_MINUTES * 60000) failures.delete(k);
+    }
+    const f = failures.get(key) || { count: 0, until: 0, last: 0 };
+    if (now - f.last > LOCK_MINUTES * 60000) f.count = 0; // les erreurs anciennes ne comptent plus
     f.count += 1;
-    if (f.count >= MAX_FAILURES) { f.until = Date.now() + LOCK_MINUTES * 60000; f.count = 0; }
-    failures.set(ip, f);
+    f.last = now;
+    if (f.count >= MAX_FAILURES) { f.until = now + LOCK_MINUTES * 60000; f.count = 0; }
+    failures.set(key, f);
   };
 
   function sessionUser(req) {
@@ -192,11 +201,12 @@ function createAuth(db) {
 
   r.post('/auth/setup', (req, res) => {
     if (userCount() > 0) throw httpError(409, 'Le compte administrateur existe déjà : connectez-vous.');
-    const ip = req.ip;
-    if (isLocked(ip)) throw httpError(429, `Trop d'essais : réessayez dans ${LOCK_MINUTES} minutes.`);
+    const ip = 'ip:' + req.ip;
+    if (isLocked(ip) || isLocked('setup')) throw httpError(429, `Trop d'essais : réessayez dans ${LOCK_MINUTES} minutes.`);
     const { name, email, password, code } = req.body || {};
     if (!setupCode || !safeEqual(String(code || '').trim(), setupCode)) {
       fail(ip);
+      fail('setup');
       throw httpError(403, 'Code de première connexion incorrect. Il est affiché dans la fenêtre du serveur au démarrage.');
     }
     const mail = String(email || '').trim().toLowerCase();
@@ -210,17 +220,20 @@ function createAuth(db) {
   });
 
   r.post('/auth/login', (req, res) => {
-    const ip = req.ip;
-    if (isLocked(ip)) throw httpError(429, `Trop de tentatives : réessayez dans ${LOCK_MINUTES} minutes.`);
-    const mail = String((req.body && req.body.email) || '').trim().toLowerCase();
+    const ip = 'ip:' + req.ip;
+    const mail = String((req.body && req.body.email) || '').trim().toLowerCase().slice(0, 200);
+    const account = 'mail:' + mail;
+    if (isLocked(ip) || isLocked(account)) throw httpError(429, `Trop de tentatives : réessayez dans ${LOCK_MINUTES} minutes.`);
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(mail);
     // Vérification même si le compte n'existe pas (temps de réponse identique)
-    const ok = verifyPassword(String((req.body && req.body.password) || ''), user ? user.password_hash : hashPassword('x'.repeat(12)));
+    const ok = verifyPassword(String((req.body && req.body.password) || '').slice(0, 200), user ? user.password_hash : DUMMY_HASH);
     if (!user || !ok) {
       fail(ip);
+      fail(account);
       throw httpError(401, 'E-mail ou mot de passe incorrect.');
     }
     failures.delete(ip);
+    failures.delete(account);
     startSession(req, res, user);
     res.json({ user: publicUser(user) });
   });
@@ -238,7 +251,12 @@ function createAuth(db) {
   r.post('/auth/password', (req, res) => {
     const { current, password } = req.body || {};
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-    if (!verifyPassword(String(current || ''), user.password_hash)) throw httpError(403, 'Mot de passe actuel incorrect.');
+    const key = 'pw:' + user.id;
+    if (isLocked(key)) throw httpError(429, `Trop d'essais : réessayez dans ${LOCK_MINUTES} minutes.`);
+    if (!verifyPassword(String(current || '').slice(0, 200), user.password_hash)) {
+      fail(key);
+      throw httpError(403, 'Mot de passe actuel incorrect.');
+    }
     checkPassword(password);
     db.transaction(() => {
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(password), user.id);

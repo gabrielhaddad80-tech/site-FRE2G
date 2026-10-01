@@ -10,9 +10,12 @@ if [ -s /etc/facturation/github-token ]; then # dépôt privé
 fi
 
 mkdir -p /var/backups/facturation
+chmod 700 /var/backups/facturation
 if [ -f /var/lib/facturation/facturation.db ]; then
-  sqlite3 /var/lib/facturation/facturation.db ".backup '/var/backups/facturation/avant-mise-a-jour-$(date +%F-%H%M).db'"
+  # Copie lisible par l'administrateur seulement (umask limité à cette commande)
+  (umask 077; sqlite3 /var/lib/facturation/facturation.db ".backup '/var/backups/facturation/avant-mise-a-jour-$(date +%F-%H%M).db'")
 fi
+chmod 600 /var/backups/facturation/*.db 2>/dev/null || true
 git -C "$APP_DIR" "${GIT_AUTH[@]}" fetch -q origin "$BRANCH"
 BEFORE="$(git -C "$APP_DIR" rev-parse HEAD)"
 git -C "$APP_DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
@@ -20,11 +23,13 @@ AFTER="$(git -C "$APP_DIR" rev-parse HEAD)"
 if [ "$BEFORE" = "$AFTER" ]; then
   # Navigateur pour l'export PDF (installations faites avant cette fonction)
   [ -f "$APP_DIR/deploy/chrome.sh" ] && bash "$APP_DIR/deploy/chrome.sh" >/dev/null
+  [ -f "$APP_DIR/deploy/harden.sh" ] && bash "$APP_DIR/deploy/harden.sh"
   echo "Déjà à jour."; exit 0
 fi
 cd "$APP_DIR"
 npm ci --omit=dev --no-audit --no-fund --loglevel=error
 bash deploy/chrome.sh
+bash deploy/harden.sh
 install -m 755 deploy/update.sh /usr/local/bin/facturation-update
 install -m 755 deploy/domain.sh /usr/local/bin/facturation-domaine
 systemctl restart facturation

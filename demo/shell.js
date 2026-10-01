@@ -139,7 +139,7 @@
     bg.innerHTML = '<div class="modal wide print-modal" role="dialog" aria-modal="true" aria-label="Aperçu du document">'
       + '<div class="toolbar"><h2 style="margin:0">Aperçu du document</h2><span class="spacer"></span><button type="button" class="primary" data-close>Fermer</button></div>'
       + '<p class="small muted">Dans la version installée, ce bouton ouvre le document prêt à imprimer ou à enregistrer en PDF (A4).</p>'
-      + '<iframe class="preview-frame" title="Aperçu du document"></iframe></div>';
+      + '<iframe class="preview-frame" title="Aperçu du document" sandbox></iframe></div>';
     bg.querySelector('iframe').srcdoc = r.body;
     const close = () => { document.removeEventListener('keydown', onKey, true); bg.remove(); };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
@@ -275,10 +275,15 @@
     }
     if (extra.length && turns.length) turns[turns.length - 1] = { role: 'user', content: extra.join('\n\n') + '\n\n' + turns[turns.length - 1].content };
     let tools;
+    const imports = [];
     if (limits && limits.tools) {
       tools = AiDraft.CHAT_TOOLS.slice(0, limits.tools.maxCount).map((t) => ({
         name: t.name, description: t.description, inputSchema: t.input_schema,
-        execute: (input) => AiDraft.runChatTool(t.name, input, request)
+        execute: async (input) => {
+          const out = await AiDraft.runChatTool(t.name, input, request);
+          if (out && out._import) { imports.push(out._import); delete out._import; }
+          return out;
+        }
       }));
     } else {
       rules += '\n\nOutils indisponibles dans cette vue. Données actuelles :\n' + JSON.stringify(await AiDraft.runChatTool('tableau_de_bord', {}, request)).slice(0, 20000);
@@ -287,7 +292,7 @@
       const r = await sample([{ role: 'user', content: rules }, ...turns], {
         tools, signal, cache: false, images: images.length ? images : undefined, onText: ({ text }) => onText && onText(text)
       });
-      return { reply: r.text, created: [] };
+      return { reply: r.text, created: [], imports };
     } catch (e) {
       const code = e && e.code;
       throw { code, message: AI_MESSAGES[code] || "L'assistant n'a pas pu répondre : réessayez." };

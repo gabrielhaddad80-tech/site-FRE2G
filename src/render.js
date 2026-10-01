@@ -137,6 +137,12 @@ function renderDocument(db, doc, templateOverride) {
   return { body, css, ctx };
 }
 
+// Le seul script autorisé dans une page de document : celui de la barre d'outils (autorisé par son empreinte).
+// Le HTML des modèles (modifiable, ou créé par l'IA) ne peut ni exécuter de script ni charger de ressource extérieure.
+const TOOLBAR_SCRIPT = "document.getElementById('tb-print').addEventListener('click',function(){window.print()});document.getElementById('tb-close').addEventListener('click',function(){window.close()});";
+const DOC_CSP = "default-src 'none'; script-src 'sha256-9KQl9PWX7mtKlUB486wJPkzlr3FaZdd1SORMgfd/sYg='; style-src 'unsafe-inline'; img-src data:; font-src data:; "
+  + "base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
+
 function pageHtml({ title, body, css, toolbar }) {
   return `<!doctype html>
 <html lang="fr">
@@ -156,10 +162,10 @@ ${css}
 </style>
 </head>
 <body>
-${toolbar ? `<div class="print-toolbar"><button onclick="window.print()">Imprimer</button><a href="pdf">Télécharger en PDF</a><a href="docx">Télécharger en Word</a><a href="javascript:window.close()">Fermer</a></div>` : ''}
+${toolbar ? `<div class="print-toolbar"><button type="button" id="tb-print">Imprimer</button><a href="pdf">Télécharger en PDF</a><a href="docx">Télécharger en Word</a><button type="button" id="tb-close">Fermer</button></div><script>${TOOLBAR_SCRIPT}</script>` : ''}
 <div class="sheet">${body}</div>
 </body>
 </html>`;
 }
 
-module.exports = { renderDocument, buildContext, pageHtml, handlebars: hb };
+module.exports = { renderDocument, buildContext, pageHtml, handlebars: hb, DOC_CSP, TOOLBAR_SCRIPT };

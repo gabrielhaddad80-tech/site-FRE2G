@@ -207,7 +207,7 @@
           quantite: { type: 'number' }, unite: { type: 'string' }, prix_unitaire_ht: { type: 'number' }, tva: { type: 'number' }
         }, ['designation']) }
       }, ['objet', 'lignes']) },
-    { name: 'ajouter_articles', description: "Ajoute des articles au catalogue (par exemple lus dans un tarif fournisseur joint). Un article dont la référence existe déjà est MIS À JOUR avec les nouvelles valeurs. N'appelle cet outil qu'après avoir montré la liste à l'utilisateur et obtenu son accord explicite. Renvoie le nombre d'articles créés et mis à jour.",
+    { name: 'ajouter_articles', description: "Prépare l'ajout d'articles au catalogue (par exemple lus dans un tarif fournisseur joint). Rien n'est enregistré : un bouton « Importer dans le catalogue » s'affiche sous ta réponse et c'est l'utilisateur qui confirme. Un article dont la référence existe déjà sera MIS À JOUR. Après l'appel, résume la liste et invite l'utilisateur à vérifier puis à cliquer sur le bouton.",
       input_schema: obj({
         catalogue: { type: 'string', description: 'Nom du catalogue / fournisseur' },
         articles: { type: 'array', items: obj({
@@ -283,8 +283,13 @@
           vat_rate: a.tva ?? '', category: a.categorie || ''
         })).filter((a) => a.designation);
         if (!rows.length) throw new Error('Aucun article valide.');
-        const r = await request('POST', '/items/import', { rows, catalog: input.catalogue || '' });
-        return { crees: r.created, mis_a_jour: r.updated, ignores: r.skipped, link: 'catalogue.html' };
+        // Jamais d'écriture directe : l'import attend la confirmation de l'utilisateur (bouton dans le chat).
+        // Un fichier joint piégé ne peut donc pas modifier les prix du catalogue à son insu.
+        return {
+          en_attente_de_confirmation: true, articles: rows.length,
+          message: "Import préparé. L'utilisateur doit cliquer sur « Importer dans le catalogue » sous ta réponse pour l'enregistrer.",
+          _import: { catalog: String(input.catalogue || '').slice(0, 120), rows }
+        };
       }
       default:
         throw new Error('Outil inconnu : ' + name);

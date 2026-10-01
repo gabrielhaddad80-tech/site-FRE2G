@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { getSettings, DEFAULT_SETTINGS } = require('../db');
-const { renderDocument, pageHtml, handlebars } = require('../render');
+const { renderDocument, pageHtml, handlebars, DOC_CSP } = require('../render');
 const { peekNumber } = require('../numbering');
 
 function localToday() {
@@ -95,6 +95,7 @@ module.exports = function adminRoutes(db) {
 
   // Aperçu d'un modèle (non enregistré) sur un document existant, ou sur un document de démonstration
   r.post('/templates/preview', (req, res) => {
+    res.set('Content-Security-Policy', DOC_CSP);
     let doc = req.body.document_id ? db.prepare('SELECT * FROM documents WHERE id = ?').get(req.body.document_id) : null;
     if (!doc) doc = db.prepare("SELECT * FROM documents ORDER BY (type = 'devis') DESC, id DESC LIMIT 1").get();
     if (!doc) {

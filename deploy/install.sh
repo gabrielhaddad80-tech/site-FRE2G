@@ -179,16 +179,7 @@ $DOMAIN {
 }
 CADDY
 
-say "Sauvegarde automatique chaque nuit"
-cat > /etc/cron.daily/facturation-backup <<'CRON'
-#!/bin/sh
-# Copie cohérente de la base, conservée 30 jours
-set -e
-mkdir -p /var/backups/facturation
-sqlite3 /var/lib/facturation/facturation.db ".backup '/var/backups/facturation/facturation-$(date +%F).db'"
-find /var/backups/facturation -name 'facturation-*.db' -mtime +30 -delete
-CRON
-chmod 755 /etc/cron.daily/facturation-backup
+# Sauvegarde automatique chaque nuit : installée par deploy/harden.sh (plus bas)
 
 # Commandes pratiques
 install -m 755 "$APP_DIR/deploy/update.sh" /usr/local/bin/facturation-update
@@ -209,6 +200,9 @@ ufw allow OpenSSH >/dev/null
 ufw allow 80/tcp >/dev/null
 ufw allow 443/tcp >/dev/null
 ufw --force enable >/dev/null
+
+say "Protection contre les attaques (SSH), sauvegardes privées, mises à jour de sécurité"
+bash "$APP_DIR/deploy/harden.sh"
 
 say "Démarrage"
 systemctl daemon-reload

@@ -70,7 +70,8 @@
   const $ = (id) => document.getElementById(id);
   const next = (() => {
     const n = new URLSearchParams(location.search).get('next') || '/';
-    return /^\/(?!\/)/.test(n) ? n : '/'; // uniquement une adresse interne
+    // Uniquement une adresse interne : « /page », jamais « //site » ni « /\site » (que les navigateurs lisent comme un autre site)
+    return /^\/(?![\/\\])[^\\\s]*$/.test(n) ? n : '/';
   })();
 
   async function post(url, body) {

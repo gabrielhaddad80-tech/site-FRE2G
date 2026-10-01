@@ -219,9 +219,10 @@ async function renderNavUser() {
     try { currentUser = (await api('/auth/me')).user; } catch (e) { return; }
   }
   const name = currentUser.name || currentUser.email;
-  box.innerHTML = `<span class="avatar" style="${avatarStyle(name)}">${initials(name)}</span>`
+  box.innerHTML = `<span class="avatar" style="${avatarStyle(name)}"></span>`
     + '<span class="who"><strong></strong><small></small></span>'
     + `<button type="button" class="icon-btn" title="Se déconnecter" aria-label="Se déconnecter">${ICON_LOGOUT}</button>`;
+  box.querySelector('.avatar').textContent = initials(name);
   box.querySelector('strong').textContent = name;
   box.querySelector('small').textContent = currentUser.name ? currentUser.email : '';
   box.querySelector('button').addEventListener('click', logout);

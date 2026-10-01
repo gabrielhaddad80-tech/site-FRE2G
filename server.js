@@ -5,6 +5,13 @@ const express = require('express');
 const { openDatabase } = require('./src/db');
 const { createAuth } = require('./src/auth');
 
+// 'unsafe-eval' : requis par Alpine.js ; les scripts restent limités au logiciel lui-même
+const APP_CSP = [
+  "default-src 'self'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'", "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:", "font-src 'self' data:", "connect-src 'self'", "worker-src 'self' blob:",
+  "frame-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'"
+].join('; ');
+
 /**
  * @param db base ouverte
  * @param options { ai, auth: false pour désactiver la connexion (tests uniquement) }
@@ -15,17 +22,28 @@ function createApp(db, options = {}) {
   // Derrière un proxy HTTPS (Caddy, Nginx…) : TRUST_PROXY=1 pour des cookies « Secure » et la bonne adresse IP
   if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
   app.use((req, res, next) => {
-    res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'X-Frame-Options': 'SAMEORIGIN' });
+    res.set({
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'same-origin',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Permissions-Policy': 'camera=(), geolocation=(), payment=(), usb=(), microphone=(self)',
+      // Tout est servi par le logiciel lui-même : aucune ressource ni envoi de données vers un autre site
+      'Content-Security-Policy': APP_CSP
+    });
     next();
   });
-  app.use(express.json({ limit: '25mb' }));
 
   if (options.auth !== false) {
     const auth = createAuth(db);
     app.locals.auth = auth;
+    // Avant connexion, seuls de petits messages sont acceptés (formulaire de connexion)
+    app.use('/api/auth', express.json({ limit: '20kb' }));
     app.use(auth.protect);
     app.use('/api', auth.router);
   }
+  // Après vérification de la session : fichiers joints (photos, PDF, sauvegardes) jusqu'à 25 Mo
+  app.use(express.json({ limit: '25mb' }));
 
   app.use('/api', require('./src/routes/catalog')(db));
   app.use('/api', require('./src/routes/documents')(db));
