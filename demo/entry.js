@@ -4,6 +4,7 @@ const { openDatabase } = require('APP/src/db');
 const catalogRoutes = require('APP/src/routes/catalog');
 const documentRoutes = require('APP/src/routes/documents');
 const adminRoutes = require('APP/src/routes/admin');
+const knowledgeRoutes = require('APP/src/routes/knowledge');
 
 let db = null;
 let routers = [];
@@ -12,7 +13,7 @@ function init(bytes) {
   globalThis.__DEMO_DB_BYTES = bytes || null;
   db = openDatabase(':memory:');
   globalThis.__DEMO_DB_BYTES = null;
-  routers = [catalogRoutes(db), documentRoutes(db), adminRoutes(db)];
+  routers = [catalogRoutes(db), documentRoutes(db), adminRoutes(db), knowledgeRoutes(db)];
 }
 
 function handle(method, url, body) {

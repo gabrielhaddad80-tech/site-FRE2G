@@ -96,6 +96,41 @@ async function prepareAttachment(file) {
   throw new Error(`Format non pris en charge : « ${name} » (images, PDF ou fichiers texte).`);
 }
 
+// Texte d'un PDF (pour l'aperçu et les vues qui ne lisent pas les PDF)
+async function pdfText(file, maxPages = 150) {
+  await loadScript(PDFJS_BASE + 'pdf.worker.min.js');
+  await loadScript(PDFJS_BASE + 'pdf.min.js');
+  const lib = window.pdfjsLib;
+  lib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'pdf.worker.min.js';
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, enableXfa: false }).promise;
+  try {
+    const pages = [];
+    for (let n = 1; n <= Math.min(pdf.numPages, maxPages); n++) {
+      const content = await (await pdf.getPage(n)).getTextContent();
+      let line = '';
+      const lines = [];
+      for (const it of content.items) {
+        line += it.str;
+        if (it.hasEOL) { lines.push(line.trim()); line = ''; } else if (it.str) line += ' ';
+      }
+      if (line.trim()) lines.push(line.trim());
+      pages.push(`[Page ${n}]\n` + lines.filter(Boolean).join('\n'));
+    }
+    return { text: pages.join('\n\n'), pages: pdf.numPages };
+  } finally {
+    pdf.destroy();
+  }
+}
+
+// Fichier de connaissances : comme une pièce jointe, avec le texte des PDF extrait en plus
+async function prepareKnowledgeFile(file) {
+  const f = await prepareAttachment(file);
+  if (f.kind === 'pdf') {
+    try { f.text = (await pdfText(file)).text; } catch (e) { f.text = ''; }
+  }
+  return f;
+}
+
 // Pages d'un PDF en images. pdf.js tourne dans la page (pdfjsWorker) ;
 // isEvalSupported: false neutralise l'exécution de code des PDF piégés.
 async function pdfToImages(file, maxPages = 3, maxSide = 1568) {
@@ -348,6 +383,7 @@ const NAV = [
   ['clients.html', 'Clients', 'users'],
   ['catalogue.html', 'Catalogue & tarifs', 'box'],
   ['modeles.html', 'Modèles', 'layout'],
+  ['assistant.html', 'Assistant IA', 'sparkle'],
   ['parametres.html', 'Paramètres', 'settings']
 ];
 const TABS = ['index.html', 'documents.html?type=devis', 'documents.html?type=facture', 'clients.html'];

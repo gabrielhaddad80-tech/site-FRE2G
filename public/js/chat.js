@@ -221,6 +221,7 @@ function initChat() {
     <header class="chat-head">
       <span class="tile-ic violet">${icon('sparkle')}</span>
       <div class="chat-title"><strong>Assistant IA</strong><small>Vos clients, devis, factures et chiffres</small></div>
+      <a class="icon-btn" href="assistant.html" id="chat-knowledge" aria-label="Instructions et fichiers de l'assistant" title="Instructions et fichiers">${icon('settings')}</a>
       <button type="button" class="icon-btn" id="chat-reset" aria-label="Nouvelle conversation" title="Nouvelle conversation">${icon('edit')}</button>
       <button type="button" class="icon-btn" id="chat-close" aria-label="Fermer l'assistant">${icon('x')}</button>
     </header>

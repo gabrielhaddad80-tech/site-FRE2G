@@ -108,6 +108,17 @@ avant d'importer ; les références existantes sont mises à jour). Elle ne peut
 enregistrer un règlement, ni supprimer quoi que ce soit. La conversation est conservée dans le navigateur ;
 le bouton crayon en démarre une nouvelle. Même clé API que l'assistant de rédaction.
 
+### Instructions et fichiers de l'assistant (comme un projet Claude)
+Page **Assistant IA** du menu :
+- **Instructions** permanentes (20 000 caractères) : votre façon de travailler, vos taux, vos règles de chiffrage,
+  votre ton… Des exemples s'ajoutent en un clic.
+- **Fichiers de référence** (20 fichiers, 30 Mo au total) : PDF (10 Mo), images, textes/CSV — tarifs fournisseurs,
+  conditions générales, anciens devis, fiches techniques. Chaque fichier peut être activé ou désactivé ; aperçu du texte.
+
+Instructions et fichiers actifs accompagnent **chaque** demande à l'IA : le chat et l'assistant de rédaction
+de devis/factures. Ils sont mis en cache (prompt caching de l'API Claude) pour réduire le coût des messages
+suivants. Ils sont inclus dans les sauvegardes.
+
 ### Modèles personnalisables (`Modèles`)
 Chaque modèle est une page HTML + CSS avec des variables (`{{client.display_name}}`, `{{money totals.ttc}}`, …)
 éditable directement dans l'application avec **aperçu en direct**. Plusieurs modèles possibles, un par défaut,

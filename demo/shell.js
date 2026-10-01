@@ -179,6 +179,19 @@
   const getSample = () => samplePromise || (samplePromise = (window.claude && typeof window.claude.use === 'function')
     ? window.claude.use('sample').catch(() => null) : Promise.resolve(null));
   window.aiAvailable = async () => !!(await getSample());
+  // Connaissances (instructions, textes, texte des PDF, images) pour les demandes faites depuis la page
+  const b64ToBlob = (data, type) => {
+    const bin = atob(data);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type });
+  };
+  const knowledgeContext = () => {
+    const k = call('GET', '/api/knowledge/context');
+    let text = k.text || '';
+    if (k.pdf_without_text.length) text += `\n\n(PDF sans texte lisible, non transmis dans la démo : ${k.pdf_without_text.join(', ')})`;
+    return { text: text.slice(0, 40000), images: k.images.map((im) => ({ name: im.name, blob: b64ToBlob(im.data, im.media_type) })) };
+  };
   window.aiUnavailableHint = () => "L'assistant IA n'est pas disponible dans cette vue de la démo (il fonctionne quand la page est ouverte dans Claude). Dans la version installée, il s'active avec une clé API.";
   window.aiDraft = async ({ text, images, docType, signal }) => {
     const sample = await getSample();
@@ -187,12 +200,18 @@
     const catalog = call('GET', '/api/items?limit=' + AiDraft.MAX_CATALOG_ITEMS);
     const vatExempt = settings.vat_exempt === '1';
     const opts = { signal, cache: false };
+    const limits = await sample.limits().catch(() => null);
     if (images && images.length) {
-      const limits = await sample.limits().catch(() => null);
       if (!limits || !limits.images) throw { code: 'images_unavailable', message: AI_MESSAGES.images_unavailable };
       opts.images = images.slice(0, limits.images.maxCount).map((im) => im.blob);
     }
-    const prompt = AiDraft.buildPrompt({
+    const knowledge = knowledgeContext();
+    if (knowledge.images.length && limits && limits.images) {
+      const room = Math.max(0, limits.images.maxCount - (opts.images ? opts.images.length : 0));
+      opts.images = [...(opts.images || []), ...knowledge.images.slice(0, room).map((im) => im.blob)];
+      if (!opts.images.length) delete opts.images;
+    }
+    const prompt = (knowledge.text ? knowledge.text + '\n\n' : '') + AiDraft.buildPrompt({
       text, imageCount: opts.images ? opts.images.length : 0, docType, catalog, vatExempt,
       defaultVat: settings.default_vat_rate, units: (settings.units || '').split(',').map((u) => u.trim()).filter(Boolean)
     });
@@ -222,7 +241,10 @@
     while (turns.length && turns[0].role !== 'user') turns.shift();
     const note = AiDraft.contextNote(context);
     if (note && turns.length) turns[turns.length - 1] = { role: 'user', content: turns[turns.length - 1].content + '\n\n' + note };
-    let rules = AiDraft.chatSystemPrompt({ company: settings.company_name, today }) + '\n\n(Ce qui précède sont tes consignes permanentes ; la conversation suit.)';
+    const knowledge = knowledgeContext();
+    let rules = AiDraft.chatSystemPrompt({ company: settings.company_name, today })
+      + (knowledge.text ? '\n\n' + knowledge.text : '')
+      + '\n\n(Ce qui précède sont tes consignes permanentes ; la conversation suit.)';
     const limits = await sample.limits().catch(() => null);
     // Pièces jointes : images telles quelles, PDF convertis en images (3 pages max), textes intégrés au message
     const images = [];
@@ -237,6 +259,12 @@
     }
     if (images.length && !(limits && limits.images)) throw { code: 'images_unavailable', message: 'Les images et PDF ne peuvent pas être envoyés depuis cette vue : copiez le texte dans le message.' };
     if (images.length > limits?.images?.maxCount) throw { code: 'image_rejected', message: `Trop d'images pour un seul message (${limits.images.maxCount} maximum, pages de PDF comprises).` };
+    // Images de référence : seulement dans la place restante (les pièces jointes passent en premier)
+    if (limits && limits.images && knowledge.images.length) {
+      const room = Math.max(0, limits.images.maxCount - images.length);
+      images.push(...knowledge.images.slice(0, room).map((im) => im.blob));
+      if (room < knowledge.images.length) rules += `\n\n(${knowledge.images.length - room} image(s) de référence non transmise(s) dans ce message, faute de place.)`;
+    }
     if (extra.length && turns.length) turns[turns.length - 1] = { role: 'user', content: extra.join('\n\n') + '\n\n' + turns[turns.length - 1].content };
     let tools;
     if (limits && limits.tools) {

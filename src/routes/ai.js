@@ -7,6 +7,44 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { getSettings } = require('../db');
 const AiDraft = require('../../public/js/ai');
 const { handlebars } = require('../render');
+const { loadKnowledge, knowledgeText } = require('./knowledge');
+
+/*
+ * Connaissances (instructions + fichiers actifs) : le texte rejoint les consignes système,
+ * les PDF et images sont placés en tête du premier message. Un point de cache après eux
+ * fait que les requêtes suivantes relisent ces documents à prix réduit.
+ */
+function knowledgeParts(db) {
+  const k = loadKnowledge(db);
+  const text = knowledgeText(k);
+  const blocks = [];
+  for (const f of k.files) {
+    if (f.kind === 'pdf' && f.data) blocks.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data }, title: f.name });
+    if (f.kind === 'image' && f.data) {
+      blocks.push({ type: 'image', source: { type: 'base64', media_type: f.media_type, data: f.data } });
+      blocks.push({ type: 'text', text: `(Image de référence ci-dessus : « ${f.name} »)` });
+    }
+  }
+  if (blocks.length) {
+    blocks.unshift({ type: 'text', text: "Documents de référence fournis par l'entreprise (à utiliser quand ils sont utiles) :" });
+    blocks[blocks.length - 1] = { ...blocks[blocks.length - 1], cache_control: { type: 'ephemeral' } };
+  }
+  return { text, blocks };
+}
+
+// Consignes système (bloc stable mis en cache)
+function systemBlocks(base, knowledge) {
+  const text = [base, knowledge.text].filter(Boolean).join('\n\n');
+  return text ? [{ type: 'text', text, cache_control: { type: 'ephemeral' } }] : undefined;
+}
+
+// Ajoute les documents de référence au début du premier message utilisateur
+function withKnowledgeBlocks(messages, knowledge) {
+  if (!knowledge.blocks.length || !messages.length) return messages;
+  const [first, ...rest] = messages;
+  const content = typeof first.content === 'string' ? [{ type: 'text', text: first.content }] : first.content;
+  return [{ role: 'user', content: [...knowledge.blocks, ...content] }, ...rest];
+}
 
 const AnthropicClient = Anthropic.default || Anthropic;
 const MODEL = 'claude-opus-5-5';
@@ -60,19 +98,21 @@ module.exports = function aiRoutes(db, options = {}) {
         defaultVat: settings.default_vat_rate, units: (settings.units || '').split(',').map((u) => u.trim()).filter(Boolean)
       });
 
+      const knowledge = knowledgeParts(db);
       const response = await createClient(key).beta.messages.create({
         model: MODEL,
         max_tokens: 16000,
         betas: ['server-side-fallback-2026-07-01'],
         fallbacks: 'default',
         output_config: { effort: 'medium', format: { type: 'json_schema', schema: AiDraft.SCHEMA } },
-        messages: [{
+        system: systemBlocks('', knowledge),
+        messages: withKnowledgeBlocks([{
           role: 'user',
           content: [
             ...images.map((im) => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })),
             { type: 'text', text: prompt }
           ]
-        }]
+        }], knowledge)
       });
 
       if (response.stop_reason === 'refusal') throw httpError(422, "L'IA n'a pas pu traiter cette demande. Reformulez-la ou retirez une photo.");
@@ -163,7 +203,8 @@ module.exports = function aiRoutes(db, options = {}) {
       const settings = getSettings(db);
       const d = new Date();
       const today = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      const system = AiDraft.chatSystemPrompt({ company: settings.company_name, today });
+      const knowledge = knowledgeParts(db);
+      const system = systemBlocks(AiDraft.chatSystemPrompt({ company: settings.company_name, today }), knowledge);
 
       // Les outils appellent l'API du logiciel lui-même (mêmes règles que l'interface)
       const port = req.socket.localPort;
@@ -178,7 +219,7 @@ module.exports = function aiRoutes(db, options = {}) {
       };
 
       const client = createClient(key);
-      const messages = [...history];
+      const messages = withKnowledgeBlocks([...history], knowledge);
       const created = [];
       for (let round = 0; round < 8; round++) {
         const response = await client.beta.messages.create({

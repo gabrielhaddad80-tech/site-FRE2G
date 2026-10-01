@@ -11,7 +11,7 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
 const read = (p) => fs.readFileSync(path.join(APP, p), 'utf8');
 const safe = (s) => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
 
-const PAGE_FILES = ['index.html', 'tableau-de-bord.html', 'documents.html', 'document.html', 'clients.html', 'catalogue.html', 'modeles.html', 'parametres.html'];
+const PAGE_FILES = ['index.html', 'assistant.html', 'tableau-de-bord.html', 'documents.html', 'document.html', 'clients.html', 'catalogue.html', 'modeles.html', 'parametres.html'];
 const pages = {};
 const scripts = [];
 for (const f of PAGE_FILES) {

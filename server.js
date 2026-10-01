@@ -30,6 +30,7 @@ function createApp(db, options = {}) {
   app.use('/api', require('./src/routes/catalog')(db));
   app.use('/api', require('./src/routes/documents')(db));
   app.use('/api', require('./src/routes/admin')(db));
+  app.use('/api', require('./src/routes/knowledge')(db));
   app.use('/api', require('./src/routes/ai')(db, options.ai));
 
   app.use('/vendor/alpine.js', (req, res) => res.sendFile(require.resolve('alpinejs/dist/cdn.min.js')));

@@ -12,9 +12,10 @@ function localToday() {
 
 const CLIENT_NAME_SQL = "COALESCE(NULLIF(c.company,''), TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')))";
 
-const BACKUP_TABLES = ['settings', 'clients', 'categories', 'items', 'item_components', 'templates', 'documents', 'document_lines', 'payments', 'counters'];
+const BACKUP_TABLES = ['settings', 'clients', 'categories', 'items', 'item_components', 'templates', 'documents', 'document_lines', 'payments', 'counters', 'ai_files'];
 
 module.exports = function adminRoutes(db) {
+  require('./knowledge').ensureSchema(db); // table ai_files incluse dans les sauvegardes
   const r = express.Router();
 
   // ---------- Paramètres ----------
