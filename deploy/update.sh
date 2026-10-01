@@ -15,9 +15,14 @@ git -C "$APP_DIR" -c http.extraHeader="$AUTH_HEADER" fetch -q origin "$BRANCH"
 BEFORE="$(git -C "$APP_DIR" rev-parse HEAD)"
 git -C "$APP_DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
 AFTER="$(git -C "$APP_DIR" rev-parse HEAD)"
-if [ "$BEFORE" = "$AFTER" ]; then echo "Déjà à jour."; exit 0; fi
+if [ "$BEFORE" = "$AFTER" ]; then
+  # Navigateur pour l'export PDF (installations faites avant cette fonction)
+  [ -f "$APP_DIR/deploy/chrome.sh" ] && bash "$APP_DIR/deploy/chrome.sh" >/dev/null
+  echo "Déjà à jour."; exit 0
+fi
 cd "$APP_DIR"
 npm ci --omit=dev --no-audit --no-fund --loglevel=error
+bash deploy/chrome.sh
 install -m 755 deploy/update.sh /usr/local/bin/facturation-update
 install -m 755 deploy/domain.sh /usr/local/bin/facturation-domaine
 systemctl restart facturation

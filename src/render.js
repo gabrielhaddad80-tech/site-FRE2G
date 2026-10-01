@@ -156,7 +156,7 @@ ${css}
 </style>
 </head>
 <body>
-${toolbar ? `<div class="print-toolbar"><button onclick="window.print()">Imprimer / Enregistrer en PDF</button><a href="javascript:window.close()">Fermer</a></div>` : ''}
+${toolbar ? `<div class="print-toolbar"><button onclick="window.print()">Imprimer</button><a href="pdf">Télécharger en PDF</a><a href="docx">Télécharger en Word</a><a href="javascript:window.close()">Fermer</a></div>` : ''}
 <div class="sheet">${body}</div>
 </body>
 </html>`;

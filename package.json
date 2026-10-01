@@ -10,13 +10,15 @@
     "reset-password": "node scripts/reset-password.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",
     "alpinejs": "^3.14.0",
     "better-sqlite3": "^11.0.0",
+    "docx": "^9.8.1",
     "express": "^4.21.0",
-    "handlebars": "^4.7.8"
+    "handlebars": "^4.7.8",
+    "puppeteer-core": "^25.12.0"
   }
 }

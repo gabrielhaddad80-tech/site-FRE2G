@@ -55,6 +55,38 @@ function go(url) { location.href = url; }
 function setUrl(url) { history.replaceState(null, '', url); }
 function openPrint(id) { window.open(`/api/documents/${id}/print`, '_blank'); }
 
+// Téléchargement d'un devis / d'une facture en PDF ou en Word (format : 'pdf' | 'docx')
+async function downloadDocument(id, format) {
+  let res;
+  try {
+    res = await fetch(`/api/documents/${id}/${format}`);
+  } catch (e) {
+    toast('Le logiciel ne répond pas : vérifiez qu\'il est bien lancé.', 'error');
+    throw e;
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && data.code === 'auth') {
+      location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.search);
+    }
+    const msg = data.error || 'Erreur ' + res.status;
+    toast(msg, 'error');
+    throw new Error(msg);
+  }
+  const cd = res.headers.get('Content-Disposition') || '';
+  const m = /filename\*=UTF-8''([^;]+)/i.exec(cd);
+  const name = m ? decodeURIComponent(m[1]) : `document.${format}`;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return name;
+}
+
 // Assistant IA (redéfinissables pour la démo en ligne)
 async function aiAvailable() {
   try { return (await api('/ai/status')).available; } catch (e) { return false; }

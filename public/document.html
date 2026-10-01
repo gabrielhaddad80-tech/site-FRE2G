@@ -66,7 +66,9 @@
       </template>
       <div class="spacer" style="flex:1"></div>
       <button class="primary" @click="save()" x-show="!doc.locked" :disabled="saving">Enregistrer</button>
-      <button @click="print()">Aperçu / PDF</button>
+      <button @click="print()">Aperçu</button>
+      <button @click="download('pdf')" :disabled="exporting" title="Télécharger le document en PDF">PDF</button>
+      <button @click="download('docx')" :disabled="exporting" title="Télécharger le document en Word (.docx), modifiable">Word</button>
       <template x-if="doc.id && doc.type === 'devis' && doc.status !== 'facture'">
         <span style="display:contents">
           <select @change="setStatus($event.target.value); $event.target.value = ''" style="width:auto">
@@ -397,7 +399,7 @@ function withKey(l) { return { ...l, _key: ++keySeq }; }
 function editor() {
   return {
     doc: null, clients: [], templates: [], categories: [], settings: {},
-    saving: false, snapshot: null, dragFrom: null, newClient: null, payment: null,
+    saving: false, exporting: false, snapshot: null, dragFrom: null, newClient: null, payment: null,
     picker: { open: false, q: '', type: '', category_id: '', detail: false, results: [] },
     ai: { available: null, text: '', interim: '', images: [], busy: false, ctl: null, result: null, canDictate: !!(window.SpeechRecognition || window.webkitSpeechRecognition), listening: false, rec: null },
 
@@ -476,6 +478,17 @@ function editor() {
     async print() {
       await this.ensureSaved();
       openPrint(this.doc.id);
+    },
+
+    async download(format) {
+      if (this.exporting) return;
+      this.exporting = true;
+      try {
+        await this.ensureSaved();
+        if (format === 'pdf') toast('Création du PDF…');
+        const name = await downloadDocument(this.doc.id, format);
+        toast('Téléchargé : ' + name);
+      } catch (e) { /* message déjà affiché */ } finally { this.exporting = false; }
     },
 
     async setStatus(status) {

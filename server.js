@@ -29,6 +29,7 @@ function createApp(db, options = {}) {
 
   app.use('/api', require('./src/routes/catalog')(db));
   app.use('/api', require('./src/routes/documents')(db));
+  app.use('/api', require('./src/routes/export')(db));
   app.use('/api', require('./src/routes/admin')(db));
   app.use('/api', require('./src/routes/knowledge')(db));
   app.use('/api', require('./src/routes/ai')(db, options.ai));

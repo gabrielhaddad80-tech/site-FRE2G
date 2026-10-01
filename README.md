@@ -11,7 +11,7 @@ Les données restent sur votre ordinateur (fichier SQLite `data/facturation.db`)
 > **Mise en ligne sur un serveur (VPS Hostinger ou autre)** : voir le guide pas à pas [DEPLOIEMENT.md](DEPLOIEMENT.md)
 > (installation automatique en une commande : HTTPS, service, pare-feu, sauvegardes).
 
-Prérequis : [Node.js](https://nodejs.org) 18 ou plus récent.
+Prérequis : [Node.js](https://nodejs.org) 22.12 ou plus récent (version LTS) ; Google Chrome ou Microsoft Edge pour l'export PDF.
 
 ```bash
 npm install
@@ -75,7 +75,16 @@ coordonnées, notes et activité récente.
   (non modifiable, non supprimable) ; correction par **avoir**.
 - Suivi des **règlements** (partiels ou totaux), statut automatique, factures en retard.
 - Numérotation personnalisable (`FAC-{AAAA}-{NUM:4}`, `F{AA}{MM}-{NUM}`, …).
-- **Aperçu / PDF** : bouton « Imprimer / Enregistrer en PDF » (format A4).
+- **Téléchargement en PDF ou en Word** : boutons « PDF » et « Word » de l'éditeur (et dans l'aperçu). Le fichier est
+  nommé automatiquement (`Devis DEV-2026-0001 - Client.pdf`).
+  - **PDF** : identique à l'aperçu (votre modèle, logo, papier à en-tête), format A4. Il est créé avec Google Chrome,
+    Microsoft Edge ou Chromium installé sur l'ordinateur / le serveur (détecté automatiquement ; sinon variable
+    `CHROME_PATH=/chemin/vers/chrome`). Le script d'installation serveur installe Chrome.
+  - **Word (.docx)** : document modifiable (Word, LibreOffice, Google Docs) avec la même structure : en-tête, client,
+    lignes et sections avec sous-totaux, TVA, totaux, acompte, règlements, conditions, RIB, bon pour accord,
+    mentions légales, pied de page et numéros de page, aux couleurs de Paramètres. La mise en page Word est une
+    version standard : un modèle HTML très personnalisé (ou un papier à en-tête) n'est reproduit fidèlement qu'en PDF.
+- **Aperçu** : document prêt à imprimer (format A4).
 
 ### Assistant IA (dictée, note, photos)
 Dans l'éditeur de devis et de factures, la carte **Assistant IA** prépare les lignes à votre place :
@@ -150,6 +159,7 @@ server.js               serveur Express
 src/db.js               schéma SQLite, paramètres par défaut, données d'exemple
 src/numbering.js        numérotation des documents
 src/render.js           rendu des modèles (Handlebars)
+src/export/             export PDF (Chrome sans interface) et Word (.docx)
 src/routes/ai.js        assistant IA (API Claude)
 public/js/ai.js         consignes envoyées à l'IA et rapprochement avec le catalogue
 src/routes/             API : catalogue & clients, documents, paramètres / modèles / sauvegarde

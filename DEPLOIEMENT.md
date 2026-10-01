@@ -98,10 +98,14 @@ Vous pouvez aussi utiliser **Paramètres → Télécharger une sauvegarde** dans
 - **« impossible de récupérer le dépôt »** : jeton expiré ou sans accès au dépôt `site-FRE2G` (refaites l'étape 2,
   puis relancez l'étape 3 : le script peut être relancé sans risque).
 - **Le logiciel ne démarre pas** : `journalctl -u facturation -n 50` et envoyez-moi le message.
+- **« Export PDF indisponible »** (installation faite avant l'arrivée de l'export PDF) :
+  `sudo bash /opt/facturation/deploy/chrome.sh` puis `sudo systemctl restart facturation`.
 
 ## Ce que fait le script (pour information)
 
 - installe Node.js 22, Caddy (serveur web HTTPS automatique), SQLite et le pare-feu ;
+- installe Google Chrome sans interface et des polices, utilisés pour créer les **PDF** des devis et factures
+  (`deploy/chrome.sh`) ;
 - télécharge le logiciel dans `/opt/facturation` ; les données sont dans `/var/lib/facturation` ;
 - le lance comme service système (redémarrage automatique, utilisateur dédié sans privilèges) ;
 - configure Caddy en HTTPS devant le logiciel, n'ouvre que SSH, HTTP et HTTPS ;

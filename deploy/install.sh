@@ -40,7 +40,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq ca-certificates curl gnupg git build-essential python3 sqlite3 ufw debian-keyring debian-archive-keyring apt-transport-https >/dev/null
 
-if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
+if ! command -v node >/dev/null || ! node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 12) ? 0 : 1)'; then
   say "Installation de Node.js 22"
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
   apt-get install -y -qq nodejs >/dev/null
@@ -68,6 +68,9 @@ fi
 cd "$APP_DIR"
 say "Installation des dépendances"
 npm ci --omit=dev --no-audit --no-fund --loglevel=error
+
+say "Navigateur pour l'export PDF"
+bash "$APP_DIR/deploy/chrome.sh"
 
 mkdir -p "$DATA_DIR" "$BACKUP_DIR"
 chown "$APP_USER:$APP_USER" "$DATA_DIR"

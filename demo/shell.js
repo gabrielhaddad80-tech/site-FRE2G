@@ -149,6 +149,14 @@
     bg.querySelector('[data-close]').focus();
   };
 
+  // Les fichiers PDF / Word sont créés par le serveur de la version installée
+  window.downloadDocument = async function (id, format) {
+    const msg = `Le téléchargement en ${format === 'pdf' ? 'PDF' : 'Word'} fonctionne dans la version installée. Voici l'aperçu du document.`;
+    toast(msg, 'error');
+    window.openPrint(id);
+    throw new Error(msg);
+  };
+
   document.addEventListener('click', (e) => {
     const a = e.target.closest('a[href]');
     if (!a) return;
