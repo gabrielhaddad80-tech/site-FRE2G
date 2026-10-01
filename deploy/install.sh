@@ -38,8 +38,10 @@ fi
 
 say "Installation des paquets système"
 export DEBIAN_FRONTEND=noninteractive
+# Ancien dépôt apt de Caddy (signé avec une clé expirée) : il bloquerait « apt-get update »
+rm -f /etc/apt/sources.list.d/caddy-stable.list /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl gnupg git build-essential python3 sqlite3 ufw debian-keyring debian-archive-keyring apt-transport-https >/dev/null
+apt-get install -y -qq ca-certificates curl gnupg git build-essential python3 sqlite3 ufw >/dev/null
 
 if ! command -v node >/dev/null || ! node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 12) ? 0 : 1)'; then
   say "Installation de Node.js 22"
@@ -49,10 +51,38 @@ fi
 
 if ! command -v caddy >/dev/null; then
   say "Installation de Caddy (serveur web HTTPS)"
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' > /etc/apt/sources.list.d/caddy-stable.list
-  apt-get update -qq
-  apt-get install -y -qq caddy >/dev/null
+  # Version officielle téléchargée sur caddyserver.com (le dépôt apt de Caddy n'est pas fiable)
+  curl -fsSL --retry 3 -o /tmp/caddy "https://caddyserver.com/api/download?os=linux&arch=$(dpkg --print-architecture)" \
+    || fail "téléchargement de Caddy impossible : vérifiez la connexion du serveur puis relancez le script."
+  install -m 755 /tmp/caddy /usr/bin/caddy
+  rm -f /tmp/caddy
+  /usr/bin/caddy version >/dev/null || fail "Caddy téléchargé mais inutilisable : relancez le script."
+fi
+getent group caddy >/dev/null || groupadd --system caddy
+id caddy >/dev/null 2>&1 || useradd --system --gid caddy --create-home --home-dir /var/lib/caddy --shell /usr/sbin/nologin caddy
+mkdir -p /etc/caddy
+if [ ! -f /lib/systemd/system/caddy.service ] && [ ! -f /usr/lib/systemd/system/caddy.service ]; then
+  cat > /etc/systemd/system/caddy.service <<'UNIT'
+[Unit]
+Description=Caddy (serveur web HTTPS)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=caddy
+Group=caddy
+ExecStart=/usr/bin/caddy run --config /etc/caddy/Caddyfile
+ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --force
+TimeoutStopSec=5s
+LimitNOFILE=1048576
+PrivateTmp=true
+ProtectSystem=full
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+UNIT
 fi
 
 say "Récupération du logiciel (branche $BRANCH)"
@@ -78,8 +108,19 @@ chmod 750 "$DATA_DIR"
 
 # Adresse du site : domaine fourni, domaine déjà configuré, ou <ip>.sslip.io (HTTPS sans nom de domaine)
 if [ -z "${DOMAIN:-}" ] && [ -s "$CONF_DIR/domain" ]; then DOMAIN="$(cat "$CONF_DIR/domain")"; fi
+DOMAIN="${DOMAIN#http://}"; DOMAIN="${DOMAIN#https://}"; DOMAIN="${DOMAIN%%/*}"
+IP="$(curl -4 -fsS --max-time 10 https://api.ipify.org || true)"
+PENDING_DOMAIN=""
+if [ -n "${DOMAIN:-}" ] && [ -n "$IP" ] && [[ "$DOMAIN" != *.sslip.io ]]; then
+  RESOLVED="$(getent ahostsv4 "$DOMAIN" | awk 'NR==1{print $1}' || true)"
+  if [ "$RESOLVED" != "$IP" ]; then
+    # Le DNS n'est pas prêt : installation sur l'adresse provisoire, le domaine s'activera ensuite
+    printf '\n\033[1;33mAttention : %s pointe vers « %s » et non vers ce serveur (%s).\033[0m\n' "$DOMAIN" "${RESOLVED:-rien}" "$IP"
+    PENDING_DOMAIN="$DOMAIN"
+    DOMAIN=""
+  fi
+fi
 if [ -z "${DOMAIN:-}" ]; then
-  IP="$(curl -4 -fsS --max-time 10 https://api.ipify.org || true)"
   [ -n "$IP" ] || fail "adresse IP publique introuvable : relancez avec « export DOMAIN=votre-domaine.fr »."
   DOMAIN="${IP//./-}.sslip.io"
 fi
@@ -190,6 +231,11 @@ if [ -n "$CODE" ]; then
   printf '  (ouvrez l’adresse, saisissez ce code puis créez votre compte)\n'
 else
   printf '  Un compte existe déjà : connectez-vous avec votre e-mail et votre mot de passe.\n'
+fi
+if [ -n "$PENDING_DOMAIN" ]; then
+  printf '\n  \033[1;33mVotre domaine %s ne pointe pas encore vers ce serveur.\033[0m\n' "$PENDING_DOMAIN"
+  printf '  Créez l’enregistrement DNS A vers %s, attendez la propagation, puis tapez :\n' "$IP"
+  printf '    facturation-domaine %s\n' "$PENDING_DOMAIN"
 fi
 printf '\n  Le certificat HTTPS est obtenu automatiquement (jusqu’à 1 minute la première fois).\n'
 printf '  Mettre à jour le logiciel :      facturation-update\n'
