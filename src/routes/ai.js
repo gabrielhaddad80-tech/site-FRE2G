@@ -63,7 +63,14 @@ function apiError(e) {
   if (e instanceof AnthropicClient.PermissionDeniedError) return httpError(403, "Cette clé API n'a pas accès au modèle demandé.");
   if (e instanceof AnthropicClient.RateLimitError) return httpError(429, "Trop de demandes à l'IA pour le moment : réessayez dans une minute.");
   if (e instanceof AnthropicClient.APIConnectionError) return httpError(502, "Impossible de joindre le service d'IA : vérifiez la connexion Internet.");
-  if (e instanceof AnthropicClient.APIError) return httpError(502, `Le service d'IA a renvoyé une erreur (${e.status || 'inconnue'}).`);
+  if (e instanceof AnthropicClient.APIError) {
+    const detail = String((e.error && e.error.error && e.error.error.message) || '').slice(0, 300);
+    console.error(`Erreur de l'API Anthropic (${e.status}) : ${detail || e.message}`);
+    if (/credit balance/i.test(detail)) {
+      return httpError(402, 'Crédit Anthropic épuisé ou non activé : ajoutez du crédit sur console.anthropic.com → Billing, puis réessayez.');
+    }
+    return httpError(502, `Le service d'IA a renvoyé une erreur (${e.status || 'inconnue'})${detail ? ' : ' + detail : '.'}`);
+  }
   return e;
 }
 
