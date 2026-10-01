@@ -8,6 +8,9 @@ Les données restent sur votre ordinateur (fichier SQLite `data/facturation.db`)
 
 ## Installation
 
+> **Mise en ligne sur un serveur (VPS Hostinger ou autre)** : voir le guide pas à pas [DEPLOIEMENT.md](DEPLOIEMENT.md)
+> (installation automatique en une commande : HTTPS, service, pare-feu, sauvegardes).
+
 Prérequis : [Node.js](https://nodejs.org) 18 ou plus récent.
 
 ```bash
