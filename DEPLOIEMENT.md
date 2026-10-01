@@ -14,29 +14,22 @@ avec une sauvegarde automatique chaque nuit.
 4. Définissez un **mot de passe root** solide et notez-le.
 5. Attendez que le VPS soit prêt, puis notez son **adresse IP** (dans hPanel → VPS → Vue d'ensemble).
 
-## 2. Créer un jeton GitHub (lecture seule)
+## 2. Dépôt GitHub
 
-Le dépôt du logiciel est privé : le serveur a besoin d'un jeton pour le télécharger.
+Le dépôt `site-FRE2G` est **public** : aucun jeton n'est nécessaire, passez à l'étape 3.
 
-1. Sur github.com : votre photo → **Settings** → **Developer settings** → **Personal access tokens** →
-   **Fine-grained tokens** → **Generate new token**.
-2. Nom : `VPS facturation` — Expiration : 1 an (ou plus).
-3. **Repository access** : *Only select repositories* → `site-FRE2G`.
-4. **Permissions** → *Repository permissions* → **Contents : Read-only**. Rien d'autre.
-5. **Generate token**, puis copiez le jeton (il commence par `github_pat_`). Il ne sera plus affiché ensuite.
-
-Ce jeton ne peut que **lire** ce dépôt. Il est conservé sur le serveur (lisible par l'administrateur seulement)
-pour les mises à jour ; vous pouvez le révoquer à tout moment sur GitHub.
+*S'il redevient privé* : créez un jeton sur github.com (Settings → Developer settings → Personal access tokens →
+Fine-grained tokens), limité au dépôt `site-FRE2G` avec la permission **Contents : Read-only**, puis tapez
+`export GITHUB_TOKEN="github_pat_..."` dans le terminal du VPS avant la commande de l'étape 3.
 
 ## 3. Lancer l'installation
 
 1. Ouvrez un terminal sur le VPS : hPanel → VPS → **Terminal du navigateur**
    (ou, depuis votre ordinateur : `ssh root@ADRESSE_IP`).
-2. Copiez-collez ces deux lignes, en remplaçant `VOTRE_JETON` par le jeton de l'étape 2 :
+2. Copiez-collez cette ligne puis appuyez sur Entrée :
 
 ```bash
-export GITHUB_TOKEN="VOTRE_JETON"
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" https://raw.githubusercontent.com/gabrielhaddad80-tech/site-FRE2G/claude/invoice-quote-software-tdb10o/deploy/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gabrielhaddad80-tech/site-FRE2G/claude/invoice-quote-software-tdb10o/deploy/install.sh | bash
 ```
 
 3. Patientez. À la fin, le script affiche :
@@ -95,7 +88,7 @@ Vous pouvez aussi utiliser **Paramètres → Télécharger une sauvegarde** dans
 
 - **La page ne s'ouvre pas / pas de cadenas** : si vous avez activé le pare-feu dans hPanel (VPS → Sécurité →
   Pare-feu), autorisez les ports **80** et **443** (TCP). Puis `journalctl -u caddy -n 50` pour le détail.
-- **« impossible de récupérer le dépôt »** : jeton expiré ou sans accès au dépôt `site-FRE2G` (refaites l'étape 2,
+- **« impossible de récupérer le dépôt »** : le dépôt est redevenu privé ou le jeton a expiré (voir l'étape 2,
   puis relancez l'étape 3 : le script peut être relancé sans risque).
 - **Le logiciel ne démarre pas** : `journalctl -u facturation -n 50` et envoyez-moi le message.
 - **« Export PDF indisponible »** (installation faite avant l'arrivée de l'export PDF) :

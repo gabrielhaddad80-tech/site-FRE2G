@@ -3,15 +3,17 @@
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "Lancez : sudo facturation-update" >&2; exit 1; }
 APP_DIR=/opt/facturation
-TOKEN="$(cat /etc/facturation/github-token)"
 BRANCH="$(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD)"
-AUTH_HEADER="Authorization: Basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+GIT_AUTH=()
+if [ -s /etc/facturation/github-token ]; then # dépôt privé
+  GIT_AUTH=(-c "http.extraHeader=Authorization: Basic $(printf 'x-access-token:%s' "$(cat /etc/facturation/github-token)" | base64 -w0)")
+fi
 
 mkdir -p /var/backups/facturation
 if [ -f /var/lib/facturation/facturation.db ]; then
   sqlite3 /var/lib/facturation/facturation.db ".backup '/var/backups/facturation/avant-mise-a-jour-$(date +%F-%H%M).db'"
 fi
-git -C "$APP_DIR" -c http.extraHeader="$AUTH_HEADER" fetch -q origin "$BRANCH"
+git -C "$APP_DIR" "${GIT_AUTH[@]}" fetch -q origin "$BRANCH"
 BEFORE="$(git -C "$APP_DIR" rev-parse HEAD)"
 git -C "$APP_DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
 AFTER="$(git -C "$APP_DIR" rev-parse HEAD)"

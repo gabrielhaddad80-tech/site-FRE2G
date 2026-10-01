@@ -2,10 +2,9 @@
 # Installation du logiciel de facturation FRE2G sur un VPS Ubuntu 22.04 / 24.04 (Hostinger ou autre).
 # À lancer en root. Réexécutable sans risque : il met à jour l'installation existante.
 #
-#   export GITHUB_TOKEN=...     (jeton GitHub en lecture seule, dépôt privé)
+#   export GITHUB_TOKEN=...     (uniquement si le dépôt est privé : jeton GitHub en lecture seule)
 #   export DOMAIN=...           (facultatif : votre nom de domaine ; sinon adresse <ip>.sslip.io)
-#   curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-#     https://raw.githubusercontent.com/gabrielhaddad80-tech/site-FRE2G/claude/invoice-quote-software-tdb10o/deploy/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/gabrielhaddad80-tech/site-FRE2G/claude/invoice-quote-software-tdb10o/deploy/install.sh | bash
 set -euo pipefail
 
 main() {
@@ -27,13 +26,15 @@ fail() { printf '\n\033[1;31mErreur : %s\033[0m\n' "$*" >&2; exit 1; }
 
 mkdir -p "$CONF_DIR"
 chmod 700 "$CONF_DIR"
-# Jeton GitHub : conservé (lisible par root uniquement) pour les mises à jour
+# Jeton GitHub (dépôt privé uniquement) : conservé, lisible par root seulement, pour les mises à jour
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   printf '%s' "$GITHUB_TOKEN" > "$CONF_DIR/github-token"
   chmod 600 "$CONF_DIR/github-token"
 fi
-[ -s "$CONF_DIR/github-token" ] || fail "jeton GitHub manquant : faites « export GITHUB_TOKEN=... » avant de lancer le script (voir DEPLOIEMENT.md)."
-TOKEN="$(cat "$CONF_DIR/github-token")"
+GIT_AUTH=()
+if [ -s "$CONF_DIR/github-token" ]; then
+  GIT_AUTH=(-c "http.extraHeader=Authorization: Basic $(printf 'x-access-token:%s' "$(cat "$CONF_DIR/github-token")" | base64 -w0)")
+fi
 
 say "Installation des paquets système"
 export DEBIAN_FRONTEND=noninteractive
@@ -56,14 +57,13 @@ fi
 
 say "Récupération du logiciel (branche $BRANCH)"
 id "$APP_USER" >/dev/null 2>&1 || useradd --system --home "$DATA_DIR" --shell /usr/sbin/nologin "$APP_USER"
-AUTH_HEADER="Authorization: Basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
 if [ -d "$APP_DIR/.git" ]; then
-  git -C "$APP_DIR" -c http.extraHeader="$AUTH_HEADER" fetch -q origin "$BRANCH"
+  git -C "$APP_DIR" "${GIT_AUTH[@]}" fetch -q origin "$BRANCH"
   git -C "$APP_DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
 else
   rm -rf "$APP_DIR"
-  git -c http.extraHeader="$AUTH_HEADER" clone -q --branch "$BRANCH" "https://github.com/$REPO.git" "$APP_DIR" \
-    || fail "impossible de récupérer le dépôt : vérifiez le jeton GitHub (accès en lecture au dépôt $REPO)."
+  git "${GIT_AUTH[@]}" clone -q --branch "$BRANCH" "https://github.com/$REPO.git" "$APP_DIR" \
+    || fail "impossible de récupérer le dépôt : dépôt $REPO introuvable ; s'il est privé, faites « export GITHUB_TOKEN=... » (voir DEPLOIEMENT.md)."
 fi
 cd "$APP_DIR"
 say "Installation des dépendances"
