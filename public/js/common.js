@@ -353,7 +353,7 @@ function icon(name, extra = '') {
 }
 
 // Avatars à initiales (couleurs stables par nom)
-const AVATAR_TONES = [['#dfe4ff', '#f1dcff'], ['#ffe1ea', '#ffeccf'], ['#d9f5e6', '#dcefff'], ['#fff0cf', '#ffdfe6'], ['#e6e0ff', '#d6f1ff']];
+const AVATAR_TONES = [['#dce9fb', '#eef3fa'], ['#d6e3f2', '#e9eef5'], ['#e3e8ef', '#f1f4f8'], ['#cfe2f7', '#e6eef8'], ['#dde4ee', '#eef1f6']];
 function initials(name) {
   return String(name || '?').split(/[\s-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
 }
