@@ -20,7 +20,7 @@ const fakeClient = (apiKey) => ({
 before(async () => {
   delete process.env.ANTHROPIC_API_KEY;
   const db = openDatabase(':memory:');
-  server = createApp(db, { ai: { createClient: fakeClient } }).listen(0);
+  server = createApp(db, { ai: { createClient: fakeClient }, auth: false }).listen(0);
   await new Promise((r) => server.once('listening', r));
   base = `http://127.0.0.1:${server.address().port}/api`;
 });
@@ -150,7 +150,7 @@ test('chat : Claude utilise les outils puis répond', async () => {
   const seen = [];
   const scripted = () => ({ beta: { messages: { create: async (params) => { seen.push(JSON.parse(JSON.stringify(params))); return replies.shift(); } } } });
   const db = openDatabase(':memory:');
-  const srv = createApp(db, { ai: { createClient: scripted } }).listen(0);
+  const srv = createApp(db, { ai: { createClient: scripted }, auth: false }).listen(0);
   await new Promise((r) => srv.once('listening', r));
   const url = `http://127.0.0.1:${srv.address().port}/api`;
   try {
@@ -190,7 +190,7 @@ test('chat : pièces jointes et ajout d\'articles au catalogue', async () => {
   const seen = [];
   const scripted = () => ({ beta: { messages: { create: async (params) => { seen.push(JSON.parse(JSON.stringify(params))); return replies.shift(); } } } });
   const db = openDatabase(':memory:');
-  const srv = createApp(db, { ai: { createClient: scripted } }).listen(0);
+  const srv = createApp(db, { ai: { createClient: scripted }, auth: false }).listen(0);
   await new Promise((r) => srv.once('listening', r));
   const url = `http://127.0.0.1:${srv.address().port}/api`;
   const post = (path, body) => fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

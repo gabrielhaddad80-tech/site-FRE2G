@@ -67,6 +67,12 @@ svg.i { width: 18px; height: 18px; flex-shrink: 0; vertical-align: -4px; }
 #nav a.btn-new { justify-content: center; background: var(--primary); color: var(--on-primary); border-radius: 999px; font-weight: 700; padding: 10px; }
 #nav a.btn-new.alt { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
 #tabbar { display: none; }
+#nav .nav-user { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 12px 6px 2px; border-top: 1px solid var(--border-soft); }
+#nav .nav-user .avatar { width: 34px; height: 34px; font-size: 12px; }
+#nav .nav-user .who { flex: 1; min-width: 0; line-height: 1.25; }
+#nav .nav-user strong { display: block; color: var(--text); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#nav .nav-user small { display: block; color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#nav .nav-user .icon-btn { width: 34px; height: 34px; }
 
 main { flex: 1; padding: 28px 32px; min-width: 0; }
 h1 { margin: 0 0 18px; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; text-wrap: balance; }

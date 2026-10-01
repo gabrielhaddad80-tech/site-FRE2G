@@ -168,9 +168,10 @@ module.exports = function aiRoutes(db, options = {}) {
       // Les outils appellent l'API du logiciel lui-même (mêmes règles que l'interface)
       const port = req.socket.localPort;
       const request = async (method, url, body) => {
-        const r2 = await fetch(`http://127.0.0.1:${port}/api${url}`, {
-          method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined
-        });
+        // Même session que la personne connectée : les outils ont exactement ses droits
+        const headers = req.headers.cookie ? { Cookie: req.headers.cookie } : {};
+        if (body) headers['Content-Type'] = 'application/json';
+        const r2 = await fetch(`http://127.0.0.1:${port}/api${url}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
         const data = await r2.json().catch(() => null);
         if (!r2.ok) throw new Error((data && data.error) || `Erreur ${r2.status}`);
         return data;

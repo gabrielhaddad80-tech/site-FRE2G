@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Connexion — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  body { display: grid; place-items: center; min-height: 100vh; padding: 24px 16px; background: radial-gradient(800px 420px at 10% 0%, var(--glow-1), transparent 70%), radial-gradient(700px 380px at 90% 10%, var(--glow-2), transparent 70%), var(--bg); }
+  .login { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 28px; padding: 32px 28px; box-shadow: 0 20px 60px var(--shadow); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; margin-bottom: 26px; }
+  .brand .logo { width: 34px; height: 34px; border-radius: 11px; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; font-style: italic; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h1 em { font-weight: 400; }
+  .intro { color: var(--muted); margin: 0 0 22px; line-height: 1.5; }
+  form { display: grid; gap: 14px; }
+  .field input { padding: 12px 14px; }
+  .pw { position: relative; }
+  .pw input { padding-right: 90px; }
+  .pw button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 12px; padding: 5px 10px; }
+  .submit { justify-content: center; padding: 12px; font-size: 15px; margin-top: 4px; }
+  .error { margin: 0; padding: 10px 14px; border-radius: 14px; background: var(--danger-bg); color: var(--danger); font-weight: 500; }
+  .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .code input { font-size: 18px; letter-spacing: .12em; text-align: center; }
+  .foot { margin-top: 20px; color: var(--muted); font-size: 12.5px; text-align: center; }
+</style>
+</head>
+<body>
+<main class="login" aria-labelledby="title">
+  <div class="brand"><span class="logo">F</span>Facturation</div>
+
+  <!-- Connexion -->
+  <section id="login-view" hidden>
+    <h1 id="title">Bonjour,<br><em>connectez-vous</em></h1>
+    <p class="intro">Accédez à vos devis, factures et clients.</p>
+    <form id="login-form" novalidate>
+      <div class="field"><label for="email">Adresse e-mail</label><input id="email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="password">Mot de passe</label>
+        <div class="pw"><input id="password" type="password" autocomplete="current-password" required><button type="button" data-toggle="password">Afficher</button></div>
+      </div>
+      <p class="error" id="login-error" role="alert" hidden></p>
+      <button class="primary submit" type="submit">Se connecter</button>
+    </form>
+    <p class="foot">Mot de passe oublié ? Il se réinitialise sur le serveur : <code>npm run reset-password -- votre@email.fr NouveauMotDePasse</code></p>
+  </section>
+
+  <!-- Première connexion : création du compte administrateur -->
+  <section id="setup-view" hidden>
+    <h1>Bienvenue,<br><em>créez votre compte</em></h1>
+    <p class="intro">Ce compte protège l'accès au logiciel. Vous pourrez ajouter d'autres utilisateurs ensuite dans Paramètres.</p>
+    <form id="setup-form" novalidate>
+      <div class="field code"><label for="code">Code de première connexion</label><input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="0000-0000" required></div>
+      <p class="hint">Ce code s'affiche dans la fenêtre du serveur au démarrage du logiciel. Il empêche quelqu'un d'autre de créer ce compte à votre place.</p>
+      <div class="field"><label for="s-name">Votre nom</label><input id="s-name" autocomplete="name"></div>
+      <div class="field"><label for="s-email">Adresse e-mail</label><input id="s-email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="s-password">Mot de passe (10 caractères minimum)</label>
+        <div class="pw"><input id="s-password" type="password" autocomplete="new-password" minlength="10" required><button type="button" data-toggle="s-password">Afficher</button></div>
+      </div>
+      <div class="field"><label for="s-password2">Confirmez le mot de passe</label><input id="s-password2" type="password" autocomplete="new-password" required></div>
+      <p class="error" id="setup-error" role="alert" hidden></p>
+      <button class="primary submit" type="submit">Créer mon compte</button>
+    </form>
+  </section>
+</main>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const next = (() => {
+    const n = new URLSearchParams(location.search).get('next') || '/';
+    return /^\/(?!\/)/.test(n) ? n : '/'; // uniquement une adresse interne
+  })();
+
+  async function post(url, body) {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Erreur ' + res.status);
+    return data;
+  }
+  function showError(el, msg) { el.textContent = msg; el.hidden = !msg; }
+
+  document.querySelectorAll('[data-toggle]').forEach((b) => b.addEventListener('click', () => {
+    const input = $(b.dataset.toggle);
+    input.type = input.type === 'password' ? 'text' : 'password';
+    b.textContent = input.type === 'password' ? 'Afficher' : 'Masquer';
+  }));
+
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.submitter || e.target.querySelector('button[type=submit]');
+    btn.disabled = true;
+    showError($('login-error'), '');
+    try {
+      await post('/api/auth/login', { email: $('email').value, password: $('password').value });
+      location.replace(next);
+    } catch (err) {
+      showError($('login-error'), err.message);
+      $('password').select();
+    } finally { btn.disabled = false; }
+  });
+
+  $('setup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('setup-error');
+    if ($('s-password').value.length < 10) return showError(err, 'Le mot de passe doit contenir au moins 10 caractères.');
+    if ($('s-password').value !== $('s-password2').value) return showError(err, 'Les deux mots de passe ne correspondent pas.');
+    const btn = e.target.querySelector('button[type=submit]');
+    btn.disabled = true;
+    showError(err, '');
+    try {
+      await post('/api/auth/setup', { code: $('code').value, name: $('s-name').value, email: $('s-email').value, password: $('s-password').value });
+      location.replace('/');
+    } catch (ex) { showError(err, ex.message); } finally { btn.disabled = false; }
+  });
+
+  fetch('/api/auth/status').then((r) => r.json()).then((s) => {
+    if (s.user) return location.replace(next);
+    const view = s.setup_required ? 'setup-view' : 'login-view';
+    $(view).hidden = false;
+    $(s.setup_required ? 'code' : 'email').focus();
+  }).catch(() => { $('login-view').hidden = false; });
+})();
+</script>
+</body>
+</html>

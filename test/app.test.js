@@ -11,7 +11,7 @@ let server, base;
 
 before(async () => {
   const db = openDatabase(':memory:');
-  server = createApp(db).listen(0);
+  server = createApp(db, { auth: false }).listen(0);
   await new Promise((r) => server.once('listening', r));
   base = `http://127.0.0.1:${server.address().port}/api`;
 });

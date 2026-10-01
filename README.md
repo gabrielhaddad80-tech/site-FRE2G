@@ -21,6 +21,24 @@ Sous Windows, double-cliquez simplement sur `demarrer.bat`.
 Options : `PORT=8080 npm start` pour changer de port, `DB_FILE=/chemin/base.db` pour utiliser un autre fichier de données,
 `HOST=0.0.0.0` pour y accéder depuis d'autres postes du réseau local.
 
+## Connexion et sécurité
+
+Le logiciel est protégé par une connexion (e-mail + mot de passe).
+
+- **Premier démarrage** : aucun compte n'existe ; la console du serveur affiche un **code de première connexion**
+  (ex. `4833-3817`). Ouvrez le logiciel, saisissez ce code et créez le compte administrateur. Le code ne sert
+  qu'une fois : personne d'autre ne peut créer ce compte à votre place.
+  Installation automatisée : `INITIAL_ADMIN_EMAIL` et `INITIAL_ADMIN_PASSWORD` créent ce compte directement.
+- **Autres utilisateurs** : `Paramètres → Utilisateurs et sécurité` (ajout, suppression, changement de mot de passe,
+  déconnexion des autres appareils). Mot de passe de 10 caractères minimum.
+- **Mot de passe oublié** : sur le serveur, `npm run reset-password -- adresse@email.fr NouveauMotDePasse`
+  (ferme aussi les sessions ouvertes de ce compte ; crée le compte s'il n'existe pas).
+- **Ce qui est protégé** : mots de passe hachés (scrypt) ; session dans un cookie HttpOnly / SameSite=Lax, valable
+  30 jours (seule son empreinte est stockée) ; toutes les pages et l'API exigent une session ; écritures refusées
+  depuis un autre site ; 10 tentatives de connexion incorrectes bloquent l'adresse IP 15 minutes.
+- **En ligne derrière HTTPS** (Caddy, Nginx…) : lancez avec `TRUST_PROXY=1` pour que le cookie soit marqué
+  « Secure » et que le blocage utilise la vraie adresse IP des visiteurs.
+
 ## Fonctionnalités
 
 ### Accueil

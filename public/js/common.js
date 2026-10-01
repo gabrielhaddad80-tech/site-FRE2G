@@ -27,6 +27,11 @@ async function api(url, options = {}) {
     throw e;
   }
   const data = await res.json().catch(() => null);
+  if (res.status === 401 && data && data.code === 'auth') {
+    // Session expirée : retour à la connexion, puis à la page en cours
+    location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.search);
+    throw Object.assign(new Error(data.error), { code: 'auth' });
+  }
   if (!res.ok) {
     const msg = (data && data.error) || `Erreur ${res.status}`;
     toast(msg, 'error');
@@ -137,6 +142,29 @@ function loadScript(src) {
   }));
 }
 let PDFJS_BASE = 'vendor/pdfjs/';
+
+// Personne connectée (affichée en bas du menu) et déconnexion
+let currentUser = null;
+async function renderNavUser() {
+  const box = document.getElementById('nav-user');
+  if (!box) return;
+  if (!currentUser) {
+    try { currentUser = (await api('/auth/me')).user; } catch (e) { return; }
+  }
+  const name = currentUser.name || currentUser.email;
+  box.innerHTML = `<span class="avatar" style="${avatarStyle(name)}">${initials(name)}</span>`
+    + '<span class="who"><strong></strong><small></small></span>'
+    + `<button type="button" class="icon-btn" title="Se déconnecter" aria-label="Se déconnecter">${ICON_LOGOUT}</button>`;
+  box.querySelector('strong').textContent = name;
+  box.querySelector('small').textContent = currentUser.name ? currentUser.email : '';
+  box.querySelector('button').addEventListener('click', logout);
+}
+const ICON_LOGOUT = '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg>';
+async function logout() {
+  try { await api('/auth/logout', { body: {} }); } catch (e) { /* déjà déconnecté */ }
+  try { localStorage.removeItem('fre2g-chat-v1'); } catch (e) { /* ignore */ }
+  location.href = '/login.html';
+}
 
 function canvasToImage(canvas, extra) {
   return new Promise((resolve, reject) => canvas.toBlob((blob) => {
@@ -339,7 +367,9 @@ function renderNav() {
   nav.classList.remove('open');
   nav.innerHTML = '<a class="brand" href="index.html"><span class="logo">F</span>Facturation</a>'
     + NAV.map(([href, label, ic]) => `<a href="${href}" class="${isActive(href) ? 'active' : ''}">${icon(ic)}${label}</a>`).join('')
-    + `<div class="nav-actions"><a class="btn-new" href="document.html?new=devis">${icon('plus')}Nouveau devis</a><a class="btn-new alt" href="document.html?new=facture">${icon('plus')}Nouvelle facture</a></div>`;
+    + `<div class="nav-actions"><a class="btn-new" href="document.html?new=devis">${icon('plus')}Nouveau devis</a><a class="btn-new alt" href="document.html?new=facture">${icon('plus')}Nouvelle facture</a></div>`
+    + (window.IS_DEMO ? '' : '<div class="nav-user" id="nav-user"></div>');
+  if (!window.IS_DEMO) renderNavUser();
   let bar = document.getElementById('tabbar');
   if (!bar) {
     bar = document.createElement('nav');
