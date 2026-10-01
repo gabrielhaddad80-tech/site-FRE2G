@@ -217,7 +217,7 @@ systemctl restart facturation
 systemctl reload caddy 2>/dev/null || systemctl restart caddy
 
 for _ in $(seq 1 20); do
-  curl -fsS -o /dev/null "http://127.0.0.1:$PORT/login.html" && break
+  curl -fs -o /dev/null "http://127.0.0.1:$PORT/login.html" && break
   sleep 1
 done
 curl -fsS -o /dev/null "http://127.0.0.1:$PORT/login.html" || fail "le logiciel ne démarre pas : consultez « journalctl -u facturation -n 50 »."
