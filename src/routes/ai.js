@@ -172,6 +172,49 @@ module.exports = function aiRoutes(db, options = {}) {
     }
   });
 
+  // Import au catalogue : l'IA lit un tarif fournisseur (PDF ou photo) et renvoie les articles à vérifier.
+  // Rien n'est enregistré ici : l'utilisateur contrôle l'aperçu puis lance l'import lui-même.
+  r.post('/ai/catalog-extract', async (req, res, next) => {
+    try {
+      const key = apiKey();
+      if (!key) throw httpError(503, "La lecture des PDF et des photos utilise l'assistant IA : ajoutez votre clé API Anthropic dans Paramètres.");
+      const f = req.body.file || {};
+      let source;
+      if (f.kind === 'pdf' && typeof f.data === 'string' && /^[A-Za-z0-9+/=]+$/.test(f.data)) {
+        if (f.data.length > 14 * 1024 * 1024) throw httpError(413, 'Le PDF dépasse 10 Mo : découpez-le en plusieurs fichiers.');
+        source = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data } };
+      } else if (f.kind === 'image' && IMAGE_TYPES.includes(f.media_type) && typeof f.data === 'string' && f.data) {
+        source = { type: 'image', source: { type: 'base64', media_type: f.media_type, data: f.data } };
+      } else {
+        throw httpError(400, 'Choisissez un PDF ou une photo de votre tarif.');
+      }
+      const settings = getSettings(db);
+      const prompt = AiDraft.buildCatalogPrompt({
+        defaultVat: settings.default_vat_rate,
+        units: (settings.units || '').split(',').map((u) => u.trim()).filter(Boolean)
+      });
+      // Longue liste possible : le streaming évite les délais d'attente HTTP
+      const response = await createClient(key).beta.messages.stream({
+        model: MODEL,
+        max_tokens: 64000,
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default',
+        output_config: { effort: 'medium', format: { type: 'json_schema', schema: AiDraft.CATALOG_SCHEMA } },
+        messages: [{ role: 'user', content: [source, { type: 'text', text: prompt }] }]
+      }).finalMessage();
+      if (response.stop_reason === 'refusal') throw httpError(422, "L'IA n'a pas pu lire ce document. Essayez avec un autre fichier.");
+      if (response.stop_reason === 'max_tokens') throw httpError(502, 'Le document contient trop d\'articles : découpez-le en plusieurs fichiers (quelques pages à la fois).');
+      const out = response.content.find((b) => b.type === 'text');
+      let parsed;
+      try { parsed = JSON.parse(out ? out.text : ''); } catch (e) { throw httpError(502, "La réponse de l'IA est illisible. Réessayez."); }
+      const result = AiDraft.normalizeCatalog(parsed, { coef: settings.default_margin_coef });
+      if (!result.rows.length) throw httpError(422, 'Aucun article avec un prix n\'a été trouvé dans ce document.' + (result.notes ? ' ' + result.notes : ''));
+      res.json(result);
+    } catch (e) {
+      next(apiError(e));
+    }
+  });
+
   // Chat avec l'assistant : Claude utilise les outils (lecture des données, création de devis brouillon)
   r.post('/ai/chat', async (req, res, next) => {
     try {

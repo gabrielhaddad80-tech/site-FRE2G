@@ -234,3 +234,44 @@ test('chat : pièces jointes et ajout d\'articles au catalogue', async () => {
     srv.close();
   }
 });
+
+test('import au catalogue : lecture d\'un tarif PDF par l\'IA, sans rien enregistrer', async () => {
+  let request;
+  const reply = { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({
+    articles: [
+      { reference: 'LR-10', designation: 'Colle carrelage 25 kg', description: 'Sac', type: 'fourniture', unite: 'u', prix_achat_ht: 18.9, prix_vente_ht: null, tva: 20, categorie: 'Colles' },
+      { reference: '', designation: 'Livraison', description: '', type: 'prestation', unite: 'forfait', prix_achat_ht: null, prix_vente_ht: 45, tva: null, categorie: '' },
+      { reference: 'X', designation: '   ', description: '', type: 'fourniture', unite: 'u', prix_achat_ht: 1, prix_vente_ht: 2, tva: 20, categorie: '' }
+    ],
+    remarques: 'Page 3 illisible.'
+  }) }] };
+  const fake = () => ({ beta: { messages: { stream: (params) => ({ finalMessage: async () => { request = params; return reply; } }) } } });
+  const db = openDatabase(':memory:');
+  const srv = createApp(db, { ai: { createClient: fake }, auth: false }).listen(0);
+  await new Promise((r) => srv.once('listening', r));
+  const url = `http://127.0.0.1:${srv.address().port}/api`;
+  const post = (path, body) => fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  try {
+    assert.strictEqual((await post('/ai/catalog-extract', { file: { kind: 'pdf', data: 'JVBERi0=' } })).status, 503, 'clé API requise');
+    await fetch(url + '/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anthropic_api_key: 'sk-ant-x', default_margin_coef: '1.5' }) });
+    assert.strictEqual((await post('/ai/catalog-extract', { file: { kind: 'exe', data: 'AA' } })).status, 400);
+    const before = (await (await fetch(url + '/items?limit=1000')).json()).length;
+    const res = await post('/ai/catalog-extract', { file: { kind: 'pdf', data: 'JVBERi0=' } });
+    const body = await res.json();
+    assert.strictEqual(res.status, 200, JSON.stringify(body));
+    assert.strictEqual(request.messages[0].content[0].type, 'document');
+    assert.strictEqual(request.output_config.format.schema, require('../public/js/ai').CATALOG_SCHEMA);
+    assert.strictEqual(body.rows.length, 2, 'ligne sans libellé ignorée');
+    assert.deepStrictEqual(body.rows[0], { reference: 'LR-10', designation: 'Colle carrelage 25 kg', description: 'Sac', type: 'fourniture', unit: 'u',
+      purchase_price: '18.9', sale_price: '28.35', vat_rate: '20', category: 'Colles' });
+    assert.strictEqual(body.rows[1].sale_price, '45');
+    assert.strictEqual(body.notes, 'Page 3 illisible.');
+    assert.strictEqual((await (await fetch(url + '/items?limit=1000')).json()).length, before, 'aucun article enregistré par la lecture');
+    // Photo d'un tarif
+    const img = await post('/ai/catalog-extract', { file: { kind: 'image', media_type: 'image/jpeg', data: 'AAAA' } });
+    assert.strictEqual(img.status, 200);
+    assert.strictEqual(request.messages[0].content[0].type, 'image');
+  } finally {
+    srv.close();
+  }
+});

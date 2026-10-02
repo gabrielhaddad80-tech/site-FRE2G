@@ -67,6 +67,9 @@ Sur mobile, une barre d'onglets en bas donne accès aux écrans principaux.
 - **Ouvrages composés** : un ouvrage regroupe plusieurs articles (ex. 1 m² de fourniture + 0,5 h de main d'œuvre) ;
   son prix est calculé à partir des composants. Il s'insère dans un devis en une ligne ou détaillé composant par composant.
 - Catégories ordonnables.
+- **Import d'un tarif en PDF ou en photo** : l'assistant IA lit le document (références, libellés, prix d'achat / de vente,
+  unités, TVA, familles) et affiche la liste à vérifier ; rien n'est enregistré avant le clic sur « Importer ». Le prix de
+  vente manquant est calculé avec le coefficient par défaut (Paramètres). Nécessite la clé API de l'assistant IA.
 - **Import CSV / Excel** avec correspondance automatique des colonnes (exemple : `exemples/catalogue-exemple.csv`).
   Un article dont la référence existe déjà est mis à jour → idéal pour charger un nouveau tarif fournisseur.
 - **Export CSV** et **mise à jour des prix en masse** (ex. +3,5 % sur un catalogue).

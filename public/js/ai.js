@@ -121,6 +121,74 @@
     };
   }
 
+  // ---------- Lecture d'un tarif fournisseur (PDF ou photo) pour l'import au catalogue ----------
+  const MAX_CATALOG_ROWS = 400;
+  const CATALOG_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['articles', 'remarques'],
+    properties: {
+      articles: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['reference', 'designation', 'description', 'type', 'unite', 'prix_achat_ht', 'prix_vente_ht', 'tva', 'categorie'],
+          properties: {
+            reference: { type: 'string', description: "Référence / code article tel qu'écrit (chaîne vide si absente)" },
+            designation: { type: 'string', description: "Libellé de l'article" },
+            description: { type: 'string', description: 'Détail utile (dimensions, conditionnement…), chaîne vide sinon' },
+            type: { type: 'string', enum: ['fourniture', 'materiel', 'main_oeuvre', 'prestation'] },
+            unite: { type: 'string', description: 'Unité : u, m², ml, m³, kg, h, forfait…' },
+            prix_achat_ht: { type: ['number', 'null'], description: "Prix d'achat HT (tarif d'achat, prix net ou remisé), null sinon" },
+            prix_vente_ht: { type: ['number', 'null'], description: 'Prix de vente HT (prix public, conseillé ou prix unitaire du document), null sinon' },
+            tva: { type: ['number', 'null'], description: "Taux de TVA en % s'il est indiqué, null sinon" },
+            categorie: { type: 'string', description: 'Famille / rubrique du document, chaîne vide sinon' }
+          }
+        }
+      },
+      remarques: { type: 'string', description: "Ce qui n'a pas pu être lu ou mérite vérification, en une ou deux phrases (chaîne vide sinon)" }
+    }
+  };
+
+  function buildCatalogPrompt(p) {
+    p = p || {};
+    const units = p.units && p.units.length ? p.units.join(', ') : 'u, m², ml, m³, kg, h, forfait';
+    return [
+      "Le document joint est un tarif, un catalogue, une liste de prix ou un devis fournisseur. Extrais-en les articles pour les importer dans le catalogue d'un artisan.",
+      '- Un article par ligne de prix. Ignore les titres, totaux, frais de port, mentions légales et lignes sans libellé.',
+      `- Recopie les références et libellés exactement. Les prix sont HT, en euros, au format nombre (12.5) ; s'il n'y a que des prix TTC, convertis-les en HT avec le taux indiqué (sinon ${p.defaultVat || 20} %).`,
+      "- Tarif d'achat (prix net, remisé, revendeur) : mets le prix dans prix_achat_ht et laisse prix_vente_ht à null. Prix public ou conseillé : mets-le dans prix_vente_ht. Les deux s'ils sont indiqués.",
+      `- Unités possibles : ${units}.`,
+      "- Type : « fourniture » pour les matériaux et produits, « materiel » pour l'outillage ou la location, « main_oeuvre » pour les heures de travail, « prestation » pour un service.",
+      '- Catégorie : la famille ou rubrique du document quand il y en a une.',
+      `- ${MAX_CATALOG_ROWS} articles au maximum ; au-delà, arrête-toi et signale-le dans remarques.`,
+      "- N'invente aucun article ni aucun prix : en cas de doute, mets null et explique-le dans remarques."
+    ].join('\n') + (p.text ? '\n\nTexte extrait du document (pour aider la lecture) :\n' + String(p.text).slice(0, 60000) : '');
+  }
+
+  // Transforme la réponse en lignes au format de l'import du catalogue (prix de vente calculé avec le coefficient si absent)
+  function normalizeCatalog(result, opts) {
+    const r = result && typeof result === 'object' ? result : {};
+    const coef = Number(opts && opts.coef) || 0;
+    const num = (v) => (typeof v === 'number' && isFinite(v) && v >= 0 ? Math.round(v * 10000) / 10000 : null);
+    const str = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+    const types = ['fourniture', 'materiel', 'main_oeuvre', 'prestation'];
+    const rows = (Array.isArray(r.articles) ? r.articles : []).slice(0, MAX_CATALOG_ROWS).map((a) => {
+      a = a && typeof a === 'object' ? a : {};
+      const buy = num(a.prix_achat_ht);
+      let sell = num(a.prix_vente_ht);
+      if (sell === null && buy !== null && coef > 0) sell = Math.round(buy * coef * 100) / 100;
+      return {
+        reference: str(a.reference, 60), designation: str(a.designation, 250), description: str(a.description, 500),
+        type: types.includes(a.type) ? a.type : 'fourniture', unit: str(a.unite, 20) || 'u',
+        purchase_price: buy === null ? '' : String(buy), sale_price: sell === null ? '' : String(sell),
+        vat_rate: num(a.tva) === null ? '' : String(num(a.tva)), category: str(a.categorie, 80)
+      };
+    }).filter((a) => a.designation);
+    return { rows, notes: str(r.remarques, 600) };
+  }
+
   // ---------- Conversion d'un modèle existant (image / page de PDF) en modèle d'impression ----------
   const TEMPLATE_SCHEMA = {
     type: 'object',
@@ -317,5 +385,5 @@
     return where ? `(L'utilisateur est actuellement sur ${where}.)` : '';
   }
 
-  return { SCHEMA, buildPrompt, normalize, MAX_CATALOG_ITEMS, TEMPLATE_SCHEMA, buildTemplatePrompt, normalizeTemplate, CHAT_TOOLS, runChatTool, chatSystemPrompt, contextNote };
+  return { SCHEMA, buildPrompt, normalize, MAX_CATALOG_ITEMS, CATALOG_SCHEMA, buildCatalogPrompt, normalizeCatalog, MAX_CATALOG_ROWS, TEMPLATE_SCHEMA, buildTemplatePrompt, normalizeTemplate, CHAT_TOOLS, runChatTool, chatSystemPrompt, contextNote };
 });

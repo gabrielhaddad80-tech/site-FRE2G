@@ -320,6 +320,38 @@
     return tpl;
   };
 
+  // Lecture d'un tarif pour l'import au catalogue : pages du PDF en images + texte extrait
+  window.aiCatalogExtract = async ({ file, signal }) => {
+    const sample = await getSample();
+    if (!sample) throw { code: 'not_granted', message: AI_MESSAGES.not_granted };
+    const limits = await sample.limits().catch(() => null);
+    if (!limits || !limits.images) throw { code: 'images_unavailable', message: 'Le document ne peut pas être envoyé depuis cette vue.' };
+    const settings = call('GET', '/api/settings');
+    let images = [];
+    let text = '';
+    if (file.kind === 'pdf') {
+      const pages = await pdfToImages(file.file, Math.min(3, limits.images.maxCount));
+      images = pages.images.map((im) => im.blob);
+      text = (await pdfText(file.file, 20).catch(() => ({ text: '' }))).text;
+    } else {
+      images = [file.blob];
+    }
+    const prompt = AiDraft.buildCatalogPrompt({
+      defaultVat: settings.default_vat_rate, text,
+      units: (settings.units || '').split(',').map((u) => u.trim()).filter(Boolean)
+    });
+    try {
+      const result = AiDraft.normalizeCatalog(await sample.json(prompt, { images, signal, cache: false }), { coef: settings.default_margin_coef });
+      if (!result.rows.length) throw { code: 'empty' };
+      return result;
+    } catch (e) {
+      const code = e && e.code;
+      const message = code === 'empty' ? "Aucun article avec un prix n'a été trouvé dans ce document." : (AI_MESSAGES[code] || "L'IA n'a pas pu lire ce document : réessayez.");
+      toast(message, 'error');
+      throw { code, message };
+    }
+  };
+
   document.getElementById('demo-reset').addEventListener('click', async () => {
     if (!(await uiConfirm('Effacer toutes les données saisies et repartir des exemples ?', 'Réinitialiser'))) return;
     try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }

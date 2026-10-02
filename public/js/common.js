@@ -95,6 +95,10 @@ async function aiAvailable() {
 function aiDraft({ text, images, docType, signal }) {
   return api('/ai/draft', { signal, body: { text, doc_type: docType, images: (images || []).map((im) => ({ media_type: im.media_type, data: im.data })) } });
 }
+// Lecture d'un tarif (PDF ou photo) pour l'import au catalogue : renvoie { rows, notes }
+function aiCatalogExtract({ file, signal }) {
+  return api('/ai/catalog-extract', { signal, body: { file: { kind: file.kind, media_type: file.media_type, data: file.data } } });
+}
 function aiUnavailableHint() {
   return 'Pour activer l\'assistant, ajoutez votre clé API Anthropic dans <a href="parametres.html">Paramètres</a>.';
 }

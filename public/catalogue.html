@@ -17,7 +17,7 @@
   <div class="toolbar">
     <h1 style="margin:0">Catalogue & tarifs</h1>
     <div class="spacer"></div>
-    <button @click="importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {} }">Importer (CSV / Excel)</button>
+    <button @click="importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {} }">Importer (PDF, photo, CSV)</button>
     <a class="btn" href="/api/items/export.csv">Exporter CSV</a>
     <button @click="reprice = { percent: 0, field: 'sale_price', type: '', category_id: '', catalog: '' }">Mise à jour des prix</button>
     <button class="primary" @click="edit({ type: filters.type || 'prestation' })">+ Nouvel article</button>
@@ -169,16 +169,19 @@
     <template x-if="importer">
       <div class="modal wide">
         <h2>Importer un catalogue / une liste de tarifs</h2>
-        <p class="small muted">Fichier CSV (depuis Excel : « Enregistrer sous » → « CSV UTF-8 (délimité par des points-virgules) »). La première ligne doit contenir les en-têtes.
+        <p class="small muted"><strong>PDF ou photo</strong> d'un tarif fournisseur : l'assistant IA lit le document et prépare la liste des articles, que vous vérifiez avant l'import.
+          <strong>CSV</strong> (depuis Excel : « Enregistrer sous » → « CSV UTF-8 (délimité par des points-virgules) ») : la première ligne doit contenir les en-têtes.
           Les articles dont la référence existe déjà sont mis à jour (pratique pour appliquer un nouveau tarif fournisseur).</p>
         <div class="grid grid-2">
-          <div><label>Fichier</label><input type="file" accept=".csv,.txt" @change="readFile($event)"></div>
+          <div><label>Fichier (PDF, photo, CSV)</label><input type="file" accept=".pdf,application/pdf,image/*,.csv,.txt" @change="readFile($event)" :disabled="importer.busy"></div>
           <div><label>Nom du catalogue (facultatif)</label><input x-model="importer.catalog" placeholder="Ex. Tarif fournisseur 2026"></div>
         </div>
+        <p class="small muted" x-show="importer.busy" style="margin-top:12px"><span class="dots"><i></i><i></i><i></i></span> L'IA lit votre document… (jusqu'à une minute pour un long tarif)</p>
+        <p class="small" x-show="importer.notes" x-text="'À vérifier : ' + importer.notes" style="margin-top:12px; color: var(--accent)"></p>
         <template x-if="importer.headers.length">
           <div style="margin-top:14px">
-            <h2>Correspondance des colonnes</h2>
-            <div class="grid grid-4">
+            <h2 x-show="!importer.ai">Correspondance des colonnes</h2>
+            <div class="grid grid-4" x-show="!importer.ai">
               <template x-for="f in importFields" :key="f.key">
                 <div><label x-text="f.label"></label>
                   <select x-model="importer.mapping[f.key]">
@@ -188,15 +191,15 @@
                 </div>
               </template>
             </div>
-            <div class="grid grid-2" style="margin-top:10px">
+            <div class="grid grid-2" style="margin-top:10px" x-show="!importer.ai">
               <div><label>Type par défaut (si pas de colonne type)</label><select x-model="importer.defaultType">
                 <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v"></option></template>
               </select></div>
             </div>
-            <p class="small muted" x-text="importer.rows.length + ' ligne(s) détectée(s). Aperçu :'"></p>
+            <p class="small muted" x-text="importer.rows.length + ' article(s) détecté(s). ' + (importer.ai ? 'Vérifiez les prix avant d\'importer :' : 'Aperçu :')"></p>
             <table class="list small">
               <thead><tr><template x-for="f in importFields" :key="f.key"><th x-show="importer.mapping[f.key] !== ''" x-text="f.label"></th></template></tr></thead>
-              <tbody><template x-for="(r, i) in mappedRows().slice(0, 5)" :key="i">
+              <tbody><template x-for="(r, i) in mappedRows().slice(0, importer.ai ? 200 : 5)" :key="i">
                 <tr><template x-for="f in importFields" :key="f.key"><td x-show="importer.mapping[f.key] !== ''" x-text="r[f.key]"></td></template></tr>
               </template></tbody>
             </table>
@@ -204,7 +207,7 @@
         </template>
         <div class="actions">
           <button @click="importer = null">Annuler</button>
-          <button class="primary" :disabled="!importer.rows.length" @click="runImport()">Importer</button>
+          <button class="primary" :disabled="!importer.rows.length || importer.busy" @click="runImport()" x-text="importer.rows.length ? 'Importer ' + importer.rows.length + ' article(s)' : 'Importer'"></button>
         </div>
       </div>
     </template>
@@ -323,6 +326,9 @@ function catalogPage() {
     async readFile(e) {
       const file = e.target.files[0];
       if (!file) return;
+      if (/^image\//.test(file.type) || file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return this.readWithAi(file, e.target);
+      this.importer.ai = false;
+      this.importer.notes = '';
       const buf = await file.arrayBuffer();
       let text = new TextDecoder('utf-8').decode(buf);
       if (text.includes('\ufffd')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
@@ -339,6 +345,30 @@ function catalogPage() {
         if (idx >= 0) used.add(idx);
       }
       this.importer.mapping = mapping;
+    },
+    // PDF ou photo : l'IA extrait les articles, présentés comme un fichier dont les colonnes sont déjà associées
+    async readWithAi(file, input) {
+      const imp = this.importer;
+      if (!(await aiAvailable())) {
+        toast("La lecture des PDF et des photos utilise l'assistant IA : ajoutez votre clé API dans Paramètres, ou importez un fichier CSV.", 'error');
+        input.value = '';
+        return;
+      }
+      Object.assign(imp, { busy: true, ai: true, notes: '', headers: [], rows: [] });
+      try {
+        let att;
+        try { att = await prepareAttachment(file); } catch (err) { toast(err.message, 'error'); throw err; }
+        const res = await aiCatalogExtract({ file: att }); // en cas d'erreur, le message est déjà affiché
+        if (this.importer !== imp) return; // fenêtre fermée entre-temps
+        imp.headers = IMPORT_FIELDS.map((f) => f.label.replace(' *', ''));
+        imp.rows = res.rows.map((r) => IMPORT_FIELDS.map((f) => String(r[f.key] ?? '')));
+        imp.mapping = Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f.key, String(i)]));
+        imp.defaultType = 'fourniture';
+        imp.notes = res.notes || '';
+        if (!imp.catalog) imp.catalog = file.name.replace(/\.[^.]+$/, '');
+      } catch (err) {
+        input.value = '';
+      } finally { imp.busy = false; }
     },
     mappedRows() {
       const m = this.importer.mapping;
