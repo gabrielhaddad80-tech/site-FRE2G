@@ -175,7 +175,8 @@ function createAuth(db) {
         try { host = new URL(origin).host; } catch (e) { /* origine invalide */ }
         if (host !== req.headers.host) return res.status(403).json({ error: 'Requête refusée (origine différente).' });
       }
-      if (req.method !== 'DELETE' && !req.is('application/json')) return res.status(415).json({ error: 'Format de requête non accepté.' });
+      const pdfUpload = req.path === '/api/ai/catalog-upload' && req.is('application/pdf'); // envoi d'un catalogue PDF
+      if (req.method !== 'DELETE' && !req.is('application/json') && !pdfUpload) return res.status(415).json({ error: 'Format de requête non accepté.' });
     }
     if (PUBLIC.some((r) => r.test(req.path))) return next();
     const user = sessionUser(req);

@@ -172,7 +172,7 @@ cat > /etc/caddy/Caddyfile <<CADDY
 $DOMAIN {
 	encode zstd gzip
 	request_body {
-		max_size 30MB
+		max_size 100MB
 	}
 	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy 127.0.0.1:$PORT

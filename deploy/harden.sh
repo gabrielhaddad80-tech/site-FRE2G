@@ -42,6 +42,11 @@ sqlite3 /var/lib/facturation/facturation.db ".backup '/var/backups/facturation/f
 find /var/backups/facturation -name 'facturation-*.db' -mtime +30 -delete
 CRON
 chmod 755 /etc/cron.daily/facturation-backup
+# Envois jusqu'à 100 Mo (catalogues fournisseurs en PDF) : met à jour les installations existantes
+if [ -f /etc/caddy/Caddyfile ] && grep -q 'max_size 30MB' /etc/caddy/Caddyfile; then
+  sed -i 's/max_size 30MB/max_size 100MB/' /etc/caddy/Caddyfile
+  systemctl reload caddy 2>/dev/null || true
+fi
 # Fichier de réglages (clé API éventuelle) : root et le service uniquement
 [ -f /etc/facturation/facturation.env ] && chmod 640 /etc/facturation/facturation.env
 exit 0

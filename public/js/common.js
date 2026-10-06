@@ -99,6 +99,91 @@ function aiDraft({ text, images, docType, signal }) {
 function aiCatalogExtract({ file, signal }) {
   return api('/ai/catalog-extract', { signal, body: { file: { kind: file.kind, media_type: file.media_type, data: file.data } } });
 }
+// Gros catalogue PDF : envoi unique du fichier (80 Mo max), puis lecture par paquets de pages
+async function aiCatalogUpload(file) {
+  let res;
+  try {
+    res = await fetch('/api/ai/catalog-upload', { method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: file });
+  } catch (e) {
+    toast('Envoi impossible : vérifiez la connexion Internet.', 'error');
+    throw e;
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = res.status === 413 ? 'Le PDF est trop volumineux (80 Mo maximum) : découpez-le en plusieurs fichiers.' : (data.error || 'Erreur ' + res.status);
+    toast(msg, 'error');
+    throw new Error(msg);
+  }
+  return data; // { id, pages, pages_per_call }
+}
+function aiCatalogExtractPages({ upload, from, to, signal }) {
+  return api('/ai/catalog-extract', { signal, body: { upload, from, to } });
+}
+
+// ---------- Lecture d'un fichier Excel (.xlsx) sans bibliothèque : archive zip de fichiers XML ----------
+async function readXlsx(file) {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const dv = new DataView(buf.buffer);
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 66000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error("Ce fichier n'est pas un classeur Excel (.xlsx) valide.");
+  const entries = {};
+  let p = dv.getUint32(eocd + 16, true);
+  const count = dv.getUint16(eocd + 10, true);
+  const dec = new TextDecoder();
+  for (let n = 0; n < count && dv.getUint32(p, true) === 0x02014b50; n++) {
+    const method = dv.getUint16(p + 10, true), size = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true), extraLen = dv.getUint16(p + 30, true), commentLen = dv.getUint16(p + 32, true);
+    const local = dv.getUint32(p + 42, true);
+    entries[dec.decode(buf.subarray(p + 46, p + 46 + nameLen))] = { method, size, local };
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  const read = async (name) => {
+    const e = entries[name];
+    if (!e) return null;
+    const start = e.local + 30 + dv.getUint16(e.local + 26, true) + dv.getUint16(e.local + 28, true);
+    const raw = buf.subarray(start, start + e.size);
+    if (e.method === 0) return dec.decode(raw);
+    if (e.method !== 8 || typeof DecompressionStream === 'undefined') throw new Error('Classeur Excel non pris en charge : enregistrez-le en CSV.');
+    const stream = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Response(stream).text();
+  };
+  const xml = (t) => new DOMParser().parseFromString(t || '<x/>', 'application/xml');
+  const shared = [...xml(await read('xl/sharedStrings.xml')).getElementsByTagName('si')]
+    .map((si) => [...si.getElementsByTagName('t')].map((t) => t.textContent).join(''));
+  // Feuilles dans l'ordre du classeur (nom + fichier)
+  const rels = {};
+  for (const r of xml(await read('xl/_rels/workbook.xml.rels')).getElementsByTagName('Relationship')) {
+    rels[r.getAttribute('Id')] = 'xl/' + r.getAttribute('Target').replace(/^\/?xl\//, '').replace(/^\//, '');
+  }
+  const sheetsMeta = [...xml(await read('xl/workbook.xml')).getElementsByTagName('sheet')].map((s) => ({
+    name: s.getAttribute('name'),
+    path: rels[s.getAttribute('r:id') || s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id')]
+  })).filter((s) => s.path && entries[s.path]);
+  if (!sheetsMeta.length) throw new Error('Aucune feuille lisible dans ce classeur.');
+  const colIndex = (ref) => { let n = 0; for (const ch of ref.replace(/\d+/g, '')) n = n * 26 + ch.charCodeAt(0) - 64; return n - 1; };
+  const sheets = [];
+  for (const s of sheetsMeta) {
+    const rows = [];
+    for (const row of xml(await read(s.path)).getElementsByTagName('row')) {
+      const cells = [];
+      for (const c of row.getElementsByTagName('c')) {
+        const t = c.getAttribute('t');
+        const v = c.getElementsByTagName('v')[0];
+        let val = t === 'inlineStr' ? [...c.getElementsByTagName('t')].map((x) => x.textContent).join('')
+          : t === 's' ? (shared[Number(v && v.textContent)] ?? '') : (v ? v.textContent : '');
+        if (t === 'b') val = val === '1' ? 'oui' : 'non';
+        const ref = c.getAttribute('r');
+        cells[ref ? colIndex(ref) : cells.length] = String(val).trim();
+      }
+      const filled = Array.from(cells, (x) => x || '');
+      if (filled.some(Boolean)) rows.push(filled);
+    }
+    sheets.push({ name: s.name, rows });
+  }
+  return sheets;
+}
+
 function aiUnavailableHint() {
   return 'Pour activer l\'assistant, ajoutez votre clé API Anthropic dans <a href="parametres.html">Paramètres</a>.';
 }

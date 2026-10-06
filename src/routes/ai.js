@@ -2,7 +2,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
+const { PDFDocument } = require('pdf-lib');
 const Anthropic = require('@anthropic-ai/sdk');
 const { getSettings } = require('../db');
 const AiDraft = require('../../public/js/ai');
@@ -172,15 +174,68 @@ module.exports = function aiRoutes(db, options = {}) {
     }
   });
 
-  // Import au catalogue : l'IA lit un tarif fournisseur (PDF ou photo) et renvoie les articles à vérifier.
-  // Rien n'est enregistré ici : l'utilisateur contrôle l'aperçu puis lance l'import lui-même.
+  // ---------- Import au catalogue : lecture d'un tarif / catalogue fournisseur par l'IA ----------
+  // Rien n'est enregistré ici : l'utilisateur vérifie la liste puis lance l'import lui-même.
+  // Gros catalogues (Daikin, Atlantic…) : le PDF est envoyé une fois, puis lu par paquets de pages.
+  const uploads = new Map(); // id -> { buf, doc, pages, name, at }
+  const UPLOAD_TTL = 60 * 60 * 1000;
+  const MAX_UPLOADS = 4;
+  const PAGES_PER_CALL = 10;
+  const purgeUploads = () => {
+    const now = Date.now();
+    for (const [id, u] of uploads) if (now - u.at > UPLOAD_TTL) uploads.delete(id);
+    while (uploads.size >= MAX_UPLOADS) uploads.delete(uploads.keys().next().value);
+  };
+
+  r.post('/ai/catalog-upload', express.raw({ type: 'application/pdf', limit: '80mb' }), async (req, res, next) => {
+    try {
+      if (!apiKey()) throw httpError(503, "La lecture des PDF utilise l'assistant IA : ajoutez votre clé API Anthropic dans Paramètres.");
+      const buf = req.body;
+      if (!Buffer.isBuffer(buf) || buf.length < 5 || buf.subarray(0, 5).toString('latin1') !== '%PDF-') throw httpError(400, "Ce fichier n'est pas un PDF valide.");
+      let doc;
+      try {
+        doc = await PDFDocument.load(buf, { updateMetadata: false });
+      } catch (e) {
+        if (/encrypt/i.test(e.message)) {
+          throw httpError(422, 'Ce PDF est protégé par son éditeur. Ouvrez-le puis « Imprimer » → « Microsoft Print to PDF » (ou « Enregistrer au format PDF ») pour en faire une copie lisible, et importez cette copie.');
+        }
+        throw httpError(400, 'PDF illisible : ' + e.message.slice(0, 120));
+      }
+      purgeUploads();
+      const id = crypto.randomBytes(12).toString('hex');
+      const pages = doc.getPageCount();
+      uploads.set(id, { buf, doc, pages, at: Date.now() });
+      res.status(201).json({ id, pages, size: buf.length, pages_per_call: PAGES_PER_CALL });
+    } catch (e) {
+      next(e.type === 'entity.too.large' ? httpError(413, 'Le PDF dépasse 80 Mo : découpez-le en plusieurs fichiers.') : e);
+    }
+  });
+
+  async function pagesAsPdf(upload, from, to) {
+    const out = await PDFDocument.create();
+    const idx = [];
+    for (let i = from; i <= to; i++) idx.push(i - 1);
+    for (const page of await out.copyPages(upload.doc, idx)) out.addPage(page);
+    return Buffer.from(await out.save()).toString('base64');
+  }
+
   r.post('/ai/catalog-extract', async (req, res, next) => {
     try {
       const key = apiKey();
       if (!key) throw httpError(503, "La lecture des PDF et des photos utilise l'assistant IA : ajoutez votre clé API Anthropic dans Paramètres.");
       const f = req.body.file || {};
       let source;
-      if (f.kind === 'pdf' && typeof f.data === 'string' && /^[A-Za-z0-9+/=]+$/.test(f.data)) {
+      let range = null;
+      if (req.body.upload) {
+        const upload = uploads.get(String(req.body.upload));
+        if (!upload) throw httpError(410, 'Le PDF envoyé a expiré : choisissez de nouveau le fichier.');
+        upload.at = Date.now();
+        const from = Math.max(1, Math.floor(Number(req.body.from) || 1));
+        const to = Math.min(upload.pages, Math.floor(Number(req.body.to) || from), from + PAGES_PER_CALL - 1);
+        if (to < from) throw httpError(400, 'Pages invalides.');
+        range = { from, to, total: upload.pages };
+        source = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: await pagesAsPdf(upload, from, to) } };
+      } else if (f.kind === 'pdf' && typeof f.data === 'string' && /^[A-Za-z0-9+/=]+$/.test(f.data)) {
         if (f.data.length > 14 * 1024 * 1024) throw httpError(413, 'Le PDF dépasse 10 Mo : découpez-le en plusieurs fichiers.');
         source = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data } };
       } else if (f.kind === 'image' && IMAGE_TYPES.includes(f.media_type) && typeof f.data === 'string' && f.data) {
@@ -190,26 +245,28 @@ module.exports = function aiRoutes(db, options = {}) {
       }
       const settings = getSettings(db);
       const prompt = AiDraft.buildCatalogPrompt({
-        defaultVat: settings.default_vat_rate,
+        defaultVat: settings.default_vat_rate, range,
         units: (settings.units || '').split(',').map((u) => u.trim()).filter(Boolean)
       });
-      // Longue liste possible : le streaming évite les délais d'attente HTTP
+      // Longue liste possible : le streaming évite les délais d'attente HTTP.
+      // Recopie de tableaux : effort bas (plus rapide, moins coûteux) pour les paquets de pages.
       const response = await createClient(key).beta.messages.stream({
         model: MODEL,
         max_tokens: 64000,
         betas: ['server-side-fallback-2026-07-01'],
         fallbacks: 'default',
-        output_config: { effort: 'medium', format: { type: 'json_schema', schema: AiDraft.CATALOG_SCHEMA } },
+        output_config: { effort: range ? 'low' : 'medium', format: { type: 'json_schema', schema: AiDraft.CATALOG_SCHEMA } },
         messages: [{ role: 'user', content: [source, { type: 'text', text: prompt }] }]
       }).finalMessage();
       if (response.stop_reason === 'refusal') throw httpError(422, "L'IA n'a pas pu lire ce document. Essayez avec un autre fichier.");
-      if (response.stop_reason === 'max_tokens') throw httpError(502, 'Le document contient trop d\'articles : découpez-le en plusieurs fichiers (quelques pages à la fois).');
+      if (response.stop_reason === 'max_tokens') throw httpError(502, "Trop d'articles d'un coup : réessayez avec moins de pages.");
       const out = response.content.find((b) => b.type === 'text');
       let parsed;
       try { parsed = JSON.parse(out ? out.text : ''); } catch (e) { throw httpError(502, "La réponse de l'IA est illisible. Réessayez."); }
       const result = AiDraft.normalizeCatalog(parsed, { coef: settings.default_margin_coef });
-      if (!result.rows.length) throw httpError(422, 'Aucun article avec un prix n\'a été trouvé dans ce document.' + (result.notes ? ' ' + result.notes : ''));
-      res.json(result);
+      // Un paquet de pages sans prix (pages techniques, photos) est normal dans un catalogue
+      if (!result.rows.length && !range) throw httpError(422, 'Aucun article avec un prix n\'a été trouvé dans ce document.' + (result.notes ? ' ' + result.notes : ''));
+      res.json(range ? { ...result, from: range.from, to: range.to, pages: range.total } : result);
     } catch (e) {
       next(apiError(e));
     }

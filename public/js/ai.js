@@ -164,7 +164,7 @@
       '- Catégorie : la famille ou rubrique du document quand il y en a une.',
       `- ${MAX_CATALOG_ROWS} articles au maximum ; au-delà, arrête-toi et signale-le dans remarques.`,
       "- N'invente aucun article ni aucun prix : en cas de doute, mets null et explique-le dans remarques."
-    ].join('\n') + (p.text ? '\n\nTexte extrait du document (pour aider la lecture) :\n' + String(p.text).slice(0, 60000) : '');
+    ].concat(p.range ? [`- Ces pages sont les pages ${p.range.from} à ${p.range.to} d'un catalogue de ${p.range.total} pages : les pages sans prix (présentation, caractéristiques techniques, photos) sont normales, renvoie alors une liste vide. Pour un tableau dont l'en-tête est sur une page précédente, déduis les colonnes de leur contenu.`] : []).join('\n') + (p.text ? '\n\nTexte extrait du document (pour aider la lecture) :\n' + String(p.text).slice(0, 60000) : '');
   }
 
   // Transforme la réponse en lignes au format de l'import du catalogue (prix de vente calculé avec le coefficient si absent)

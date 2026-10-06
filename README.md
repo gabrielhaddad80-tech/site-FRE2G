@@ -67,10 +67,15 @@ Sur mobile, une barre d'onglets en bas donne accès aux écrans principaux.
 - **Ouvrages composés** : un ouvrage regroupe plusieurs articles (ex. 1 m² de fourniture + 0,5 h de main d'œuvre) ;
   son prix est calculé à partir des composants. Il s'insère dans un devis en une ligne ou détaillé composant par composant.
 - Catégories ordonnables.
-- **Import d'un tarif en PDF ou en photo** : l'assistant IA lit le document (références, libellés, prix d'achat / de vente,
-  unités, TVA, familles) et affiche la liste à vérifier ; rien n'est enregistré avant le clic sur « Importer ». Le prix de
-  vente manquant est calculé avec le coefficient par défaut (Paramètres). Nécessite la clé API de l'assistant IA.
-- **Import CSV / Excel** avec correspondance automatique des colonnes (exemple : `exemples/catalogue-exemple.csv`).
+- **Import Excel (.xlsx) et CSV** des tarifs fournisseurs (Daikin, Atlantic, Rexel…), lu directement dans le navigateur,
+  sans IA : choix de la feuille, ligne d'en-têtes repérée même après des lignes de titre, correspondance automatique
+  des colonnes (exemple : `exemples/catalogue-exemple.csv`).
+- **Import d'un catalogue en PDF (jusqu'à 80 Mo) ou en photo** : l'assistant IA lit le document (références, libellés,
+  prix d'achat / de vente, unités, TVA, familles). Les gros catalogues sont envoyés une fois puis lus par paquets de
+  10 pages : choix des pages à lire, progression, arrêt possible, paquets en échec relancés ; coût estimé affiché
+  (environ 2 à 6 centimes par page de tarif). Les références en double sont fusionnées. Rien n'est enregistré avant
+  le clic sur « Importer ». Le prix de vente manquant est calculé avec le coefficient par défaut (Paramètres).
+  Un PDF protégé par son éditeur doit d'abord être « imprimé en PDF » pour en faire une copie lisible.
   Un article dont la référence existe déjà est mis à jour → idéal pour charger un nouveau tarif fournisseur.
 - **Export CSV** et **mise à jour des prix en masse** (ex. +3,5 % sur un catalogue).
 

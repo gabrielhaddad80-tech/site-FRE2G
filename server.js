@@ -59,7 +59,9 @@ function createApp(db, options = {}) {
   app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
     const status = err.status || (err.type === 'entity.too.large' ? 413 : 500);
     if (status === 500) console.error(err);
-    res.status(status).json({ error: status === 500 ? 'Erreur interne du serveur.' : err.message });
+    const message = status === 500 ? 'Erreur interne du serveur.'
+      : err.type === 'entity.too.large' ? 'Fichier trop volumineux.' : err.message;
+    res.status(status).json({ error: message });
   });
   return app;
 }

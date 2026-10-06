@@ -17,7 +17,7 @@
   <div class="toolbar">
     <h1 style="margin:0">Catalogue & tarifs</h1>
     <div class="spacer"></div>
-    <button @click="importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {}, busy: false, ai: false, notes: '' }">Importer (PDF, photo, CSV)</button>
+    <button @click="importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {}, busy: false, uploading: false, ai: false, notes: '', pdf: null, sheets: [], sheet: 0 }">Importer (PDF, Excel, photo)</button>
     <a class="btn" href="/api/items/export.csv">Exporter CSV</a>
     <button @click="reprice = { percent: 0, field: 'sale_price', type: '', category_id: '', catalog: '' }">Mise à jour des prix</button>
     <button class="primary" @click="edit({ type: filters.type || 'prestation' })">+ Nouvel article</button>
@@ -169,14 +169,43 @@
     <template x-if="importer">
       <div class="modal wide">
         <h2>Importer un catalogue / une liste de tarifs</h2>
-        <p class="small muted"><strong>PDF ou photo</strong> d'un tarif fournisseur : l'assistant IA lit le document et prépare la liste des articles, que vous vérifiez avant l'import.
-          <strong>CSV</strong> (depuis Excel : « Enregistrer sous » → « CSV UTF-8 (délimité par des points-virgules) ») : la première ligne doit contenir les en-têtes.
-          Les articles dont la référence existe déjà sont mis à jour (pratique pour appliquer un nouveau tarif fournisseur).</p>
+        <p class="small muted"><strong>Excel (.xlsx) ou CSV</strong> : tarifs fournisseurs au format tableau (Daikin, Atlantic, Rexel…), lus directement, sans IA.
+          <strong>PDF ou photo</strong> d'un tarif ou d'un catalogue : l'assistant IA lit le document et prépare la liste des articles.
+          Vous vérifiez la liste avant l'import ; les articles dont la référence existe déjà sont mis à jour (pratique pour appliquer le tarif de l'année).</p>
         <div class="grid grid-2">
-          <div><label>Fichier (PDF, photo, CSV)</label><input type="file" accept=".pdf,application/pdf,image/*,.csv,.txt" @change="readFile($event)" :disabled="!!importer.busy"></div>
-          <div><label>Nom du catalogue (facultatif)</label><input x-model="importer.catalog" placeholder="Ex. Tarif fournisseur 2026"></div>
+          <div><label>Fichier (Excel, CSV, PDF jusqu'à 80 Mo, photo)</label><input type="file" accept=".xlsx,.xls,.csv,.txt,.pdf,application/pdf,image/*" @change="readFile($event)" :disabled="!!importer.busy"></div>
+          <div><label>Nom du catalogue (facultatif)</label><input x-model="importer.catalog" placeholder="Ex. Tarif Daikin 2026"></div>
         </div>
-        <p class="small muted" x-show="importer.busy" style="margin-top:12px"><span class="dots"><i></i><i></i><i></i></span> L'IA lit votre document… (jusqu'à une minute pour un long tarif)</p>
+        <div x-show="importer.sheets.length > 1" style="margin-top:10px; max-width:340px">
+          <label>Feuille du classeur</label>
+          <select @change="useSheet($event.target.value)">
+            <template x-for="(sh, i) in importer.sheets" :key="i"><option :value="i" :selected="i === importer.sheet" x-text="sh.name + ' (' + sh.rows.length + ' lignes)'"></option></template>
+          </select>
+        </div>
+        <template x-if="importer.pdf">
+          <div class="pdf-read">
+            <p style="margin:0"><strong x-text="'Catalogue de ' + importer.pdf.pages + ' page(s)'"></strong>
+              <span class="muted" x-text="'— lu par l\'IA par paquets de ' + importer.pdf.per + ' pages.'"></span></p>
+            <div class="pdf-range">
+              <label>De la page <input type="number" min="1" :max="importer.pdf.pages" x-model.number="importer.pdf.from" :disabled="importer.pdf.running"></label>
+              <label>à la page <input type="number" min="1" :max="importer.pdf.pages" x-model.number="importer.pdf.to" :disabled="importer.pdf.running"></label>
+              <button type="button" class="primary" x-show="!importer.pdf.running" @click="readPdfPages()" x-text="importer.pdf.read ? 'Relire ces pages' : 'Lire le catalogue'"></button>
+              <button type="button" x-show="importer.pdf.running" @click="importer.pdf.stop = true" :disabled="importer.pdf.stop" x-text="importer.pdf.stop ? 'Arrêt en cours…' : 'Arrêter'"></button>
+            </div>
+            <p class="small muted" style="margin:0" x-show="!importer.pdf.running && !importer.pdf.read">Coût de l'IA estimé : <span x-text="pdfEstimate()"></span>. Conseil : ne faites lire que les pages des grilles de prix (le sommaire du catalogue les indique), pas les pages de présentation ou techniques.</p>
+            <template x-if="importer.pdf.running || importer.pdf.read">
+              <div>
+                <progress :value="importer.pdf.read" :max="importer.pdf.total || 1"></progress>
+                <p class="small muted" style="margin:4px 0 0" x-text="'Pages lues : ' + importer.pdf.read + ' / ' + importer.pdf.total + ' — ' + importer.rows.length + ' article(s) trouvé(s)' + (importer.pdf.running ? '…' : '')"></p>
+              </div>
+            </template>
+            <p class="small" x-show="importer.pdf.failed.length && !importer.pdf.running" style="margin:0; color: var(--accent)">
+              <span x-text="'Pages non lues : ' + importer.pdf.failed.map((f) => f[0] + '–' + f[1]).join(', ')"></span>
+              <button type="button" class="small" style="margin-left:8px" @click="readPdfPages(importer.pdf.failed.slice())">Réessayer</button>
+            </p>
+          </div>
+        </template>
+        <p class="small muted" x-show="importer.busy" style="margin-top:12px"><span class="dots"><i></i><i></i><i></i></span> <span x-text="importer.uploading ? 'Envoi du PDF…' : (importer.pdf ? 'L\'IA lit les pages…' : 'L\'IA lit votre document… (jusqu\'à une minute)')"></span></p>
         <p class="small" x-show="importer.notes" x-text="'À vérifier : ' + importer.notes" style="margin-top:12px; color: var(--accent)"></p>
         <template x-if="importer.headers.length">
           <div style="margin-top:14px">
@@ -196,7 +225,7 @@
                 <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v"></option></template>
               </select></div>
             </div>
-            <p class="small muted" x-text="importer.rows.length + ' article(s) détecté(s). ' + (importer.ai ? 'Vérifiez les prix avant d\'importer :' : 'Aperçu :')"></p>
+            <p class="small muted" x-text="importer.rows.length + ' article(s) détecté(s). ' + (importer.ai ? 'Vérifiez les prix avant d\'importer' : 'Aperçu') + (importer.rows.length > (importer.ai ? 200 : 5) ? ' (premiers articles) :' : ' :')"></p>
             <table class="list small">
               <thead><tr><template x-for="f in importFields" :key="f.key"><th x-show="importer.mapping[f.key] !== ''" x-text="f.label"></th></template></tr></thead>
               <tbody><template x-for="(r, i) in mappedRows().slice(0, importer.ai ? 200 : 5)" :key="i">
@@ -272,7 +301,7 @@ function catalogPage() {
       if (qs('tab') === 'categories') this.tab = 'categories';
       if (qs('id')) this.edit({ id: Number(qs('id')) });
       else if (qs('new')) this.edit({ type: 'prestation' });
-      else if (qs('import')) this.importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {}, busy: false, ai: false, notes: '' };
+      else if (qs('import')) this.importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {}, busy: false, uploading: false, ai: false, notes: '', pdf: null, sheets: [], sheet: 0 };
     },
     async load() {
       const p = new URLSearchParams();
@@ -323,52 +352,171 @@ function catalogPage() {
     },
 
     // ----- Import -----
+    resetImport(extra) {
+      Object.assign(this.importer, { ai: false, notes: '', pdf: null, sheets: [], sheet: 0, headers: [], rows: [], mapping: {} }, extra || {});
+    },
     async readFile(e) {
-      const file = e.target.files[0];
+      const input = e.target;
+      const file = input.files[0];
       if (!file) return;
-      if (/^image\//.test(file.type) || file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return this.readWithAi(file, e.target);
-      this.importer.ai = false;
-      this.importer.notes = '';
-      const buf = await file.arrayBuffer();
-      let text = new TextDecoder('utf-8').decode(buf);
-      if (text.includes('\ufffd')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
-      const rows = parseCSV(text);
-      this.importer.headers = rows[0] || [];
-      this.importer.rows = rows.slice(1);
-      this.importer.defaultType = this.importer.defaultType || 'fourniture';
-      if (!this.importer.catalog) this.importer.catalog = file.name.replace(/\.[^.]+$/, '');
+      const name = file.name || '';
+      this.resetImport();
+      if (!this.importer.catalog) this.importer.catalog = name.replace(/\.[^.]+$/, '');
+      try {
+        if (/\.xlsx$/i.test(name) || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+          this.importer.sheets = await readXlsx(file);
+          const best = this.importer.sheets.reduce((b, s, i, all) => (s.rows.length > all[b].rows.length ? i : b), 0);
+          return this.useSheet(best);
+        }
+        if (/\.xls$/i.test(name)) throw new Error('Ancien format Excel (.xls) : ouvrez-le dans Excel puis « Enregistrer sous » → « Classeur Excel (.xlsx) ».');
+        if (file.type === 'application/pdf' || /\.pdf$/i.test(name)) return window.IS_DEMO ? this.readWithAi(file, input) : this.readPdf(file, input);
+        if (/^image\//.test(file.type)) return this.readWithAi(file, input);
+        const buf = await file.arrayBuffer();
+        let text = new TextDecoder('utf-8').decode(buf);
+        if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
+        this.setTable(parseCSV(text));
+      } catch (err) {
+        toast(err.message, 'error');
+        input.value = '';
+      }
+    },
+    useSheet(i) {
+      this.importer.sheet = Number(i);
+      this.setTable(this.importer.sheets[this.importer.sheet].rows);
+    },
+    // Tableau (CSV ou Excel) : la ligne d'en-têtes est repérée même après quelques lignes de titre
+    setTable(rows) {
+      const filled = (r) => r.filter((c) => String(c || '').trim()).length;
+      const known = (r) => r.some((c) => IMPORT_FIELDS.some((f) => f.match.test(String(c || '').trim())));
+      let h = rows.slice(0, 30).findIndex((r) => filled(r) >= 3 && known(r));
+      if (h < 0) h = Math.max(0, rows.slice(0, 30).findIndex((r) => filled(r) >= 2));
+      const imp = this.importer;
+      imp.headers = (rows[h] || []).map((c, i) => String(c || '').trim() || 'Colonne ' + (i + 1));
+      imp.rows = rows.slice(h + 1).filter((r) => filled(r) > 0);
+      imp.defaultType = imp.defaultType || 'fourniture';
       const mapping = {};
       const used = new Set();
       for (const f of IMPORT_FIELDS) {
-        const idx = this.importer.headers.findIndex((h, i) => !used.has(i) && f.match.test(h.trim()));
+        const idx = imp.headers.findIndex((hd, i) => !used.has(i) && f.match.test(hd.trim()));
         mapping[f.key] = idx >= 0 ? String(idx) : '';
         if (idx >= 0) used.add(idx);
       }
-      this.importer.mapping = mapping;
+      imp.mapping = mapping;
     },
-    // PDF ou photo : l'IA extrait les articles, présentés comme un fichier dont les colonnes sont déjà associées
+    // Résultat de l'IA : colonnes déjà dans l'ordre des champs
+    setAiColumns() {
+      const imp = this.importer;
+      imp.ai = true;
+      imp.headers = IMPORT_FIELDS.map((f) => f.label.replace(' *', ''));
+      imp.mapping = Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f.key, String(i)]));
+      imp.defaultType = 'fourniture';
+    },
+    addAiRows(rows) {
+      const imp = this.importer;
+      imp.refIndex = imp.refIndex || new Map();
+      for (const r of rows) {
+        const line = IMPORT_FIELDS.map((f) => String(r[f.key] ?? ''));
+        const ref = (r.reference || '').trim().toUpperCase();
+        if (ref && imp.refIndex.has(ref)) imp.rows[imp.refIndex.get(ref)] = line; // même référence : la dernière lue l'emporte
+        else { if (ref) imp.refIndex.set(ref, imp.rows.length); imp.rows.push(line); }
+      }
+    },
+    addNote(note) {
+      if (!note) return;
+      const notes = this.importer.notes ? this.importer.notes.split(' · ') : [];
+      if (!notes.includes(note)) notes.push(note);
+      this.importer.notes = notes.slice(-4).join(' · ');
+    },
+    // Photo ou petit PDF (démo) : lecture en une fois
     async readWithAi(file, input) {
       const imp = this.importer;
       if (!(await aiAvailable())) {
-        toast("La lecture des PDF et des photos utilise l'assistant IA : ajoutez votre clé API dans Paramètres, ou importez un fichier CSV.", 'error');
+        toast("La lecture des PDF et des photos utilise l'assistant IA : ajoutez votre clé API dans Paramètres, ou importez un fichier Excel / CSV.", 'error');
         input.value = '';
         return;
       }
-      Object.assign(imp, { busy: true, ai: true, notes: '', headers: [], rows: [] });
+      imp.busy = true;
       try {
         let att;
         try { att = await prepareAttachment(file); } catch (err) { toast(err.message, 'error'); throw err; }
         const res = await aiCatalogExtract({ file: att }); // en cas d'erreur, le message est déjà affiché
         if (this.importer !== imp) return; // fenêtre fermée entre-temps
-        imp.headers = IMPORT_FIELDS.map((f) => f.label.replace(' *', ''));
-        imp.rows = res.rows.map((r) => IMPORT_FIELDS.map((f) => String(r[f.key] ?? '')));
-        imp.mapping = Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f.key, String(i)]));
-        imp.defaultType = 'fourniture';
-        imp.notes = res.notes || '';
-        if (!imp.catalog) imp.catalog = file.name.replace(/\.[^.]+$/, '');
+        this.setAiColumns();
+        this.addAiRows(res.rows);
+        this.addNote(res.notes);
       } catch (err) {
         input.value = '';
       } finally { imp.busy = false; }
+    },
+    // Catalogue PDF (jusqu'à 80 Mo) : envoyé une fois, puis lu par paquets de pages
+    async readPdf(file, input) {
+      const imp = this.importer;
+      if (!(await aiAvailable())) {
+        toast("La lecture des PDF utilise l'assistant IA : ajoutez votre clé API dans Paramètres, ou importez un fichier Excel / CSV.", 'error');
+        input.value = '';
+        return;
+      }
+      imp.busy = true;
+      imp.uploading = true;
+      try {
+        const up = await aiCatalogUpload(file);
+        if (this.importer !== imp) return;
+        this.setAiColumns();
+        imp.pdf = { id: up.id, pages: up.pages, per: up.pages_per_call || 10, from: 1, to: up.pages, read: 0, total: 0, running: false, stop: false, failed: [] };
+      } catch (err) {
+        input.value = '';
+      } finally { imp.busy = false; imp.uploading = false; }
+      if (imp.pdf && imp.pdf.pages <= imp.pdf.per) this.readPdfPages(); // petit tarif : lecture directe
+    },
+    pdfEstimate() {
+      const p = this.importer.pdf;
+      const n = Math.max(0, (p.to || 0) - (p.from || 0) + 1);
+      const high = n * 0.06; // environ 2 à 6 centimes par page selon la densité des tableaux
+      return high < 1 ? 'moins de 1 €' : `jusqu'à environ ${Math.ceil(high)} €`;
+    },
+    async readPdfPages(ranges) {
+      const imp = this.importer;
+      const p = imp.pdf;
+      p.from = Math.min(Math.max(1, Number(p.from) || 1), p.pages);
+      p.to = Math.min(Math.max(p.from, Number(p.to) || p.pages), p.pages);
+      if (!ranges) {
+        ranges = [];
+        for (let a = p.from; a <= p.to; a += p.per) ranges.push([a, Math.min(p.to, a + p.per - 1)]);
+        p.read = 0;
+        p.total = p.to - p.from + 1;
+        p.failed = [];
+      } else {
+        p.failed = p.failed.filter((f) => !ranges.some((r) => r[0] === f[0]));
+      }
+      p.running = true;
+      p.stop = false;
+      imp.busy = true;
+      const queue = ranges.slice();
+      const worker = async () => {
+        while (queue.length && !p.stop && this.importer === imp) {
+          const [from, to] = queue.shift();
+          let done = false;
+          for (let attempt = 0; attempt < 2 && !done && !p.stop; attempt++) {
+            try {
+              const res = await aiCatalogExtractPages({ upload: p.id, from, to });
+              if (this.importer !== imp) return;
+              this.addAiRows(res.rows);
+              this.addNote(res.notes);
+              done = true;
+            } catch (err) {
+              if (/expiré/.test(err.message || '')) { p.stop = true; imp.pdf = null; return; }
+            }
+          }
+          if (!done && !p.stop) p.failed.push([from, to]);
+          if (done || !p.stop) p.read += to - from + 1;
+        }
+      };
+      await Promise.all([worker(), worker()]); // deux paquets à la fois
+      p.running = false;
+      imp.busy = false;
+      if (this.importer === imp && !p.stop) {
+        toast(`${imp.rows.length} article(s) trouvé(s)` + (p.failed.length ? ` — ${p.failed.length} paquet(s) de pages non lu(s)` : ''), p.failed.length ? 'error' : 'ok');
+      }
     },
     mappedRows() {
       const m = this.importer.mapping;

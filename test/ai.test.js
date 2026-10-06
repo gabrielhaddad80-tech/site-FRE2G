@@ -275,3 +275,63 @@ test('import au catalogue : lecture d\'un tarif PDF par l\'IA, sans rien enregis
     srv.close();
   }
 });
+
+test('gros catalogue PDF : envoi unique puis lecture par paquets de pages', async () => {
+  const { PDFDocument, StandardFonts } = require('pdf-lib');
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  for (let i = 1; i <= 23; i++) pdf.addPage([595, 842]).drawText('Tarif page ' + i, { x: 50, y: 780, size: 14, font });
+  const bytes = Buffer.from(await pdf.save());
+
+  const seen = [];
+  const fake = () => ({ beta: { messages: { stream: (params) => ({ finalMessage: async () => {
+    const doc = await PDFDocument.load(Buffer.from(params.messages[0].content[0].source.data, 'base64'));
+    seen.push({ pages: doc.getPageCount(), effort: params.output_config.effort, prompt: params.messages[0].content[1].text });
+    const n = seen.length;
+    return { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ articles: n === 2 ? [] : [
+      { reference: 'DK-' + n, designation: 'Unité Daikin ' + n, description: '', type: 'fourniture', unite: 'u', prix_achat_ht: null, prix_vente_ht: 1000 + n, tva: 20, categorie: 'Climatisation' }
+    ], remarques: '' }) }] };
+  } }) } } });
+  const db = openDatabase(':memory:');
+  require('../src/auth').resetPassword(db, 'g@fre2g.fr', 'MotDePasse-Solide-1');
+  const srv = createApp(db, { ai: { createClient: fake } }).listen(0);
+  await new Promise((r) => srv.once('listening', r));
+  const base = `http://127.0.0.1:${srv.address().port}/api`;
+  try {
+    // Sans session : refusé avant de lire le fichier
+    const anon = await fetch(base + '/ai/catalog-upload', { method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: bytes });
+    assert.strictEqual(anon.status, 401);
+    const login = await fetch(base + '/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'g@fre2g.fr', password: 'MotDePasse-Solide-1' }) });
+    const cookie = login.headers.get('set-cookie').split(';')[0];
+    const json = (path, body) => fetch(base + path, { method: body ? 'POST' : 'GET', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: body && JSON.stringify(body) });
+    await fetch(base + '/settings', { method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ anthropic_api_key: 'sk-ant-x' }) });
+
+    const bad = await fetch(base + '/ai/catalog-upload', { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/pdf' }, body: Buffer.from('pas un pdf') });
+    assert.strictEqual(bad.status, 400);
+    const up = await fetch(base + '/ai/catalog-upload', { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/pdf' }, body: bytes });
+    const info = await up.json();
+    assert.strictEqual(up.status, 201, JSON.stringify(info));
+    assert.strictEqual(info.pages, 23);
+    assert.strictEqual(info.pages_per_call, 10);
+
+    const r1 = await (await json('/ai/catalog-extract', { upload: info.id, from: 1, to: 10 })).json();
+    assert.deepStrictEqual([r1.from, r1.to, r1.pages, r1.rows[0].reference], [1, 10, 23, 'DK-1']);
+    const r2 = await json('/ai/catalog-extract', { upload: info.id, from: 11, to: 20 });
+    assert.strictEqual(r2.status, 200, 'paquet sans prix : liste vide, pas une erreur');
+    assert.deepStrictEqual((await r2.json()).rows, []);
+    const r3 = await (await json('/ai/catalog-extract', { upload: info.id, from: 21, to: 40 })).json();
+    assert.deepStrictEqual([r3.from, r3.to], [21, 23], 'limité à la fin du document');
+    assert.deepStrictEqual(seen.map((s) => s.pages), [10, 10, 3]);
+    assert.ok(seen.every((s) => s.effort === 'low'));
+    assert.match(seen[2].prompt, /pages 21 à 23 d'un catalogue de 23 pages/);
+    // Pas plus de 10 pages par appel
+    await json('/ai/catalog-extract', { upload: info.id, from: 1, to: 23 });
+    assert.strictEqual(seen.at(-1).pages, 10);
+    assert.strictEqual((await json('/ai/catalog-extract', { upload: 'inconnu', from: 1, to: 2 })).status, 410);
+    // Rien n'a été ajouté au catalogue
+    const items = await (await json('/items?q=DK-')).json();
+    assert.strictEqual(items.length, 0);
+  } finally {
+    srv.close();
+  }
+});
