@@ -373,7 +373,7 @@ function catalogPage() {
         if (/^image\//.test(file.type)) return this.readWithAi(file, input);
         const buf = await file.arrayBuffer();
         let text = new TextDecoder('utf-8').decode(buf);
-        if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
+        if (text.includes('\ufffd')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
         this.setTable(parseCSV(text));
       } catch (err) {
         toast(err.message, 'error');
