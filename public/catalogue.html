@@ -17,7 +17,7 @@
   <div class="toolbar">
     <h1 style="margin:0">Catalogue & tarifs</h1>
     <div class="spacer"></div>
-    <button @click="importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {} }">Importer (PDF, photo, CSV)</button>
+    <button @click="importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {}, busy: false, ai: false, notes: '' }">Importer (PDF, photo, CSV)</button>
     <a class="btn" href="/api/items/export.csv">Exporter CSV</a>
     <button @click="reprice = { percent: 0, field: 'sale_price', type: '', category_id: '', catalog: '' }">Mise à jour des prix</button>
     <button class="primary" @click="edit({ type: filters.type || 'prestation' })">+ Nouvel article</button>
@@ -173,7 +173,7 @@
           <strong>CSV</strong> (depuis Excel : « Enregistrer sous » → « CSV UTF-8 (délimité par des points-virgules) ») : la première ligne doit contenir les en-têtes.
           Les articles dont la référence existe déjà sont mis à jour (pratique pour appliquer un nouveau tarif fournisseur).</p>
         <div class="grid grid-2">
-          <div><label>Fichier (PDF, photo, CSV)</label><input type="file" accept=".pdf,application/pdf,image/*,.csv,.txt" @change="readFile($event)" :disabled="importer.busy"></div>
+          <div><label>Fichier (PDF, photo, CSV)</label><input type="file" accept=".pdf,application/pdf,image/*,.csv,.txt" @change="readFile($event)" :disabled="!!importer.busy"></div>
           <div><label>Nom du catalogue (facultatif)</label><input x-model="importer.catalog" placeholder="Ex. Tarif fournisseur 2026"></div>
         </div>
         <p class="small muted" x-show="importer.busy" style="margin-top:12px"><span class="dots"><i></i><i></i><i></i></span> L'IA lit votre document… (jusqu'à une minute pour un long tarif)</p>
@@ -207,7 +207,7 @@
         </template>
         <div class="actions">
           <button @click="importer = null">Annuler</button>
-          <button class="primary" :disabled="!importer.rows.length || importer.busy" @click="runImport()" x-text="importer.rows.length ? 'Importer ' + importer.rows.length + ' article(s)' : 'Importer'"></button>
+          <button class="primary" :disabled="!importer.rows.length || !!importer.busy" @click="runImport()" x-text="importer.rows.length ? 'Importer ' + importer.rows.length + ' article(s)' : 'Importer'"></button>
         </div>
       </div>
     </template>
@@ -272,7 +272,7 @@ function catalogPage() {
       if (qs('tab') === 'categories') this.tab = 'categories';
       if (qs('id')) this.edit({ id: Number(qs('id')) });
       else if (qs('new')) this.edit({ type: 'prestation' });
-      else if (qs('import')) this.importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {} };
+      else if (qs('import')) this.importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {}, busy: false, ai: false, notes: '' };
     },
     async load() {
       const p = new URLSearchParams();
