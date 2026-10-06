@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableau de bord — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/chat.js"></script>
+<script defer src="vendor/alpine.js"></script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="dashboard()" x-init="load()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0">Tableau de bord</h1>
+    <div class="spacer"></div>
+    <label style="margin:0">Année</label>
+    <select x-model="year" @change="load()" style="width:100px">
+      <template x-for="y in years" :key="y"><option :value="y" x-text="y" :selected="y == year"></option></template>
+    </select>
+  </div>
+
+  <template x-if="d">
+    <div>
+      <div class="grid grid-4" style="margin-bottom:16px">
+        <div class="kpi"><div class="label">Chiffre d'affaires HT facturé</div><div class="value" x-text="money(d.revenue_ht)"></div></div>
+        <div class="kpi"><div class="label">Encaissé</div><div class="value" x-text="money(d.collected)"></div></div>
+        <div class="kpi"><div class="label">Reste à encaisser (TTC)</div><div class="value" x-text="money(d.receivable)"></div></div>
+        <div class="kpi"><div class="label">Devis en cours (HT) · transformation</div><div class="value"><span x-text="money(d.pending_quotes_total)"></span> <span class="small muted" x-text="'· ' + num(d.conversion_rate) + ' %'"></span></div></div>
+      </div>
+
+      <div class="card">
+        <h2>CA HT mensuel</h2>
+        <div class="bar-chart">
+          <template x-for="m in d.months" :key="m.month">
+            <div class="bar" :title="money(m.ht)">
+              <div class="fill" :style="`height:${max ? Math.max(0, m.ht) / max * 100 : 0}%`"></div>
+              <span x-text="monthNames[+m.month - 1]"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h2>Factures en attente de règlement</h2>
+          <table class="list" x-show="d.open_invoices.length">
+            <thead><tr><th>N°</th><th>Client</th><th>Échéance</th><th class="num">Reste dû</th></tr></thead>
+            <tbody>
+              <template x-for="f in d.open_invoices" :key="f.id">
+                <tr class="clickable" @click="go('document.html?id='+f.id)">
+                  <td x-text="f.number"></td>
+                  <td x-text="f.client_name"></td>
+                  <td><span x-text="fdate(f.due_date)"></span> <span class="badge late" x-show="f.due_date && f.due_date < today">En retard</span></td>
+                  <td class="num" x-text="money(f.total_ttc - f.paid - f.credited)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div class="empty" x-show="!d.open_invoices.length">Aucune facture en attente.</div>
+        </div>
+        <div class="card">
+          <h2>Devis en cours</h2>
+          <table class="list" x-show="d.pending_quotes.length">
+            <thead><tr><th>N°</th><th>Client</th><th>Statut</th><th class="num">Total HT</th></tr></thead>
+            <tbody>
+              <template x-for="q in d.pending_quotes" :key="q.id">
+                <tr class="clickable" @click="go('document.html?id='+q.id)">
+                  <td x-text="q.number"></td>
+                  <td x-text="q.client_name"></td>
+                  <td><span class="badge" :class="q.status" x-text="LABELS.status[q.status]"></span></td>
+                  <td class="num" x-text="money(q.total_ht)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div class="empty" x-show="!d.pending_quotes.length">Aucun devis en cours.</div>
+        </div>
+      </div>
+    </div>
+  </template>
+</main>
+<script>
+function dashboard() {
+  const cy = new Date().getFullYear();
+  return {
+    d: null, year: String(cy), today: todayIso(),
+    years: Array.from({ length: 6 }, (_, i) => String(cy - i)),
+    monthNames: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'],
+    get max() { return this.d ? Math.max(...this.d.months.map((m) => m.ht), 0) : 0; },
+    async load() { this.d = await api('/dashboard?year=' + this.year); }
+  };
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+'use strict';
+
+const path = require('path');
+const express = require('express');
+const { openDatabase } = require('./src/db');
+const { createAuth } = require('./src/auth');
+
+// 'unsafe-eval' : requis par Alpine.js ; les scripts restent limités au logiciel lui-même
+const APP_CSP = [
+  "default-src 'self'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'", "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:", "font-src 'self' data:", "connect-src 'self'", "worker-src 'self' blob:",
+  "frame-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'"
+].join('; ');
+
+/**
+ * @param db base ouverte
+ * @param options { ai, auth: false pour désactiver la connexion (tests uniquement) }
+ */
+function createApp(db, options = {}) {
+  const app = express();
+  app.disable('x-powered-by');
+  // Derrière un proxy HTTPS (Caddy, Nginx…) : TRUST_PROXY=1 pour des cookies « Secure » et la bonne adresse IP
+  if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
+  app.use((req, res, next) => {
+    res.set({
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'same-origin',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Permissions-Policy': 'camera=(), geolocation=(), payment=(), usb=(), microphone=(self)',
+      // Tout est servi par le logiciel lui-même : aucune ressource ni envoi de données vers un autre site
+      'Content-Security-Policy': APP_CSP
+    });
+    next();
+  });
+
+  if (options.auth !== false) {
+    const auth = createAuth(db);
+    app.locals.auth = auth;
+    // Avant connexion, seuls de petits messages sont acceptés (formulaire de connexion)
+    app.use('/api/auth', express.json({ limit: '20kb' }));
+    app.use(auth.protect);
+    app.use('/api', auth.router);
+  }
+  // Après vérification de la session : fichiers joints (photos, PDF, sauvegardes) jusqu'à 25 Mo
+  app.use(express.json({ limit: '25mb' }));
+
+  app.use('/api', require('./src/routes/catalog')(db));
+  app.use('/api', require('./src/routes/documents')(db));
+  app.use('/api', require('./src/routes/export')(db));
+  app.use('/api', require('./src/routes/admin')(db));
+  app.use('/api', require('./src/routes/knowledge')(db));
+  app.use('/api', require('./src/routes/ai')(db, options.ai));
+
+  app.use('/vendor/alpine.js', (req, res) => res.sendFile(require.resolve('alpinejs/dist/cdn.min.js')));
+  app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
+
+  // Gestion des erreurs : message lisible en JSON pour l'interface
+  app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+    const status = err.status || (err.type === 'entity.too.large' ? 413 : 500);
+    if (status === 500) console.error(err);
+    const message = status === 500 ? 'Erreur interne du serveur.'
+      : err.type === 'entity.too.large' ? 'Fichier trop volumineux.' : err.message;
+    res.status(status).json({ error: message });
+  });
+  return app;
+}
+
+if (require.main === module) {
+  const db = openDatabase();
+  const port = Number(process.env.PORT) || 3000;
+  const host = process.env.HOST || '127.0.0.1';
+  const app = createApp(db);
+  app.listen(port, host, () => {
+    console.log(`Logiciel de facturation démarré : http://localhost:${port}`);
+    const code = app.locals.auth && app.locals.auth.setupCode;
+    if (code) {
+      console.log('');
+      console.log('  Aucun compte n\'existe encore. Ouvrez le logiciel et créez le compte administrateur');
+      console.log(`  avec ce code de première connexion : ${code}`);
+      console.log('');
+    }
+  });
+}
+
+module.exports = { createApp };

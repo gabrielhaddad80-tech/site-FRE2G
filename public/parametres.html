@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paramètres — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/chat.js"></script>
+<script defer src="vendor/alpine.js"></script>
+<style>
+  .sec-box { display: grid; gap: 10px; align-content: start; padding: 16px; border: 1px solid var(--border-soft); border-radius: 18px; }
+  .sec-box h3 { margin: 0; font-size: 15px; }
+  .sec-box button { justify-self: start; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="settingsPage()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0">Paramètres</h1>
+    <div class="spacer"></div>
+    <button class="primary" @click="save()">Enregistrer</button>
+  </div>
+
+  <template x-if="s">
+  <div>
+    <div class="card">
+      <h2>Entreprise</h2>
+      <div class="grid grid-3">
+        <div><label>Raison sociale</label><input x-model="s.company_name"></div>
+        <div><label>Forme juridique</label><input x-model="s.company_legal_form" placeholder="SARL, SAS, EI…"></div>
+        <div><label>Capital</label><input x-model="s.company_capital" placeholder="10 000 €"></div>
+        <div style="grid-column: span 3"><label>Adresse</label><input x-model="s.company_address"></div>
+        <div><label>Code postal</label><input x-model="s.company_postal_code"></div>
+        <div><label>Ville</label><input x-model="s.company_city"></div>
+        <div><label>Pays</label><input x-model="s.company_country"></div>
+        <div><label>Téléphone</label><input x-model="s.company_phone"></div>
+        <div><label>E-mail</label><input x-model="s.company_email"></div>
+        <div><label>Site web</label><input x-model="s.company_website"></div>
+        <div><label>SIRET</label><input x-model="s.company_siret"></div>
+        <div><label>RCS / RM</label><input x-model="s.company_rcs"></div>
+        <div><label>Code APE / NAF</label><input x-model="s.company_ape"></div>
+        <div><label>N° TVA intracommunautaire</label><input x-model="s.company_vat_number"></div>
+        <div style="grid-column: span 2"><label>Assurance professionnelle (décennale…)</label><input x-model="s.company_insurance" placeholder="Assurance décennale n° … — Compagnie … — Couverture : France"></div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:16px; align-items:center">
+        <div>
+          <label>Logo</label>
+          <input type="file" accept="image/*" @change="loadLogo($event)">
+        </div>
+        <img x-show="s.company_logo" :src="s.company_logo" style="max-height:70px; max-width:200px; border:1px solid var(--border); padding:4px; border-radius:4px">
+        <button class="small danger" x-show="s.company_logo" @click="s.company_logo = ''">Retirer le logo</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Banque (imprimée sur les factures)</h2>
+      <div class="grid grid-3">
+        <div><label>Banque</label><input x-model="s.bank_name"></div>
+        <div><label>IBAN</label><input x-model="s.bank_iban"></div>
+        <div><label>BIC</label><input x-model="s.bank_bic"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>TVA, unités & tarifs</h2>
+      <div class="grid grid-3">
+        <div><label style="display:flex; gap:6px; align-items:center"><input type="checkbox" :checked="s.vat_exempt === '1'" @change="s.vat_exempt = $event.target.checked ? '1' : '0'"> Franchise en base de TVA (auto-entrepreneur)</label></div>
+        <div style="grid-column: span 2"><label>Mention d'exonération</label><input x-model="s.vat_exempt_mention"></div>
+        <div><label>Taux de TVA disponibles (séparés par des virgules)</label><input x-model="s.vat_rates"></div>
+        <div><label>Taux de TVA par défaut</label><input x-model="s.default_vat_rate"></div>
+        <div><label>Coefficient de marge par défaut</label><input x-model="s.default_margin_coef"></div>
+        <div style="grid-column: span 3"><label>Unités proposées (séparées par des virgules)</label><input x-model="s.units"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Numérotation & délais</h2>
+      <p class="small muted">Jetons : <code>{AAAA}</code> année, <code>{AA}</code> année sur 2 chiffres, <code>{MM}</code> mois, <code>{NUM:4}</code> compteur sur 4 chiffres. Le compteur repart à 1 chaque année (ou chaque mois si <code>{MM}</code> est utilisé).</p>
+      <div class="grid grid-3">
+        <div><label>Format des devis</label><input x-model="s.quote_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.quote_number_format)"></div></div>
+        <div><label>Format des factures</label><input x-model="s.invoice_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.invoice_number_format)"></div></div>
+        <div><label>Format des avoirs</label><input x-model="s.credit_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.credit_number_format)"></div></div>
+        <div><label>Validité des devis (jours)</label><input type="number" x-model="s.quote_validity_days"></div>
+        <div><label>Délai de paiement des factures (jours)</label><input type="number" x-model="s.invoice_payment_days"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Textes par défaut</h2>
+      <div class="grid grid-2">
+        <div><label>Introduction des devis</label><textarea x-model="s.quote_default_intro" rows="3"></textarea></div>
+        <div><label>Introduction des factures</label><textarea x-model="s.invoice_default_intro" rows="3"></textarea></div>
+        <div><label>Conditions des devis</label><textarea x-model="s.quote_default_conditions" rows="3"></textarea></div>
+        <div><label>Conditions des factures</label><textarea x-model="s.invoice_default_conditions" rows="3"></textarea></div>
+        <div><label>Mentions légales (factures : pénalités de retard, indemnité 40 €…)</label><textarea x-model="s.legal_mentions" rows="4"></textarea></div>
+        <div><label>Pied de page</label><textarea x-model="s.footer_text" rows="4"></textarea></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Apparence</h2>
+      <div class="grid grid-4">
+        <div><label>Couleur principale</label><input type="color" x-model="s.primary_color" style="height:38px"></div>
+        <div><label>Couleur secondaire (fonds)</label><input type="color" x-model="s.accent_color" style="height:38px"></div>
+      </div>
+    </div>
+
+    <div class="card" x-show="!isDemo" id="securite">
+      <h2>Utilisateurs et sécurité</h2>
+      <p class="small muted">Chaque personne qui utilise le logiciel a son propre compte. Mot de passe de 10 caractères minimum.</p>
+      <table class="list" x-show="users.length">
+        <thead><tr><th>Nom</th><th>E-mail</th><th>Dernière connexion</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="u in users" :key="u.id">
+            <tr>
+              <td><strong x-text="u.name || '—'"></strong> <span class="badge soft" x-show="me && u.id === me.id">Vous</span></td>
+              <td x-text="u.email"></td>
+              <td class="muted" x-text="u.last_login_at ? fdate(u.last_login_at) : 'Jamais'"></td>
+              <td class="num"><button type="button" class="small danger" x-show="!me || u.id !== me.id" @click="removeUser(u)">Supprimer</button></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <div class="grid grid-2" style="margin-top:16px">
+        <form class="sec-box" @submit.prevent="addUser()">
+          <h3>Ajouter un utilisateur</h3>
+          <div><label for="nu-name">Nom</label><input id="nu-name" x-model="newUser.name" autocomplete="off"></div>
+          <div><label for="nu-email">E-mail</label><input id="nu-email" type="email" x-model="newUser.email" autocomplete="off" required></div>
+          <div><label for="nu-pw">Mot de passe provisoire</label><input id="nu-pw" type="text" x-model="newUser.password" autocomplete="new-password" minlength="10" required></div>
+          <p class="small muted" style="margin:0">Transmettez-le à la personne : elle pourra le changer ici après sa connexion.</p>
+          <button type="submit" class="primary">Ajouter</button>
+        </form>
+        <form class="sec-box" @submit.prevent="changePassword()">
+          <h3>Changer mon mot de passe</h3>
+          <div><label for="pw-cur">Mot de passe actuel</label><input id="pw-cur" type="password" x-model="pw.current" autocomplete="current-password" required></div>
+          <div><label for="pw-new">Nouveau mot de passe</label><input id="pw-new" type="password" x-model="pw.next" autocomplete="new-password" minlength="10" required></div>
+          <div><label for="pw-new2">Confirmation</label><input id="pw-new2" type="password" x-model="pw.confirm" autocomplete="new-password" required></div>
+          <button type="submit" class="primary">Changer le mot de passe</button>
+        </form>
+      </div>
+      <div class="toolbar" style="margin:14px 0 0">
+        <button type="button" @click="revokeOthers()">Déconnecter mes autres appareils</button>
+        <span class="small muted">Utile si vous vous êtes connecté sur un ordinateur qui n'est pas le vôtre.</span>
+      </div>
+    </div>
+
+    <div class="card" x-show="isDemo">
+      <h2>Assistant IA</h2>
+      <p class="small muted" style="margin:0">Dans cette démo, l'assistant utilise votre compte Claude : aucune clé n'est nécessaire. Dans la version installée, une clé API Anthropic se renseigne ici.</p>
+    </div>
+    <div class="card" x-show="!isDemo">
+      <h2>Assistant IA</h2>
+      <p class="small muted">L'assistant rédige vos devis et factures à partir d'une dictée, d'une note ou de photos, en s'appuyant sur votre catalogue.
+        Il utilise l'API Claude d'Anthropic : créez une clé sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> (usage facturé par Anthropic).
+        La clé reste sur cet ordinateur : elle n'est jamais affichée ni incluse dans les sauvegardes. Les textes et photos envoyés à l'assistant sont transmis à Anthropic pour être traités.</p>
+      <div class="grid grid-2">
+        <div>
+          <label for="ai-key">Clé API Anthropic</label>
+          <input id="ai-key" type="password" x-model="aiKey" autocomplete="off" :placeholder="s.ai_key_configured ? 'Clé enregistrée (laisser vide pour la conserver)' : 'sk-ant-…'">
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap">
+          <span class="badge" :class="s.ai_key_configured ? 'accepte' : 'soft'" x-text="s.ai_key_configured ? 'Assistant activé' : 'Assistant non configuré'"></span>
+          <button type="button" class="small primary" x-show="aiKey.trim()" @click="save()">Enregistrer la clé</button>
+          <button type="button" class="small danger" x-show="s.ai_key_configured" @click="removeKey()">Retirer la clé</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sauvegarde</h2>
+      <p class="small muted">Toutes les données sont stockées localement dans <code>data/facturation.db</code>. Téléchargez régulièrement une sauvegarde.</p>
+      <div class="toolbar">
+        <a class="btn" href="/api/backup">Télécharger une sauvegarde</a>
+        <label class="btn" style="margin:0; font-weight:normal; color:inherit; font-size:14px">Restaurer une sauvegarde…<input type="file" accept=".json" style="display:none" @change="restore($event)"></label>
+      </div>
+    </div>
+  </div>
+  </template>
+</main>
+<script>
+function settingsPage() {
+  return {
+    s: null, aiKey: '', isDemo: !!window.IS_DEMO,
+    users: [], me: null, newUser: { name: '', email: '', password: '' }, pw: { current: '', next: '', confirm: '' },
+    async init() {
+      this.s = await api('/settings');
+      if (!this.isDemo) await this.loadUsers();
+    },
+    async loadUsers() {
+      [this.users, this.me] = await Promise.all([api('/auth/users'), api('/auth/me').then((r) => r.user)]);
+    },
+    async addUser() {
+      if ((this.newUser.password || '').length < 10) { toast('Mot de passe : 10 caractères minimum', 'error'); return; }
+      await api('/auth/users', { body: this.newUser });
+      toast('Utilisateur ajouté : ' + this.newUser.email);
+      this.newUser = { name: '', email: '', password: '' };
+      this.loadUsers();
+    },
+    async removeUser(u) {
+      if (!(await uiConfirm(`Supprimer le compte de ${u.name || u.email} ? Ses sessions ouvertes seront fermées.`, 'Supprimer'))) return;
+      await api('/auth/users/' + u.id, { method: 'DELETE' });
+      this.loadUsers();
+    },
+    async changePassword() {
+      if (this.pw.next.length < 10) { toast('Mot de passe : 10 caractères minimum', 'error'); return; }
+      if (this.pw.next !== this.pw.confirm) { toast('Les deux mots de passe ne correspondent pas', 'error'); return; }
+      await api('/auth/password', { body: { current: this.pw.current, password: this.pw.next } });
+      this.pw = { current: '', next: '', confirm: '' };
+      toast('Mot de passe changé. Vos autres appareils ont été déconnectés.');
+    },
+    async revokeOthers() {
+      const r = await api('/auth/sessions/revoke-others', { body: {} });
+      toast(r.revoked ? r.revoked + ' autre(s) session(s) fermée(s)' : 'Aucune autre session ouverte');
+    },
+    example(fmt) {
+      const d = todayIso();
+      return (fmt || '').replace(/\{AAAA\}/g, d.slice(0, 4)).replace(/\{AA\}/g, d.slice(2, 4)).replace(/\{MM\}/g, d.slice(5, 7))
+        .replace(/\{NUM(?::(\d+))?\}/g, (_, w) => '1'.padStart(w ? Number(w) : 1, '0'));
+    },
+    async save() {
+      const body = { ...this.s };
+      delete body.ai_key_configured;
+      if (this.aiKey.trim()) body.anthropic_api_key = this.aiKey.trim();
+      this.s = await api('/settings', { method: 'PUT', body });
+      this.aiKey = '';
+      toast('Paramètres enregistrés');
+    },
+    async removeKey() {
+      if (!(await uiConfirm("Retirer la clé API ? L'assistant IA sera désactivé.", 'Retirer'))) return;
+      this.s = await api('/settings', { method: 'PUT', body: { anthropic_api_key: '' } });
+      toast('Clé retirée');
+    },
+    loadLogo(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      if (f.size > 2 * 1024 * 1024) { toast('Logo trop lourd (2 Mo maximum)', 'error'); return; }
+      const reader = new FileReader();
+      reader.onload = () => { this.s.company_logo = reader.result; };
+      reader.readAsDataURL(f);
+    },
+    async restore(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      if (!(await uiConfirm('Restaurer cette sauvegarde ? TOUTES les données actuelles seront remplacées.'))) { e.target.value = ''; return; }
+      let data;
+      try { data = JSON.parse(await f.text()); } catch { toast('Fichier illisible', 'error'); return; }
+      await api('/restore', { body: data });
+      toast('Sauvegarde restaurée');
+      setTimeout(() => location.reload(), 800);
+    }
+  };
+}
+</script>
+</body>
+</html>

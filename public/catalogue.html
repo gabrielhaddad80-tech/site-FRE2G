@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalogue & tarifs — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/calc.js"></script>
+<script defer src="vendor/alpine.js"></script>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="catalogPage()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0">Catalogue & tarifs</h1>
+    <div class="spacer"></div>
+    <button @click="importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {}, busy: false, uploading: false, ai: false, notes: '', pdf: null, sheets: [], sheet: 0 }">Importer (PDF, Excel, photo)</button>
+    <a class="btn" href="/api/items/export.csv">Exporter CSV</a>
+    <button @click="reprice = { percent: 0, field: 'sale_price', type: '', category_id: '', catalog: '' }">Mise à jour des prix</button>
+    <button class="primary" @click="edit({ type: filters.type || 'prestation' })">+ Nouvel article</button>
+  </div>
+
+  <div class="tabs">
+    <button :class="tab === 'items' && 'active'" @click="tab = 'items'">Articles, prestations & main d'œuvre</button>
+    <button :class="tab === 'categories' && 'active'" @click="tab = 'categories'">Catégories</button>
+  </div>
+
+  <div x-show="tab === 'items'" class="card">
+    <div class="grid grid-4" style="margin-bottom:12px">
+      <div><label>Recherche</label><input type="search" x-model="filters.q" @input.debounce.300ms="load()" placeholder="Référence, désignation…"></div>
+      <div><label>Type</label><select x-model="filters.type" @change="load()">
+        <option value="">Tous</option>
+        <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v"></option></template>
+      </select></div>
+      <div><label>Catégorie</label><select x-model="filters.category_id" @change="load()">
+        <option value="">Toutes</option>
+        <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.name"></option></template>
+      </select></div>
+      <div><label>Catalogue / fournisseur</label><select x-model="filters.catalog" @change="load()">
+        <option value="">Tous</option>
+        <template x-for="c in catalogs" :key="c"><option :value="c" x-text="c"></option></template>
+      </select></div>
+    </div>
+    <label style="display:flex; gap:6px; align-items:center; font-weight:normal; margin-bottom:10px"><input type="checkbox" x-model="filters.all" @change="load()"> Afficher les articles désactivés</label>
+    <table class="list">
+      <thead><tr><th>Réf.</th><th>Désignation</th><th>Type</th><th>Catégorie</th><th>Catalogue</th><th>Unité</th><th class="num">Achat HT</th><th class="num">Vente HT</th><th class="num">Marge</th><th class="num">TVA</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="it in items" :key="it.id">
+          <tr class="clickable" @click="edit(it)" :style="!it.active && 'opacity:.5'">
+            <td x-text="it.reference"></td>
+            <td x-text="it.designation"></td>
+            <td><span class="badge" x-text="LABELS.itemType[it.type]"></span></td>
+            <td x-text="it.category_name || ''"></td>
+            <td x-text="it.catalog || ''"></td>
+            <td x-text="it.unit"></td>
+            <td class="num" x-text="money(it.purchase_price)"></td>
+            <td class="num"><strong x-text="money(it.sale_price)"></strong></td>
+            <td class="num" x-text="it.sale_price ? num(Calc.round2((it.sale_price - it.purchase_price) / it.sale_price * 100)) + ' %' : ''"></td>
+            <td class="num" x-text="num(it.vat_rate) + ' %'"></td>
+            <td class="num" @click.stop><button class="small" @click="duplicate(it)">Dupliquer</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="empty" x-show="!items.length">Aucun article.</div>
+    <div class="small muted" style="margin-top:8px" x-text="items.length + ' article(s)'"></div>
+  </div>
+
+  <div x-show="tab === 'categories'" class="card" style="max-width:700px">
+    <div style="display:flex; gap:8px; margin-bottom:12px">
+      <input x-model="newCategory" placeholder="Nouvelle catégorie" @keydown.enter="addCategory()">
+      <button class="primary" @click="addCategory()">Ajouter</button>
+    </div>
+    <table class="list">
+      <thead><tr><th>Nom</th><th style="width:90px">Ordre</th><th class="num">Articles</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="c in categories" :key="c.id">
+          <tr>
+            <td><input x-model="c.name" @change="saveCategory(c)"></td>
+            <td><input type="number" x-model="c.position" @change="saveCategory(c)"></td>
+            <td class="num" x-text="c.items_count"></td>
+            <td class="num"><button class="small danger" @click="deleteCategory(c)">Supprimer</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Fiche article -->
+  <div class="modal-bg" x-show="form" @keydown.escape.window="form = null">
+    <template x-if="form">
+      <div class="modal wide">
+        <h2 x-text="form.id ? 'Article ' + (form.reference || '') : 'Nouvel article'"></h2>
+        <div class="grid grid-4">
+          <div><label>Type</label><select x-model="form.type">
+            <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v" :selected="k === form.type"></option></template>
+          </select></div>
+          <div><label>Référence</label><input x-model="form.reference"></div>
+          <div style="grid-column: span 2"><label>Désignation *</label><input x-model="form.designation"></div>
+          <div style="grid-column: span 4"><label>Description (reprise sur le devis)</label><textarea x-model="form.description" rows="2"></textarea></div>
+          <div><label>Unité</label><input x-model="form.unit" list="units"></div>
+          <div><label>Catégorie</label><select x-model.number="form.category_id">
+            <option value="">—</option>
+            <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.name" :selected="c.id == form.category_id"></option></template>
+          </select></div>
+          <div><label>Catalogue</label><input x-model="form.catalog" list="catalogs"></div>
+          <div><label>Fournisseur</label><input x-model="form.supplier"></div>
+          <div><label>Prix d'achat HT</label><input type="number" step="any" x-model="form.purchase_price"></div>
+          <div><label>Coefficient</label>
+            <div style="display:flex; gap:4px"><input type="number" step="any" x-model="coef"><button type="button" class="small" @click="form.sale_price = Calc.round2(Calc.num(form.purchase_price) * Calc.num(coef))" title="Prix de vente = achat × coefficient">→</button></div>
+          </div>
+          <div><label>Prix de vente HT</label><input type="number" step="any" x-model="form.sale_price"></div>
+          <div><label>TVA (%)</label><select x-model.number="form.vat_rate">
+            <template x-for="r in vatRates" :key="r"><option :value="r" x-text="num(r) + ' %'" :selected="r == form.vat_rate"></option></template>
+          </select></div>
+          <div style="grid-column: span 4" class="small muted" x-show="Calc.num(form.sale_price)"
+               x-text="'Marge : ' + money(Calc.num(form.sale_price) - Calc.num(form.purchase_price)) + ' (' + num(Calc.round2((Calc.num(form.sale_price) - Calc.num(form.purchase_price)) / Calc.num(form.sale_price) * 100)) + ' %) · Prix TTC : ' + money(Calc.num(form.sale_price) * (1 + Calc.num(form.vat_rate) / 100))"></div>
+          <div><label style="display:flex; gap:6px; align-items:center"><input type="checkbox" x-model="form.active" :checked="form.active"> Actif</label></div>
+        </div>
+
+        <template x-if="form.type === 'ouvrage'">
+          <div style="margin-top:16px">
+            <h2>Composition de l'ouvrage</h2>
+            <table class="list">
+              <thead><tr><th>Réf.</th><th>Composant</th><th>Unité</th><th style="width:100px">Quantité</th><th class="num">P.U. vente</th><th class="num">Total vente</th><th class="num">Total achat</th><th></th></tr></thead>
+              <tbody>
+                <template x-for="(c, i) in form.components" :key="i">
+                  <tr>
+                    <td x-text="c.reference"></td><td x-text="c.designation"></td><td x-text="c.unit"></td>
+                    <td><input type="number" step="any" x-model="c.quantity"></td>
+                    <td class="num" x-text="money(c.sale_price)"></td>
+                    <td class="num" x-text="money(Calc.num(c.quantity) * c.sale_price)"></td>
+                    <td class="num" x-text="money(Calc.num(c.quantity) * c.purchase_price)"></td>
+                    <td class="num"><button class="small danger" @click="form.components.splice(i, 1)">✕</button></td>
+                  </tr>
+                </template>
+              </tbody>
+              <tfoot><tr><td colspan="5"><strong>Prix calculé</strong></td>
+                <td class="num"><strong x-text="money(componentsSale)"></strong></td><td class="num" x-text="money(componentsBuy)"></td>
+                <td><button class="small" @click="form.sale_price = componentsSale; form.purchase_price = componentsBuy">Appliquer</button></td></tr></tfoot>
+            </table>
+            <div style="display:flex; gap:8px; margin-top:8px">
+              <input type="search" x-model="compSearch" @input.debounce.200ms="searchComponents()" placeholder="Ajouter un composant : rechercher un article…">
+            </div>
+            <div class="search-results" x-show="compResults.length" style="max-height:200px">
+              <table class="list"><tbody>
+                <template x-for="r in compResults" :key="r.id">
+                  <tr class="clickable" @click="addComponent(r)"><td x-text="r.reference"></td><td x-text="r.designation"></td><td x-text="LABELS.itemType[r.type]"></td><td class="num" x-text="money(r.sale_price) + ' / ' + r.unit"></td></tr>
+                </template>
+              </tbody></table>
+            </div>
+          </div>
+        </template>
+
+        <div class="actions">
+          <button class="danger" x-show="form.id" @click="remove()" style="margin-right:auto">Supprimer</button>
+          <button @click="form = null">Annuler</button>
+          <button class="primary" @click="save()">Enregistrer</button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Import -->
+  <div class="modal-bg" x-show="importer" @keydown.escape.window="importer = null">
+    <template x-if="importer">
+      <div class="modal wide">
+        <h2>Importer un catalogue / une liste de tarifs</h2>
+        <p class="small muted"><strong>Excel (.xlsx) ou CSV</strong> : tarifs fournisseurs au format tableau (Daikin, Atlantic, Rexel…), lus directement, sans IA.
+          <strong>PDF ou photo</strong> d'un tarif ou d'un catalogue : l'assistant IA lit le document et prépare la liste des articles.
+          Vous vérifiez la liste avant l'import ; les articles dont la référence existe déjà sont mis à jour (pratique pour appliquer le tarif de l'année).</p>
+        <div class="grid grid-2">
+          <div><label>Fichier (Excel, CSV, PDF jusqu'à 80 Mo, photo)</label><input type="file" accept=".xlsx,.xls,.csv,.txt,.pdf,application/pdf,image/*" @change="readFile($event)" :disabled="!!importer.busy"></div>
+          <div><label>Nom du catalogue (facultatif)</label><input x-model="importer.catalog" placeholder="Ex. Tarif Daikin 2026"></div>
+        </div>
+        <div x-show="importer.sheets.length > 1" style="margin-top:10px; max-width:340px">
+          <label>Feuille du classeur</label>
+          <select @change="useSheet($event.target.value)">
+            <template x-for="(sh, i) in importer.sheets" :key="i"><option :value="i" :selected="i === importer.sheet" x-text="sh.name + ' (' + sh.rows.length + ' lignes)'"></option></template>
+          </select>
+        </div>
+        <template x-if="importer.pdf">
+          <div class="pdf-read">
+            <p style="margin:0"><strong x-text="'Catalogue de ' + importer.pdf.pages + ' page(s)'"></strong>
+              <span class="muted" x-text="'— lu par l\'IA par paquets de ' + importer.pdf.per + ' pages.'"></span></p>
+            <div class="pdf-range">
+              <label>De la page <input type="number" min="1" :max="importer.pdf.pages" x-model.number="importer.pdf.from" :disabled="importer.pdf.running"></label>
+              <label>à la page <input type="number" min="1" :max="importer.pdf.pages" x-model.number="importer.pdf.to" :disabled="importer.pdf.running"></label>
+              <button type="button" class="primary" x-show="!importer.pdf.running" @click="readPdfPages()" x-text="importer.pdf.read ? 'Relire ces pages' : 'Lire le catalogue'"></button>
+              <button type="button" x-show="importer.pdf.running" @click="importer.pdf.stop = true" :disabled="importer.pdf.stop" x-text="importer.pdf.stop ? 'Arrêt en cours…' : 'Arrêter'"></button>
+            </div>
+            <p class="small muted" style="margin:0" x-show="!importer.pdf.running && !importer.pdf.read">Coût de l'IA estimé : <span x-text="pdfEstimate()"></span>. Conseil : ne faites lire que les pages des grilles de prix (le sommaire du catalogue les indique), pas les pages de présentation ou techniques.</p>
+            <template x-if="importer.pdf.running || importer.pdf.read">
+              <div>
+                <progress :value="importer.pdf.read" :max="importer.pdf.total || 1"></progress>
+                <p class="small muted" style="margin:4px 0 0" x-text="'Pages lues : ' + importer.pdf.read + ' / ' + importer.pdf.total + ' — ' + importer.rows.length + ' article(s) trouvé(s)' + (importer.pdf.running ? '…' : '')"></p>
+              </div>
+            </template>
+            <p class="small" x-show="importer.pdf.failed.length && !importer.pdf.running" style="margin:0; color: var(--accent)">
+              <span x-text="'Pages non lues : ' + importer.pdf.failed.map((f) => f[0] + '–' + f[1]).join(', ')"></span>
+              <button type="button" class="small" style="margin-left:8px" @click="readPdfPages(importer.pdf.failed.slice())">Réessayer</button>
+            </p>
+          </div>
+        </template>
+        <p class="small muted" x-show="importer.busy" style="margin-top:12px"><span class="dots"><i></i><i></i><i></i></span> <span x-text="importer.uploading ? 'Envoi du PDF…' : (importer.pdf ? 'L\'IA lit les pages…' : 'L\'IA lit votre document… (jusqu\'à une minute)')"></span></p>
+        <p class="small" x-show="importer.notes" x-text="'À vérifier : ' + importer.notes" style="margin-top:12px; color: var(--accent)"></p>
+        <template x-if="importer.headers.length">
+          <div style="margin-top:14px">
+            <h2 x-show="!importer.ai">Correspondance des colonnes</h2>
+            <div class="grid grid-4" x-show="!importer.ai">
+              <template x-for="f in importFields" :key="f.key">
+                <div><label x-text="f.label"></label>
+                  <select x-model="importer.mapping[f.key]">
+                    <option value="">— ignorer —</option>
+                    <template x-for="(h, i) in importer.headers" :key="i"><option :value="i" x-text="h" :selected="importer.mapping[f.key] == i"></option></template>
+                  </select>
+                </div>
+              </template>
+            </div>
+            <div class="grid grid-2" style="margin-top:10px" x-show="!importer.ai">
+              <div><label>Type par défaut (si pas de colonne type)</label><select x-model="importer.defaultType">
+                <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v"></option></template>
+              </select></div>
+            </div>
+            <p class="small muted" x-text="importer.rows.length + ' article(s) détecté(s). ' + (importer.ai ? 'Vérifiez les prix avant d\'importer' : 'Aperçu') + (importer.rows.length > (importer.ai ? 200 : 5) ? ' (premiers articles) :' : ' :')"></p>
+            <table class="list small">
+              <thead><tr><template x-for="f in importFields" :key="f.key"><th x-show="importer.mapping[f.key] !== ''" x-text="f.label"></th></template></tr></thead>
+              <tbody><template x-for="(r, i) in mappedRows().slice(0, importer.ai ? 200 : 5)" :key="i">
+                <tr><template x-for="f in importFields" :key="f.key"><td x-show="importer.mapping[f.key] !== ''" x-text="r[f.key]"></td></template></tr>
+              </template></tbody>
+            </table>
+          </div>
+        </template>
+        <div class="actions">
+          <button @click="importer = null">Annuler</button>
+          <button class="primary" :disabled="!importer.rows.length || !!importer.busy" @click="runImport()" x-text="importer.rows.length ? 'Importer ' + importer.rows.length + ' article(s)' : 'Importer'"></button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Mise à jour des prix -->
+  <div class="modal-bg" x-show="reprice" @keydown.escape.window="reprice = null">
+    <template x-if="reprice">
+      <div class="modal" style="max-width:560px">
+        <h2>Mise à jour des prix en masse</h2>
+        <div class="grid grid-2">
+          <div><label>Variation (%)</label><input type="number" step="any" x-model="reprice.percent" placeholder="Ex. 3.5 ou -2"></div>
+          <div><label>Prix concerné</label><select x-model="reprice.field"><option value="sale_price">Prix de vente</option><option value="purchase_price">Prix d'achat</option></select></div>
+          <div><label>Type</label><select x-model="reprice.type"><option value="">Tous</option>
+            <template x-for="(v, k) in LABELS.itemType" :key="k"><option :value="k" x-text="v" x-show="k !== 'ouvrage'"></option></template></select></div>
+          <div><label>Catégorie</label><select x-model="reprice.category_id"><option value="">Toutes</option>
+            <template x-for="c in categories" :key="c.id"><option :value="c.id" x-text="c.name"></option></template></select></div>
+          <div><label>Catalogue</label><select x-model="reprice.catalog"><option value="">Tous</option>
+            <template x-for="c in catalogs" :key="c"><option :value="c" x-text="c"></option></template></select></div>
+        </div>
+        <p class="small muted">Les ouvrages ne sont pas modifiés : ouvrez-les et cliquez sur « Appliquer » pour recalculer leur prix.</p>
+        <div class="actions"><button @click="reprice = null">Annuler</button><button class="primary" @click="runReprice()">Appliquer</button></div>
+      </div>
+    </template>
+  </div>
+
+  <datalist id="units"><template x-for="u in units" :key="u"><option :value="u"></option></template></datalist>
+  <datalist id="catalogs"><template x-for="c in catalogs" :key="c"><option :value="c"></option></template></datalist>
+</main>
+<script>
+const IMPORT_FIELDS = [
+  { key: 'reference', label: 'Référence', match: /^(r[ée]f|code|article)/i },
+  { key: 'designation', label: 'Désignation *', match: /^(d[ée]signation|libell|nom|intitul)/i },
+  { key: 'description', label: 'Description', match: /^(description|d[ée]tail)/i },
+  { key: 'type', label: 'Type', match: /^type/i },
+  { key: 'unit', label: 'Unité', match: /^(unit|u$|unité)/i },
+  { key: 'purchase_price', label: 'Prix d\'achat HT', match: /(achat|co[uû]t|purchase)/i },
+  { key: 'sale_price', label: 'Prix de vente HT', match: /(vente|prix|p\.?u|tarif|sale)/i },
+  { key: 'vat_rate', label: 'TVA %', match: /(tva|vat)/i },
+  { key: 'category', label: 'Catégorie', match: /(cat[ée]gor|famille|rubrique)/i },
+  { key: 'supplier', label: 'Fournisseur', match: /(fournisseur|supplier|marque)/i },
+  { key: 'catalog', label: 'Catalogue', match: /^catalog/i }
+];
+const TYPE_ALIASES = { "main d'oeuvre": 'main_oeuvre', "main d'œuvre": 'main_oeuvre', 'mo': 'main_oeuvre', 'prestation': 'prestation', 'fourniture': 'fourniture', 'materiel': 'materiel', 'matériel': 'materiel', 'ouvrage': 'ouvrage' };
+
+function catalogPage() {
+  return {
+    tab: 'items', items: [], categories: [], catalogs: [], settings: {},
+    filters: { q: '', type: '', category_id: '', catalog: '', all: false },
+    form: null, coef: 1.3, compSearch: '', compResults: [], newCategory: '',
+    importer: null, reprice: null, importFields: IMPORT_FIELDS,
+
+    get vatRates() { return (this.settings.vat_rates || '20,10,5.5,0').split(',').map(Number); },
+    get units() { return (this.settings.units || 'u,h').split(',').map((s) => s.trim()); },
+    get componentsSale() { return Calc.round2((this.form?.components || []).reduce((s, c) => s + Calc.num(c.quantity) * c.sale_price, 0)); },
+    get componentsBuy() { return Calc.round2((this.form?.components || []).reduce((s, c) => s + Calc.num(c.quantity) * c.purchase_price, 0)); },
+
+    async init() {
+      this.settings = await api('/settings');
+      this.coef = Number(this.settings.default_margin_coef || 1.3);
+      await Promise.all([this.load(), this.loadCategories()]);
+      if (qs('tab') === 'categories') this.tab = 'categories';
+      if (qs('id')) this.edit({ id: Number(qs('id')) });
+      else if (qs('new')) this.edit({ type: 'prestation' });
+      else if (qs('import')) this.importer = { step: 1, catalog: '', rows: [], headers: [], mapping: {}, busy: false, uploading: false, ai: false, notes: '', pdf: null, sheets: [], sheet: 0 };
+    },
+    async load() {
+      const p = new URLSearchParams();
+      for (const k of ['q', 'type', 'category_id', 'catalog']) if (this.filters[k]) p.set(k, this.filters[k]);
+      if (this.filters.all) p.set('active', 'all');
+      [this.items, this.catalogs] = await Promise.all([api('/items?' + p), api('/items/catalogs')]);
+    },
+    async loadCategories() { this.categories = await api('/categories'); },
+
+    async edit(it) {
+      this.compSearch = ''; this.compResults = [];
+      if (it.id) this.form = { ...(await api('/items/' + it.id)) };
+      else this.form = { type: it.type, unit: 'u', vat_rate: Number(this.settings.default_vat_rate || 20), purchase_price: 0, sale_price: 0, active: 1, components: [] };
+      this.form.active = !!this.form.active;
+      this.form.components = this.form.components || [];
+    },
+    async save() {
+      if (this.form.id) await api('/items/' + this.form.id, { method: 'PUT', body: this.form });
+      else await api('/items', { body: this.form });
+      this.form = null;
+      toast('Article enregistré');
+      this.load(); this.loadCategories();
+    },
+    async duplicate(it) { await api(`/items/${it.id}/duplicate`, { body: {} }); this.load(); toast('Article dupliqué'); },
+    async remove() {
+      if (!(await uiConfirm('Supprimer cet article du catalogue ? (Les devis et factures existants ne sont pas modifiés.)'))) return;
+      await api('/items/' + this.form.id, { method: 'DELETE' });
+      this.form = null; this.load();
+    },
+    async searchComponents() {
+      if (!this.compSearch) { this.compResults = []; return; }
+      this.compResults = (await api('/items?limit=30&q=' + encodeURIComponent(this.compSearch))).filter((r) => r.id !== this.form.id);
+    },
+    addComponent(r) {
+      this.form.components.push({ child_id: r.id, reference: r.reference, designation: r.designation, unit: r.unit, quantity: 1, sale_price: r.sale_price, purchase_price: r.purchase_price });
+      this.compSearch = ''; this.compResults = [];
+    },
+
+    async addCategory() {
+      if (!this.newCategory) return;
+      await api('/categories', { body: { name: this.newCategory, position: this.categories.length + 1 } });
+      this.newCategory = ''; this.loadCategories();
+    },
+    async saveCategory(c) { await api('/categories/' + c.id, { method: 'PUT', body: c }); },
+    async deleteCategory(c) {
+      if (!(await uiConfirm(`Supprimer la catégorie « ${c.name} » ? Les articles seront conservés sans catégorie.`))) return;
+      await api('/categories/' + c.id, { method: 'DELETE' }); this.loadCategories();
+    },
+
+    // ----- Import -----
+    resetImport(extra) {
+      Object.assign(this.importer, { ai: false, notes: '', pdf: null, sheets: [], sheet: 0, headers: [], rows: [], mapping: {} }, extra || {});
+    },
+    async readFile(e) {
+      const input = e.target;
+      const file = input.files[0];
+      if (!file) return;
+      const name = file.name || '';
+      this.resetImport();
+      if (!this.importer.catalog) this.importer.catalog = name.replace(/\.[^.]+$/, '');
+      try {
+        if (/\.xlsx$/i.test(name) || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+          this.importer.sheets = await readXlsx(file);
+          const best = this.importer.sheets.reduce((b, s, i, all) => (s.rows.length > all[b].rows.length ? i : b), 0);
+          return this.useSheet(best);
+        }
+        if (/\.xls$/i.test(name)) throw new Error('Ancien format Excel (.xls) : ouvrez-le dans Excel puis « Enregistrer sous » → « Classeur Excel (.xlsx) ».');
+        if (file.type === 'application/pdf' || /\.pdf$/i.test(name)) return window.IS_DEMO ? this.readWithAi(file, input) : this.readPdf(file, input);
+        if (/^image\//.test(file.type)) return this.readWithAi(file, input);
+        const buf = await file.arrayBuffer();
+        let text = new TextDecoder('utf-8').decode(buf);
+        if (text.includes('\ufffd')) text = new TextDecoder('windows-1252').decode(buf); // CSV Excel « ANSI »
+        this.setTable(parseCSV(text));
+      } catch (err) {
+        toast(err.message, 'error');
+        input.value = '';
+      }
+    },
+    useSheet(i) {
+      this.importer.sheet = Number(i);
+      this.setTable(this.importer.sheets[this.importer.sheet].rows);
+    },
+    // Tableau (CSV ou Excel) : la ligne d'en-têtes est repérée même après quelques lignes de titre
+    setTable(rows) {
+      const filled = (r) => r.filter((c) => String(c || '').trim()).length;
+      const known = (r) => r.some((c) => IMPORT_FIELDS.some((f) => f.match.test(String(c || '').trim())));
+      let h = rows.slice(0, 30).findIndex((r) => filled(r) >= 3 && known(r));
+      if (h < 0) h = Math.max(0, rows.slice(0, 30).findIndex((r) => filled(r) >= 2));
+      const imp = this.importer;
+      imp.headers = (rows[h] || []).map((c, i) => String(c || '').trim() || 'Colonne ' + (i + 1));
+      imp.rows = rows.slice(h + 1).filter((r) => filled(r) > 0);
+      imp.defaultType = imp.defaultType || 'fourniture';
+      const mapping = {};
+      const used = new Set();
+      for (const f of IMPORT_FIELDS) {
+        const idx = imp.headers.findIndex((hd, i) => !used.has(i) && f.match.test(hd.trim()));
+        mapping[f.key] = idx >= 0 ? String(idx) : '';
+        if (idx >= 0) used.add(idx);
+      }
+      imp.mapping = mapping;
+    },
+    // Résultat de l'IA : colonnes déjà dans l'ordre des champs
+    setAiColumns() {
+      const imp = this.importer;
+      imp.ai = true;
+      imp.headers = IMPORT_FIELDS.map((f) => f.label.replace(' *', ''));
+      imp.mapping = Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f.key, String(i)]));
+      imp.defaultType = 'fourniture';
+    },
+    addAiRows(rows) {
+      const imp = this.importer;
+      imp.refIndex = imp.refIndex || new Map();
+      for (const r of rows) {
+        const line = IMPORT_FIELDS.map((f) => String(r[f.key] ?? ''));
+        const ref = (r.reference || '').trim().toUpperCase();
+        if (ref && imp.refIndex.has(ref)) imp.rows[imp.refIndex.get(ref)] = line; // même référence : la dernière lue l'emporte
+        else { if (ref) imp.refIndex.set(ref, imp.rows.length); imp.rows.push(line); }
+      }
+    },
+    addNote(note) {
+      if (!note) return;
+      const notes = this.importer.notes ? this.importer.notes.split(' · ') : [];
+      if (!notes.includes(note)) notes.push(note);
+      this.importer.notes = notes.slice(-4).join(' · ');
+    },
+    // Photo ou petit PDF (démo) : lecture en une fois
+    async readWithAi(file, input) {
+      const imp = this.importer;
+      if (!(await aiAvailable())) {
+        toast("La lecture des PDF et des photos utilise l'assistant IA : ajoutez votre clé API dans Paramètres, ou importez un fichier Excel / CSV.", 'error');
+        input.value = '';
+        return;
+      }
+      imp.busy = true;
+      try {
+        let att;
+        try { att = await prepareAttachment(file); } catch (err) { toast(err.message, 'error'); throw err; }
+        const res = await aiCatalogExtract({ file: att }); // en cas d'erreur, le message est déjà affiché
+        if (this.importer !== imp) return; // fenêtre fermée entre-temps
+        this.setAiColumns();
+        this.addAiRows(res.rows);
+        this.addNote(res.notes);
+      } catch (err) {
+        input.value = '';
+      } finally { imp.busy = false; }
+    },
+    // Catalogue PDF (jusqu'à 80 Mo) : envoyé une fois, puis lu par paquets de pages
+    async readPdf(file, input) {
+      const imp = this.importer;
+      if (!(await aiAvailable())) {
+        toast("La lecture des PDF utilise l'assistant IA : ajoutez votre clé API dans Paramètres, ou importez un fichier Excel / CSV.", 'error');
+        input.value = '';
+        return;
+      }
+      imp.busy = true;
+      imp.uploading = true;
+      try {
+        const up = await aiCatalogUpload(file);
+        if (this.importer !== imp) return;
+        this.setAiColumns();
+        imp.pdf = { id: up.id, pages: up.pages, per: up.pages_per_call || 10, from: 1, to: up.pages, read: 0, total: 0, running: false, stop: false, failed: [] };
+      } catch (err) {
+        input.value = '';
+      } finally { imp.busy = false; imp.uploading = false; }
+      if (imp.pdf && imp.pdf.pages <= imp.pdf.per) this.readPdfPages(); // petit tarif : lecture directe
+    },
+    pdfEstimate() {
+      const p = this.importer.pdf;
+      const n = Math.max(0, (p.to || 0) - (p.from || 0) + 1);
+      const high = n * 0.06; // environ 2 à 6 centimes par page selon la densité des tableaux
+      return high < 1 ? 'moins de 1 €' : `jusqu'à environ ${Math.ceil(high)} €`;
+    },
+    async readPdfPages(ranges) {
+      const imp = this.importer;
+      const p = imp.pdf;
+      p.from = Math.min(Math.max(1, Number(p.from) || 1), p.pages);
+      p.to = Math.min(Math.max(p.from, Number(p.to) || p.pages), p.pages);
+      if (!ranges) {
+        ranges = [];
+        for (let a = p.from; a <= p.to; a += p.per) ranges.push([a, Math.min(p.to, a + p.per - 1)]);
+        p.read = 0;
+        p.total = p.to - p.from + 1;
+        p.failed = [];
+      } else {
+        p.failed = p.failed.filter((f) => !ranges.some((r) => r[0] === f[0]));
+      }
+      p.running = true;
+      p.stop = false;
+      imp.busy = true;
+      const queue = ranges.slice();
+      const worker = async () => {
+        while (queue.length && !p.stop && this.importer === imp) {
+          const [from, to] = queue.shift();
+          let done = false;
+          for (let attempt = 0; attempt < 2 && !done && !p.stop; attempt++) {
+            try {
+              const res = await aiCatalogExtractPages({ upload: p.id, from, to });
+              if (this.importer !== imp) return;
+              this.addAiRows(res.rows);
+              this.addNote(res.notes);
+              done = true;
+            } catch (err) {
+              if (/expiré/.test(err.message || '')) { p.stop = true; imp.pdf = null; return; }
+            }
+          }
+          if (!done && !p.stop) p.failed.push([from, to]);
+          if (done || !p.stop) p.read += to - from + 1;
+        }
+      };
+      await Promise.all([worker(), worker()]); // deux paquets à la fois
+      p.running = false;
+      imp.busy = false;
+      if (this.importer === imp && !p.stop) {
+        toast(`${imp.rows.length} article(s) trouvé(s)` + (p.failed.length ? ` — ${p.failed.length} paquet(s) de pages non lu(s)` : ''), p.failed.length ? 'error' : 'ok');
+      }
+    },
+    mappedRows() {
+      const m = this.importer.mapping;
+      return this.importer.rows.map((r) => {
+        const o = {};
+        for (const f of IMPORT_FIELDS) o[f.key] = m[f.key] !== '' && m[f.key] !== undefined ? (r[Number(m[f.key])] || '').trim() : '';
+        const t = (o.type || '').toLowerCase();
+        o.type = LABELS.itemType[t] ? t : (TYPE_ALIASES[t] || this.importer.defaultType);
+        for (const k of ['purchase_price', 'sale_price', 'vat_rate']) o[k] = o[k].replace(/[€%\s ]/g, '');
+        if (o.vat_rate === '') o.vat_rate = this.settings.default_vat_rate || '20';
+        return o;
+      });
+    },
+    async runImport() {
+      const res = await api('/items/import', { body: { rows: this.mappedRows(), catalog: this.importer.catalog } });
+      toast(`Import terminé : ${res.created} créé(s), ${res.updated} mis à jour, ${res.skipped} ignoré(s)`);
+      this.importer = null;
+      this.load(); this.loadCategories();
+    },
+
+    async runReprice() {
+      if (!Calc.num(this.reprice.percent)) return;
+      if (!(await uiConfirm(`Appliquer une variation de ${this.reprice.percent} % ?`))) return;
+      const res = await api('/items/reprice', { body: this.reprice });
+      toast(res.updated + ' article(s) mis à jour');
+      this.reprice = null; this.load();
+    }
+  };
+}
+</script>
+</body>
+</html>

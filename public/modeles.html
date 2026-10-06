@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modèles de document — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/chat.js"></script>
+<script defer src="vendor/alpine.js"></script>
+<style>
+  .tpl-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 1200px) { .tpl-layout { grid-template-columns: 1fr; } }
+  .tpl-list { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tpl-list button.active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+  details summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
+  .imp-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+  .imp-choice { text-align: left; white-space: normal; display: grid; gap: 6px; padding: 16px; border-radius: 18px; border: 1.5px solid var(--border); background: var(--surface); align-content: start; }
+  .imp-choice strong { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .imp-choice span { color: var(--muted); font-weight: 400; font-size: 13px; line-height: 1.45; }
+  .imp-choice.active { border-color: var(--primary); background: var(--primary-light); }
+  .imp-drop { display: grid; place-items: center; gap: 6px; padding: 26px; border: 2px dashed var(--border); border-radius: 18px; color: var(--muted); text-align: center; cursor: pointer; }
+  .imp-drop.over { border-color: var(--primary); background: var(--primary-light); }
+  .compare { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 14px; }
+  .compare figure { margin: 0; min-width: 0; }
+  .compare figcaption { font-weight: 700; margin-bottom: 6px; }
+  .compare img { width: 100%; border: 1px solid var(--border); border-radius: 12px; background: #fff; display: block; }
+  .compare iframe { width: 100%; height: 62vh; border: 1px solid var(--border); border-radius: 12px; background: #e5e5e5; }
+  .compare .orig { max-height: 62vh; overflow: auto; border-radius: 12px; }
+  .lh-panel { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 10px; border: 1px solid var(--border-soft); border-radius: 14px; background: var(--surface-2); }
+  .lh-panel img { width: 54px; height: 76px; object-fit: cover; object-position: top; border-radius: 6px; border: 1px solid var(--border); background: #fff; }
+  .busy-line { display: flex; align-items: center; gap: 10px; color: var(--muted); margin-top: 14px; }
+  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--primary-light); border-top-color: var(--primary); animation: spin .8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 760px) { .imp-choices, .compare { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="templatesPage()" x-cloak>
+  <div class="toolbar">
+    <h1 style="margin:0">Modèles de devis & factures</h1>
+    <div class="spacer"></div>
+    <button @click="create()">+ Nouveau modèle (copie)</button>
+    <button class="primary" @click="openImport()"><span x-html="icon('sparkle')"></span>Importer mon modèle (image ou PDF)</button>
+  </div>
+  <p class="muted" style="margin-top:-8px">Chaque modèle est une page HTML/CSS avec des variables <code>{{…}}</code> remplacées automatiquement (syntaxe Handlebars).
+    Vous pouvez reproduire votre modèle existant à l'identique. Couleurs, logo et coordonnées se règlent aussi dans <a href="parametres.html">Paramètres</a>.</p>
+
+  <div class="tpl-list">
+    <template x-for="t in templates" :key="t.id">
+      <button :class="current && current.id === t.id && 'active'" @click="open(t.id)" x-text="t.name + (t.is_default ? ' ★' : '')"></button>
+    </template>
+  </div>
+
+  <template x-if="current">
+    <div class="tpl-layout">
+      <div>
+        <div class="card">
+          <div class="grid grid-2">
+            <div><label>Nom du modèle</label><input x-model="current.name"></div>
+            <div><label>&nbsp;</label><label style="display:flex; gap:6px; align-items:center; font-weight:normal"><input type="checkbox" x-model="current.is_default" :checked="current.is_default"> Modèle par défaut</label></div>
+          </div>
+          <div class="tabs" style="margin-top:12px">
+            <button :class="tab === 'html' && 'active'" @click="tab = 'html'">HTML</button>
+            <button :class="tab === 'css' && 'active'" @click="tab = 'css'">CSS (mise en forme)</button>
+            <button :class="tab === 'vars' && 'active'" @click="tab = 'vars'">Variables disponibles</button>
+          </div>
+          <textarea class="code" x-show="tab === 'html'" x-model="current.html" @input.debounce.600ms="preview()" spellcheck="false"></textarea>
+          <textarea class="code" x-show="tab === 'css'" x-model="current.css" @input.debounce.600ms="preview()" spellcheck="false"></textarea>
+          <div x-show="tab === 'vars'" class="var-list small" style="max-height:440px; overflow:auto">
+            <table>
+              <tr><td colspan="2"><strong>Entreprise</strong></td></tr>
+              <tr><td><code>{{company.name}}</code> <code>{{company.address}}</code> <code>{{company.postal_code}}</code> <code>{{company.city}}</code></td><td>Coordonnées</td></tr>
+              <tr><td><code>{{company.phone}}</code> <code>{{company.email}}</code> <code>{{company.website}}</code></td><td>Contact</td></tr>
+              <tr><td><code>{{company.siret}}</code> <code>{{company.rcs}}</code> <code>{{company.ape}}</code> <code>{{company.vat_number}}</code> <code>{{company.legal_form}}</code> <code>{{company.capital}}</code> <code>{{company.insurance}}</code></td><td>Mentions légales</td></tr>
+              <tr><td><code>{{company.logo}}</code></td><td>Logo (à utiliser dans <code>&lt;img src="{{company.logo}}"&gt;</code>)</td></tr>
+              <tr><td><code>{{company.iban}}</code> <code>{{company.bic}}</code> <code>{{company.bank_name}}</code></td><td>Banque</td></tr>
+              <tr><td colspan="2"><strong>Client</strong></td></tr>
+              <tr><td><code>{{client.display_name}}</code> <code>{{client.contact_name}}</code> <code>{{nl2br client.full_address}}</code></td><td>Nom et adresse formatés</td></tr>
+              <tr><td><code>{{client.code}}</code> <code>{{client.email}}</code> <code>{{client.phone}}</code> <code>{{client.siret}}</code> <code>{{client.vat_number}}</code></td><td></td></tr>
+              <tr><td colspan="2"><strong>Document</strong></td></tr>
+              <tr><td><code>{{doc.type_label}}</code> <code>{{doc.number}}</code> <code>{{date doc.date}}</code></td><td>Type (Devis / Facture / Avoir), numéro, date</td></tr>
+              <tr><td><code>{{date doc.validity_date}}</code> <code>{{date doc.due_date}}</code></td><td>Validité (devis), échéance (facture)</td></tr>
+              <tr><td><code>{{doc.title}}</code> <code>{{nl2br doc.site_address}}</code> <code>{{nl2br doc.intro}}</code> <code>{{nl2br doc.notes}}</code> <code>{{nl2br doc.conditions}}</code></td><td>Objet, chantier, textes</td></tr>
+              <tr><td><code>{{#if isQuote}}…{{/if}}</code> <code>isInvoice</code> <code>isCredit</code></td><td>Afficher selon le type</td></tr>
+              <tr><td><code>{{source.number}}</code></td><td>Devis d'origine / facture d'origine</td></tr>
+              <tr><td colspan="2"><strong>Lignes</strong> — <code>{{#each lines}}…{{/each}}</code></td></tr>
+              <tr><td><code>isSection</code> <code>isText</code> <code>isItem</code></td><td>Type de ligne</td></tr>
+              <tr><td><code>{{reference}}</code> <code>{{designation}}</code> <code>{{nl2br description}}</code> <code>{{number quantity}}</code> <code>{{unit}}</code></td><td></td></tr>
+              <tr><td><code>{{money unit_price}}</code> <code>{{percent discount_pct}}</code> <code>{{percent vat_rate}}</code> <code>{{money total_ht}}</code> <code>{{index}}</code></td><td></td></tr>
+              <tr><td><code>{{closing_section}}</code> <code>{{money closing_section_total}}</code></td><td>Sous-total en fin de section</td></tr>
+              <tr><td colspan="2"><strong>Totaux</strong></td></tr>
+              <tr><td><code>{{money totals.ht_brut}}</code> <code>{{money totals.discount_amount}}</code> <code>{{money totals.ht}}</code> <code>{{money totals.total_vat}}</code> <code>{{money totals.ttc}}</code></td><td></td></tr>
+              <tr><td><code>{{#each totals.vat}}{{percent rate}} {{money base}} {{money amount}}{{/each}}</code></td><td>Détail TVA par taux</td></tr>
+              <tr><td><code>{{money totals.deposit_amount}}</code> <code>{{money totals.paid}}</code> <code>{{money totals.due}}</code></td><td>Acompte, déjà réglé, reste à payer</td></tr>
+              <tr><td colspan="2"><strong>Divers</strong></td></tr>
+              <tr><td><code>{{legal_mentions}}</code> <code>{{footer_text}}</code> <code>{{vat_exempt}}</code> <code>{{vat_exempt_mention}}</code></td><td></td></tr>
+              <tr><td><code>{{colors.primary}}</code> <code>{{colors.accent}}</code></td><td>Couleurs (utilisables dans le CSS)</td></tr>
+              <tr><td><code>{{money x}}</code> <code>{{number x}}</code> <code>{{percent x}}</code> <code>{{date x}}</code> <code>{{nl2br x}}</code> <code>{{upper x}}</code> <code>(eq a b)</code> <code>(gt a b)</code></td><td>Fonctions de mise en forme</td></tr>
+            </table>
+          </div>
+          <div class="toolbar" style="margin:12px 0 0">
+            <button class="primary" @click="save()">Enregistrer</button>
+            <label class="btn" style="margin:0; font-weight:normal; color:inherit; font-size:14px">Charger un fichier HTML…<input type="file" accept=".html,.htm,.hbs" style="display:none" @change="loadFile($event)"></label>
+            <div class="spacer"></div>
+            <button class="danger" @click="remove()">Supprimer</button>
+          </div>
+          <div class="lh-panel" x-show="current.background">
+            <img :src="current.background || ''" alt="Papier à en-tête">
+            <div style="flex:1; min-width:0"><strong>Papier à en-tête</strong><div class="small muted">Imprimé en fond de la première page. Réglez les marges dans le CSS (padding de .doc).</div></div>
+            <button type="button" class="small danger" @click="current.background = ''; preview()">Retirer</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="toolbar">
+          <label style="margin:0">Aperçu avec :</label>
+          <select x-model="previewDoc" @change="preview()" style="max-width:320px">
+            <option value="">Dernier document</option>
+            <template x-for="d in docs" :key="d.id"><option :value="d.id" x-text="LABELS.type[d.type] + ' ' + (d.number || '(brouillon)') + ' — ' + (d.client_name || '')"></option></template>
+          </select>
+        </div>
+        <iframe class="preview-frame" id="tpl-frame" title="Aperçu du modèle" sandbox></iframe>
+      </div>
+    </div>
+  </template>
+
+  <!-- Import d'un modèle existant -->
+  <div class="modal-bg" x-show="impOpen" @keydown.escape.window="impOpen && !imp.busy && closeImport()">
+    <template x-if="impOpen">
+      <div class="modal wide">
+        <h2>Importer mon modèle de devis ou de facture</h2>
+        <template x-if="!imp?.image">
+          <div>
+            <label class="imp-drop" :class="imp.over && 'over'" @dragover.prevent="imp.over = true" @dragleave="imp.over = false" @drop.prevent="imp.over = false; readImport($event.dataTransfer.files[0])">
+              <span x-html="icon('quote')"></span>
+              <strong>Choisissez ou déposez une image (JPEG, PNG) ou un PDF de votre modèle actuel</strong>
+              <span class="small">Pour un PDF, la première page est utilisée. Un devis ou une facture déjà rempli convient très bien.</span>
+              <input type="file" accept="image/*,application/pdf,.pdf" style="display:none" @change="readImport($event.target.files[0]); $event.target.value = ''">
+            </label>
+            <div class="busy-line" x-show="imp?.reading"><span class="spinner"></span>Lecture du fichier…</div>
+          </div>
+        </template>
+
+        <template x-if="imp?.image && !imp?.result">
+          <div>
+            <div class="lh-panel">
+              <img :src="imp?.image?.preview" alt="Aperçu du modèle importé">
+              <div style="flex:1; min-width:0"><strong x-text="imp?.image?.name"></strong><div class="small muted" x-text="imp?.image?.pages > 1 ? 'PDF de ' + imp.image.pages + ' pages : première page utilisée' : 'Image prête'"></div></div>
+              <button type="button" class="small" @click="imp.image = null; imp.mode = ''" :disabled="imp.busy">Changer de fichier</button>
+            </div>
+            <div class="imp-choices">
+              <button type="button" class="imp-choice" :class="imp.mode === 'ai' && 'active'" @click="imp.mode = 'ai'" :disabled="imp.busy">
+                <strong><span x-html="icon('sparkle')"></span>Reproduire la mise en page avec l'IA</strong>
+                <span>L'IA recrée votre modèle (disposition, couleurs, tableau, totaux) et le remplit automatiquement avec vos données. Vous comparez avant d'enregistrer. Idéal si vous voulez pouvoir le modifier ensuite.</span>
+              </button>
+              <button type="button" class="imp-choice" :class="imp.mode === 'letterhead' && 'active'" @click="imp.mode = 'letterhead'; letterheadPreview()" :disabled="imp.busy">
+                <strong><span x-html="icon('layout')"></span>Utiliser comme papier à en-tête</strong>
+                <span>Votre fichier est imprimé tel quel en fond de page (logo, bandeaux, pied de page) et le devis s'écrit par-dessus, dans la zone libre. Idéal pour un papier à en-tête déjà prêt.</span>
+              </button>
+            </div>
+
+            <template x-if="imp?.mode === 'ai'">
+              <div>
+                <p class="small muted" x-show="aiOn === false" x-html="aiUnavailableHint()"></p>
+                <div class="modal-actions-inline" style="display:flex; gap:8px; margin-top:14px; align-items:center; flex-wrap:wrap" x-show="aiOn !== false">
+                  <button type="button" class="primary" @click="runAiImport()" :disabled="imp.busy"><span x-html="icon('sparkle')"></span>Lancer la reproduction</button>
+                  <span class="small muted">Compter 1 à 3 minutes.</span>
+                </div>
+                <div class="busy-line" x-show="imp?.busy" role="status"><span class="spinner"></span>L'IA analyse votre modèle et le recrée…<button type="button" class="small" @click="imp.ctl && imp.ctl.abort()">Arrêter</button></div>
+              </div>
+            </template>
+
+            <template x-if="imp?.mode === 'letterhead'">
+              <div>
+                <div class="grid grid-3" style="margin-top:14px">
+                  <div><label for="lh-top">Marge haute (mm)</label><input id="lh-top" type="number" min="0" max="200" x-model.number="imp.top" @input.debounce.300ms="letterheadPreview()"></div>
+                  <div><label for="lh-bottom">Marge basse (mm)</label><input id="lh-bottom" type="number" min="0" max="150" x-model.number="imp.bottom" @input.debounce.300ms="letterheadPreview()"></div>
+                  <div style="display:flex; align-items:flex-end"><label style="display:flex; gap:6px; align-items:center; font-weight:500; color:var(--text)"><input type="checkbox" x-model="imp.hideOwn" @change="letterheadPreview()"> Masquer mes coordonnées (déjà sur le papier)</label></div>
+                </div>
+                <p class="small muted">Basé sur le modèle « <span x-text="current ? current.name : ''"></span> ». Ajustez les marges pour que le texte ne chevauche pas l'en-tête ni le pied de page.</p>
+                <div class="compare">
+                  <figure><figcaption>Votre papier</figcaption><div class="orig"><img :src="imp?.image?.preview" alt="Papier à en-tête importé"></div></figure>
+                  <figure><figcaption>Résultat</figcaption><iframe id="lh-frame" title="Aperçu avec papier à en-tête" sandbox></iframe></figure>
+                </div>
+                <div class="actions">
+                  <button type="button" @click="closeImport()">Annuler</button>
+                  <button type="button" class="primary" @click="saveLetterhead()"><span x-html="icon('check')"></span>Créer le modèle</button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="imp?.result">
+          <div>
+            <div class="grid grid-2">
+              <div><label for="imp-name">Nom du modèle</label><input id="imp-name" x-model="imp.result.name"></div>
+            </div>
+            <p class="small" style="margin:10px 0 0; padding:10px 12px; border-radius:12px; background:var(--warn-bg); color:var(--warn)" x-show="imp?.result?.notes" x-text="'Remarque de l\'IA : ' + (imp?.result?.notes || '')"></p>
+            <div class="compare">
+              <figure><figcaption>Votre modèle</figcaption><div class="orig"><img :src="imp?.image?.preview" alt="Modèle d'origine"></div></figure>
+              <figure><figcaption>Reproduction (avec vos données)</figcaption><iframe id="ai-frame" title="Aperçu du modèle reproduit" sandbox></iframe></figure>
+            </div>
+            <div class="actions">
+              <button type="button" @click="imp.result = null">Réessayer</button>
+              <button type="button" @click="closeImport()">Annuler</button>
+              <button type="button" class="primary" @click="saveAiTemplate()"><span x-html="icon('check')"></span>Enregistrer ce modèle</button>
+            </div>
+          </div>
+        </template>
+
+        <div class="actions" x-show="!imp?.image || (!imp?.mode && !imp?.result)">
+          <button type="button" @click="closeImport()">Fermer</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</main>
+<script>
+function templatesPage() {
+  return {
+    templates: [], current: null, tab: 'html', docs: [], previewDoc: '', imp: {}, impOpen: false, aiOn: null,
+    async init() {
+      [this.templates, this.docs] = await Promise.all([api('/templates'), api('/documents')]);
+      const def = this.templates.find((t) => t.is_default) || this.templates[0];
+      if (def) this.open(def.id);
+    },
+    async open(id) {
+      this.current = await api('/templates/' + id);
+      this.current.is_default = !!this.current.is_default;
+      this.$nextTick(() => this.preview());
+    },
+    async renderPreview(html, css, background) {
+      const res = await fetch('/api/templates/preview', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html, css, background: background || '', document_id: this.previewDoc || null })
+      });
+      return res.text();
+    },
+    async preview() {
+      if (!this.current) return;
+      const seq = (this.previewSeq = (this.previewSeq || 0) + 1);
+      const html = await this.renderPreview(this.current.html, this.current.css, this.current.background);
+      // Un aperçu plus ancien qui finit après le dernier ne doit pas l'écraser
+      const frame = document.getElementById('tpl-frame');
+      if (seq === this.previewSeq && frame) frame.srcdoc = html;
+    },
+
+    // ----- Import d'un modèle existant -----
+    openImport() {
+      this.imp = { image: null, reading: false, over: false, mode: '', busy: false, ctl: null, result: null, top: 45, bottom: 25, hideOwn: true };
+      this.impOpen = true;
+      if (this.aiOn === null) aiAvailable().then((v) => { this.aiOn = v; });
+    },
+    closeImport() {
+      if (this.imp.ctl) this.imp.ctl.abort();
+      this.impOpen = false;
+    },
+    async readImport(file) {
+      if (!file) return;
+      if (!/^image\//.test(file.type) && !(file.type === 'application/pdf' || /\.pdf$/i.test(file.name))) {
+        toast('Choisissez une image (JPEG, PNG) ou un PDF.', 'error');
+        return;
+      }
+      this.imp.reading = true;
+      try {
+        this.imp.image = await documentToImage(file, 1800);
+        this.imp.mode = '';
+      } catch (e) {
+        toast('Impossible de lire ce fichier : ' + (e.message || 'format non reconnu'), 'error');
+      } finally {
+        this.imp.reading = false;
+      }
+    },
+    letterheadCss() {
+      const top = Math.max(0, Number(this.imp.top) || 0);
+      const bottom = Math.max(0, Number(this.imp.bottom) || 0);
+      return (this.current ? this.current.css || '' : '') + `
+
+/* --- Papier à en-tête (généré à l'import) --- */
+@page :first { size: A4; margin: 0; }
+@page { size: A4; margin: 14mm 0; }
+@media screen { .sheet { padding: 0 !important; } }
+.doc { box-sizing: border-box; min-height: 297mm; padding: ${top}mm 14mm ${bottom}mm; background: url({{{template.background}}}) top left / 100% auto no-repeat; -webkit-print-color-adjust: exact; print-color-adjust: exact; }` +
+        (this.imp.hideOwn ? '\n.doc .company, .doc .logo, .doc .company-name, .doc .doc-footer { visibility: hidden; }' : '');
+    },
+    async letterheadPreview() {
+      await this.$nextTick();
+      const frame = document.getElementById('lh-frame');
+      if (!this.impOpen || this.imp.mode !== 'letterhead' || !frame) return;
+      frame.srcdoc = await this.renderPreview(this.current ? this.current.html : '', this.letterheadCss(), this.imp.image.dataUrl);
+    },
+    async saveLetterhead() {
+      const name = (this.current ? this.current.name : 'Modèle') + ' — papier à en-tête';
+      const t = await api('/templates', { body: { name, html: this.current ? this.current.html : undefined, css: this.letterheadCss(), background: this.imp.image.dataUrl } });
+      this.impOpen = false;
+      this.templates = await api('/templates');
+      await this.open(t.id);
+      toast('Modèle créé : vérifiez l\'aperçu puis définissez-le par défaut si besoin');
+    },
+    async runAiImport() {
+      this.imp.busy = true;
+      this.imp.ctl = new AbortController();
+      try {
+        const r = await aiTemplate({ image: this.imp.image, signal: this.imp.ctl.signal });
+        if (!this.impOpen) return;
+        this.imp.result = r;
+        const html = await this.renderPreview(r.html, r.css, '');
+        await this.$nextTick();
+        const frame = document.getElementById('ai-frame');
+        if (frame) frame.srcdoc = html;
+      } catch (e) {
+        if (e && e.code !== 'cancelled' && !(e instanceof Error)) toast(e.message || "L'IA n'a pas pu reproduire ce modèle.", 'error');
+      } finally {
+        this.imp.busy = false;
+        this.imp.ctl = null;
+      }
+    },
+    async saveAiTemplate() {
+      const r = this.imp.result;
+      const t = await api('/templates', { body: { name: r.name || 'Mon modèle', html: r.html, css: r.css } });
+      this.impOpen = false;
+      this.templates = await api('/templates');
+      await this.open(t.id);
+      toast('Modèle enregistré : cochez « Modèle par défaut » pour l\'utiliser partout');
+    },
+    async save() {
+      const t = await api('/templates/' + this.current.id, { method: 'PUT', body: this.current });
+      this.templates = await api('/templates');
+      this.current = { ...t, is_default: !!t.is_default };
+      toast('Modèle enregistré');
+    },
+    async create() {
+      const t = await api('/templates', { body: { copy_of: this.current?.id } });
+      this.templates = await api('/templates');
+      this.open(t.id);
+    },
+    async remove() {
+      if (!(await uiConfirm(`Supprimer le modèle « ${this.current.name} » ?`))) return;
+      await api('/templates/' + this.current.id, { method: 'DELETE' });
+      this.templates = await api('/templates');
+      this.current = null;
+      if (this.templates[0]) this.open(this.templates[0].id);
+    },
+    async loadFile(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      let text = await f.text();
+      // Si un fichier HTML complet est chargé, extrait le <style> et le <body>
+      const style = [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+      const body = text.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+      if (body) text = body[1];
+      this.current.html = text.trim();
+      if (style) this.current.css = style.trim();
+      e.target.value = '';
+      this.preview();
+      toast('Fichier chargé : pensez à enregistrer');
+    }
+  };
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "fre2g-facturation-demo",
+  "private": true,
+  "description": "Construction de la démo en ligne (page autonome, base SQLite dans le navigateur)",
+  "scripts": { "build": "node build.js" },
+  "devDependencies": { "esbuild": "^0.24.0" }
+}
