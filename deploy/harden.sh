@@ -7,8 +7,24 @@ set -uo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "Lancez : sudo bash $0" >&2; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
 
-if ! command -v fail2ban-client >/dev/null || ! dpkg -s unattended-upgrades >/dev/null 2>&1; then
-  apt-get install -y -qq fail2ban unattended-upgrades >/dev/null 2>&1 || echo "Attention : fail2ban / unattended-upgrades non installés." >&2
+if ! command -v fail2ban-client >/dev/null || ! dpkg -s unattended-upgrades >/dev/null 2>&1 || ! command -v qpdf >/dev/null; then
+  # qpdf : découpe les gros catalogues PDF sans charger tout le fichier en mémoire
+  apt-get install -y -qq fail2ban unattended-upgrades qpdf >/dev/null 2>&1 || echo "Attention : fail2ban / unattended-upgrades / qpdf non installés." >&2
+fi
+
+# Mémoire du logiciel plafonnée (moitié de la mémoire du serveur) : en cas d'excès, il redémarre tout seul
+# au lieu de bloquer tout le serveur. Pris en compte au prochain redémarrage du service.
+TOTAL_MB="$(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo)"
+if [ -n "$TOTAL_MB" ] && [ "$TOTAL_MB" -gt 0 ]; then
+  mkdir -p /etc/systemd/system/facturation.service.d
+  cat > /etc/systemd/system/facturation.service.d/limites.conf <<LIM
+[Service]
+MemoryHigh=$((TOTAL_MB * 40 / 100))M
+MemoryMax=$((TOTAL_MB * 50 / 100))M
+Restart=always
+RestartSec=3
+LIM
+  systemctl daemon-reload 2>/dev/null || true
 fi
 if [ -d /etc/fail2ban ]; then
   mkdir -p /etc/fail2ban/jail.d

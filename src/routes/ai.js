@@ -4,7 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
-const { PDFDocument } = require('pdf-lib');
+const os = require('os');
+const { countPages, extractPages } = require('../export/pdfsplit');
 const Anthropic = require('@anthropic-ai/sdk');
 const { getSettings } = require('../db');
 const AiDraft = require('../../public/js/ai');
@@ -177,47 +178,67 @@ module.exports = function aiRoutes(db, options = {}) {
   // ---------- Import au catalogue : lecture d'un tarif / catalogue fournisseur par l'IA ----------
   // Rien n'est enregistré ici : l'utilisateur vérifie la liste puis lance l'import lui-même.
   // Gros catalogues (Daikin, Atlantic…) : le PDF est envoyé une fois, puis lu par paquets de pages.
-  const uploads = new Map(); // id -> { buf, doc, pages, name, at }
+  // Le PDF est écrit sur disque au fil de l'envoi (jamais chargé en entier en mémoire),
+  // puis découpé par paquets de pages avec qpdf, sans bloquer le logiciel.
+  const uploads = new Map(); // id -> { file, pages, at }
   const UPLOAD_TTL = 60 * 60 * 1000;
   const MAX_UPLOADS = 4;
+  const MAX_UPLOAD_BYTES = 80 * 1024 * 1024;
   const PAGES_PER_CALL = 10;
+  const UPLOAD_DIR = os.tmpdir();
+  const dropUpload = (id) => {
+    const u = uploads.get(id);
+    uploads.delete(id);
+    if (u) fs.rm(u.file, { force: true }, () => {});
+  };
   const purgeUploads = () => {
     const now = Date.now();
-    for (const [id, u] of uploads) if (now - u.at > UPLOAD_TTL) uploads.delete(id);
-    while (uploads.size >= MAX_UPLOADS) uploads.delete(uploads.keys().next().value);
+    for (const [id, u] of uploads) if (now - u.at > UPLOAD_TTL) dropUpload(id);
+    while (uploads.size >= MAX_UPLOADS) dropUpload(uploads.keys().next().value);
   };
+  // Fichiers laissés par un arrêt précédent du logiciel
+  try {
+    for (const f of fs.readdirSync(UPLOAD_DIR)) if (/^fre2g-(catalog|pages)-/.test(f)) fs.rm(path.join(UPLOAD_DIR, f), { force: true }, () => {});
+  } catch (e) { /* dossier temporaire illisible : sans conséquence */ }
 
-  r.post('/ai/catalog-upload', express.raw({ type: 'application/pdf', limit: '80mb' }), async (req, res, next) => {
+  function saveUpload(req, file) {
+    return new Promise((resolve, reject) => {
+      if (Number(req.headers['content-length']) > MAX_UPLOAD_BYTES) return reject(httpError(413, 'Le PDF dépasse 80 Mo : découpez-le en plusieurs fichiers.'));
+      const out = fs.createWriteStream(file, { mode: 0o600 });
+      let size = 0;
+      let head = Buffer.alloc(0);
+      const fail = (err) => { req.unpipe(out); out.destroy(); fs.rm(file, { force: true }, () => {}); reject(err); };
+      req.on('data', (chunk) => {
+        size += chunk.length;
+        if (head.length < 5) head = Buffer.concat([head, chunk]).subarray(0, 5);
+        if (size > MAX_UPLOAD_BYTES) { fail(httpError(413, 'Le PDF dépasse 80 Mo : découpez-le en plusieurs fichiers.')); req.resume(); }
+      });
+      req.on('error', fail);
+      out.on('error', fail);
+      out.on('finish', () => {
+        if (head.toString('latin1') !== '%PDF-') { fs.rm(file, { force: true }, () => {}); return reject(httpError(400, "Ce fichier n'est pas un PDF valide.")); }
+        resolve(size);
+      });
+      req.pipe(out);
+    });
+  }
+
+  r.post('/ai/catalog-upload', async (req, res, next) => {
     try {
       if (!apiKey()) throw httpError(503, "La lecture des PDF utilise l'assistant IA : ajoutez votre clé API Anthropic dans Paramètres.");
-      const buf = req.body;
-      if (!Buffer.isBuffer(buf) || buf.length < 5 || buf.subarray(0, 5).toString('latin1') !== '%PDF-') throw httpError(400, "Ce fichier n'est pas un PDF valide.");
-      let doc;
-      try {
-        doc = await PDFDocument.load(buf, { updateMetadata: false });
-      } catch (e) {
-        if (/encrypt/i.test(e.message)) {
-          throw httpError(422, 'Ce PDF est protégé par son éditeur. Ouvrez-le puis « Imprimer » → « Microsoft Print to PDF » (ou « Enregistrer au format PDF ») pour en faire une copie lisible, et importez cette copie.');
-        }
-        throw httpError(400, 'PDF illisible : ' + e.message.slice(0, 120));
-      }
+      if (!req.is('application/pdf')) throw httpError(415, 'Envoyez un fichier PDF.');
       purgeUploads();
       const id = crypto.randomBytes(12).toString('hex');
-      const pages = doc.getPageCount();
-      uploads.set(id, { buf, doc, pages, at: Date.now() });
-      res.status(201).json({ id, pages, size: buf.length, pages_per_call: PAGES_PER_CALL });
+      const file = path.join(UPLOAD_DIR, `fre2g-catalog-${id}.pdf`);
+      const size = await saveUpload(req, file);
+      let pages;
+      try { pages = await countPages(file); } catch (e) { fs.rm(file, { force: true }, () => {}); throw e; }
+      uploads.set(id, { file, pages, at: Date.now() });
+      res.status(201).json({ id, pages, size, pages_per_call: PAGES_PER_CALL });
     } catch (e) {
-      next(e.type === 'entity.too.large' ? httpError(413, 'Le PDF dépasse 80 Mo : découpez-le en plusieurs fichiers.') : e);
+      next(e);
     }
   });
-
-  async function pagesAsPdf(upload, from, to) {
-    const out = await PDFDocument.create();
-    const idx = [];
-    for (let i = from; i <= to; i++) idx.push(i - 1);
-    for (const page of await out.copyPages(upload.doc, idx)) out.addPage(page);
-    return Buffer.from(await out.save()).toString('base64');
-  }
 
   r.post('/ai/catalog-extract', async (req, res, next) => {
     try {
@@ -234,7 +255,7 @@ module.exports = function aiRoutes(db, options = {}) {
         const to = Math.min(upload.pages, Math.floor(Number(req.body.to) || from), from + PAGES_PER_CALL - 1);
         if (to < from) throw httpError(400, 'Pages invalides.');
         range = { from, to, total: upload.pages };
-        source = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: await pagesAsPdf(upload, from, to) } };
+        source = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: await extractPages(upload.file, from, to) } };
       } else if (f.kind === 'pdf' && typeof f.data === 'string' && /^[A-Za-z0-9+/=]+$/.test(f.data)) {
         if (f.data.length > 14 * 1024 * 1024) throw httpError(413, 'Le PDF dépasse 10 Mo : découpez-le en plusieurs fichiers.');
         source = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data } };
