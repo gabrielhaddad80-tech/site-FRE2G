@@ -80,9 +80,9 @@
       <h2>Numérotation & délais</h2>
       <p class="small muted">Jetons : <code>{AAAA}</code> année, <code>{AA}</code> année sur 2 chiffres, <code>{MM}</code> mois, <code>{NUM:4}</code> compteur sur 4 chiffres. Le compteur repart à 1 chaque année (ou chaque mois si <code>{MM}</code> est utilisé).</p>
       <div class="grid grid-3">
-        <div><label>Format des devis</label><input x-model="s.quote_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.quote_number_format)"></div></div>
-        <div><label>Format des factures</label><input x-model="s.invoice_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.invoice_number_format)"></div></div>
-        <div><label>Format des avoirs</label><input x-model="s.credit_number_format"><div class="small muted" x-text="'Ex. : ' + example(s.credit_number_format)"></div></div>
+        <div><label>Format des devis</label><input x-model="s.quote_number_format"><div class="small" :class="formatOk(s.quote_number_format) ? 'muted' : ''" :style="formatOk(s.quote_number_format) ? '' : 'color: var(--danger)'" x-text="formatHint(s.quote_number_format)"></div></div>
+        <div><label>Format des factures</label><input x-model="s.invoice_number_format"><div class="small" :class="formatOk(s.invoice_number_format) ? 'muted' : ''" :style="formatOk(s.invoice_number_format) ? '' : 'color: var(--danger)'" x-text="formatHint(s.invoice_number_format)"></div></div>
+        <div><label>Format des avoirs</label><input x-model="s.credit_number_format"><div class="small" :class="formatOk(s.credit_number_format) ? 'muted' : ''" :style="formatOk(s.credit_number_format) ? '' : 'color: var(--danger)'" x-text="formatHint(s.credit_number_format)"></div></div>
         <div><label>Validité des devis (jours)</label><input type="number" x-model="s.quote_validity_days"></div>
         <div><label>Délai de paiement des factures (jours)</label><input type="number" x-model="s.invoice_payment_days"></div>
       </div>
@@ -219,6 +219,13 @@ function settingsPage() {
       const d = todayIso();
       return (fmt || '').replace(/\{AAAA\}/g, d.slice(0, 4)).replace(/\{AA\}/g, d.slice(2, 4)).replace(/\{MM\}/g, d.slice(5, 7))
         .replace(/\{NUM(?::(\d+))?\}/g, (_, w) => '1'.padStart(w ? Number(w) : 1, '0'));
+    },
+    // Sans {NUM}, tous les documents porteraient le même numéro : format refusé à l'enregistrement
+    formatOk(fmt) {
+      return /\{NUM(?::\d+)?\}/.test(fmt || '');
+    },
+    formatHint(fmt) {
+      return this.formatOk(fmt) ? 'Ex. : ' + this.example(fmt) : 'Le format doit contenir {NUM}, sinon tous les documents auraient le même numéro.';
     },
     async save() {
       const body = { ...this.s };

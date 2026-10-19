@@ -3,7 +3,9 @@
 const express = require('express');
 const { getSettings, DEFAULT_SETTINGS } = require('../db');
 const { renderDocument, pageHtml, handlebars, DOC_CSP } = require('../render');
-const { peekNumber } = require('../numbering');
+const { peekNumber, isValidFormat, FORMAT_KEYS } = require('../numbering');
+
+const FORMAT_SETTING_KEYS = Object.values(FORMAT_KEYS);
 
 function localToday() {
   const d = new Date();
@@ -30,6 +32,13 @@ module.exports = function adminRoutes(db) {
   r.get('/settings', (req, res) => res.json(publicSettings()));
 
   r.put('/settings', (req, res) => {
+    // Un format de numérotation sans {NUM} donnerait toujours le même numéro : refusé avant enregistrement
+    for (const k of FORMAT_SETTING_KEYS) {
+      const v = (req.body || {})[k];
+      if (v !== undefined && !isValidFormat(v)) {
+        return res.status(400).json({ error: 'Le format de numérotation doit contenir {NUM} (par exemple DEV-{AAAA}-{NUM:4}).' });
+      }
+    }
     const up = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
     db.transaction(() => {
       for (const [k, v] of Object.entries(req.body || {})) {

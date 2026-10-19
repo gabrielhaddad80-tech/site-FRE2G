@@ -5,7 +5,7 @@ const assert = require('node:assert');
 const { openDatabase } = require('../src/db');
 const { createApp } = require('../server');
 const { computeTotals } = require('../public/js/calc');
-const { formatNumber } = require('../src/numbering');
+const { formatNumber, peekNumber } = require('../src/numbering');
 
 let server, base;
 
@@ -49,6 +49,17 @@ test('franchise de TVA : aucun montant de TVA', () => {
 test('format de numérotation', () => {
   assert.strictEqual(formatNumber('FAC-{AAAA}-{NUM:4}', '2026-03-05', 7), 'FAC-2026-0007');
   assert.strictEqual(formatNumber('F{AA}{MM}-{NUM}', '2026-03-05', 12), 'F2603-12');
+});
+
+test('format de numérotation sans {NUM} : refusé et sans blocage', async () => {
+  const refus = await call('/settings', 'PUT', { quote_number_format: 'DEV-261151' });
+  assert.strictEqual(refus.status, 400);
+
+  // Même enregistré de force, un format sans {NUM} ne doit pas faire tourner la recherche sans fin
+  const db = openDatabase(':memory:');
+  db.prepare("INSERT INTO settings (key, value) VALUES ('quote_number_format', 'DEV-261151') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+  db.prepare("INSERT INTO documents (type, number, date, status) VALUES ('devis', 'DEV-261151', '2026-03-05', 'emise')").run();
+  assert.strictEqual(peekNumber(db, 'devis', '2026-03-05'), 'DEVIS-0001');
 });
 
 test('cycle complet devis → facture → règlement → avoir', async () => {

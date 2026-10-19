@@ -9,6 +9,14 @@
 
 const FORMAT_KEYS = { devis: 'quote_number_format', facture: 'invoice_number_format', avoir: 'credit_number_format' };
 
+// Garde-fou : la recherche d'un numéro libre ne doit jamais tourner sans fin
+const MAX_TRIES = 100000;
+
+// Sans {NUM}, le format produit toujours le même numéro : la recherche ne finirait jamais
+function isValidFormat(format) {
+  return /\{NUM(?::\d+)?\}/.test(String(format || ''));
+}
+
 function scopeFor(format, date) {
   const y = date.slice(0, 4);
   const m = date.slice(5, 7);
@@ -25,18 +33,21 @@ function formatNumber(format, date, n) {
     .replace(/\{NUM(?::(\d+))?\}/g, (_, w) => String(n).padStart(w ? Number(w) : 1, '0'));
 }
 
+// Un format invalide enregistré par le passé est ignoré au profit du format par défaut
 function formatFor(db, type) {
-  return db.prepare('SELECT value FROM settings WHERE key = ?').get(FORMAT_KEYS[type])?.value || `${type.toUpperCase()}-{NUM:4}`;
+  const stored = db.prepare('SELECT value FROM settings WHERE key = ?').get(FORMAT_KEYS[type])?.value;
+  return isValidFormat(stored) ? stored : `${type.toUpperCase()}-{NUM:4}`;
 }
 
 // Numéro qui sera attribué au prochain document, sans consommer le compteur.
 function peekNumber(db, type, date) {
   const format = formatFor(db, type);
   let n = db.prepare('SELECT value FROM counters WHERE type = ? AND scope = ?').get(type, scopeFor(format, date))?.value || 0;
-  for (;;) {
+  for (let tries = 0; tries < MAX_TRIES; tries++) {
     const number = formatNumber(format, date, ++n);
     if (!db.prepare('SELECT 1 FROM documents WHERE number = ?').get(number)) return number;
   }
+  throw new Error(`Aucun numéro libre trouvé pour le format « ${format} » : vérifiez la numérotation dans Paramètres.`);
 }
 
 // À appeler dans une transaction.
@@ -45,12 +56,13 @@ function nextNumber(db, type, date) {
   const scope = scopeFor(format, date);
   db.prepare('INSERT OR IGNORE INTO counters (type, scope, value) VALUES (?, ?, 0)').run(type, scope);
   // Saute les numéros déjà utilisés (ex. import d'anciens documents)
-  for (;;) {
+  for (let tries = 0; tries < MAX_TRIES; tries++) {
     db.prepare('UPDATE counters SET value = value + 1 WHERE type = ? AND scope = ?').run(type, scope);
     const n = db.prepare('SELECT value FROM counters WHERE type = ? AND scope = ?').get(type, scope).value;
     const number = formatNumber(format, date, n);
     if (!db.prepare('SELECT 1 FROM documents WHERE number = ?').get(number)) return number;
   }
+  throw new Error(`Aucun numéro libre trouvé pour le format « ${format} » : vérifiez la numérotation dans Paramètres.`);
 }
 
-module.exports = { nextNumber, peekNumber, formatNumber, scopeFor };
+module.exports = { nextNumber, peekNumber, formatNumber, scopeFor, isValidFormat, FORMAT_KEYS };
