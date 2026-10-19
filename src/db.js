@@ -212,13 +212,16 @@ function initData(db) {
   const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) insertSetting.run(k, v);
 
+  // Le modèle fourni n'est installé qu'une seule fois : une fois supprimé, il ne revient pas
+  const tplSeeded = db.prepare("SELECT value FROM settings WHERE key = 'default_template_seeded'").get()?.value;
   const tplCount = db.prepare('SELECT COUNT(*) AS n FROM templates').get().n;
-  if (tplCount === 0) {
+  if (tplCount === 0 && !tplSeeded) {
     const tplDir = path.join(__dirname, '..', 'templates');
     const html = fs.readFileSync(path.join(tplDir, 'classique.hbs'), 'utf8');
     const css = fs.readFileSync(path.join(tplDir, 'classique.css'), 'utf8');
     db.prepare('INSERT INTO templates (name, html, css, is_default) VALUES (?, ?, ?, 1)').run('Modèle classique', html, css);
   }
+  db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('default_template_seeded', '1')").run();
 
   const itemCount = db.prepare('SELECT COUNT(*) AS n FROM items').get().n;
   if (itemCount === 0 && process.env.NO_SEED !== '1') seedExamples(db);

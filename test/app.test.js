@@ -62,6 +62,23 @@ test('format de numérotation sans {NUM} : refusé et sans blocage', async () =>
   assert.strictEqual(peekNumber(db, 'devis', '2026-03-05'), 'DEVIS-0001');
 });
 
+test('modèle fourni : une fois supprimé, il ne revient pas au redémarrage', () => {
+  const fs = require('node:fs');
+  const file = require('node:path').join(require('node:os').tmpdir(), `facturation-test-${process.pid}-${Date.now()}.db`);
+  try {
+    const first = openDatabase(file);
+    assert.strictEqual(first.prepare('SELECT COUNT(*) AS n FROM templates').get().n, 1);
+    first.prepare('DELETE FROM templates').run();
+    first.close();
+
+    const second = openDatabase(file); // équivaut à un redémarrage du logiciel
+    assert.strictEqual(second.prepare('SELECT COUNT(*) AS n FROM templates').get().n, 0);
+    second.close();
+  } finally {
+    for (const f of [file, `${file}-wal`, `${file}-shm`]) fs.rmSync(f, { force: true });
+  }
+});
+
 test('cycle complet devis → facture → règlement → avoir', async () => {
   const client = (await call('/clients', 'POST', { company: 'ACME', city: 'Lyon' })).body;
   assert.match(client.code, /^CL\d{4}$/);

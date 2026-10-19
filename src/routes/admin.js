@@ -93,7 +93,7 @@ module.exports = function adminRoutes(db) {
   });
   r.delete('/templates/:id', (req, res) => {
     const n = db.prepare('SELECT COUNT(*) AS n FROM templates').get().n;
-    if (n <= 1) return res.status(409).json({ error: 'Il faut conserver au moins un modèle.' });
+    if (n <= 1) return res.status(409).json({ error: 'Importez d\'abord votre modèle : le logiciel doit toujours en conserver un.' });
     const t = db.prepare('SELECT * FROM templates WHERE id = ?').get(req.params.id);
     db.transaction(() => {
       db.prepare('DELETE FROM templates WHERE id = ?').run(req.params.id);
