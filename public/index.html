@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accueil — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/chat.js"></script>
+<script defer src="vendor/alpine.js"></script>
+<style>
+.home { max-width: 1240px; background: radial-gradient(900px 420px at 0% 0%, var(--glow-1), transparent 70%), radial-gradient(700px 380px at 70% 0%, var(--glow-2), transparent 70%); background-repeat: no-repeat; }
+.top { display: flex; align-items: center; gap: 10px; margin-bottom: 26px; }
+.brandmark { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; min-width: 0; }
+.brandmark .logo { width: 32px; height: 32px; border-radius: 10px; background: var(--accent); color: #fff; display: grid; place-items: center; font-style: italic; flex-shrink: 0; }
+.brandmark span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top .spacer { flex: 1; }
+.top .avatar { width: 40px; height: 40px; font-size: 13px; text-decoration: none; }
+
+.finder { position: relative; margin: -8px 0 22px; }
+.finder-results { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 30; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 16px 40px var(--shadow); max-height: 400px; overflow-y: auto; padding: 8px; }
+.finder-results h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 10px 10px 4px; }
+.finder-results a { display: flex; justify-content: space-between; gap: 12px; padding: 9px 10px; border-radius: 12px; color: var(--text); text-decoration: none; }
+.finder-results a:hover, .finder-results a:focus-visible { background: var(--hover); outline: none; }
+.finder-results .r-side { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.finder-results .r-none { padding: 10px; color: var(--muted); margin: 0; }
+
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; align-items: start; }
+.col-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; min-width: 0; }
+.hello-date { margin: 0 0 6px; color: var(--muted); font-weight: 500; }
+.hello { margin: 0; font-size: clamp(30px, 4.2vw, 46px); line-height: 1.08; letter-spacing: -0.03em; font-weight: 700; }
+.hello em { display: block; font-weight: 400; color: var(--accent); }
+
+.insight { position: relative; display: flex; align-items: center; gap: 16px; padding: 20px 22px; border-radius: 24px; text-decoration: none; color: var(--text); background: linear-gradient(135deg, var(--surface) 0%, var(--glow-1) 100%); border: 1px solid var(--border-soft); box-shadow: 0 1px 2px var(--shadow); overflow: hidden; }
+.insight .ins-body { flex: 1; min-width: 0; }
+.insight .ins-title { margin: 0 0 6px; font-weight: 700; font-size: 16px; }
+.insight .ins-text { margin: 0; color: var(--muted); line-height: 1.5; max-width: 52ch; }
+.insight .ins-cta { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; font-weight: 700; color: var(--primary); font-size: 13px; }
+.insight.danger .ins-cta { color: var(--danger); }
+.insight .bulb { width: 92px; height: 92px; flex-shrink: 0; }
+.insight:hover { border-color: var(--primary-light); }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stat { min-width: 0; grid-template-columns: minmax(0, 1fr); background: var(--surface); border: 1px solid var(--border-soft); border-radius: 20px; padding: 14px 16px; box-shadow: 0 1px 2px var(--shadow); text-decoration: none; color: var(--text); display: grid; gap: 8px; }
+.stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stat .tile-ic { width: 32px; height: 32px; border-radius: 10px; }
+.stat .n { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.stat .l { font-weight: 700; font-size: 14px; }
+.stat .s { color: var(--muted); font-size: 12px; margin-top: -6px; }
+.stat:hover { border-color: var(--primary-light); }
+
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.sec-head h2 { margin: 0; font-size: 17px; }
+.sec-head a { font-size: 13px; font-weight: 600; text-decoration: none; }
+.qa-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.qa { position: relative; display: grid; gap: 22px; padding: 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border-soft); box-shadow: 0 1px 2px var(--shadow); text-decoration: none; color: var(--text); font-weight: 600; }
+.qa-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.qa .go { color: var(--muted); transition: transform .15s ease, color .15s ease; }
+.qa:hover .go { transform: translate(2px, -2px); color: var(--primary); }
+.qa:hover { border-color: var(--primary-light); }
+
+.rub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.rub { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border-soft); box-shadow: 0 1px 2px var(--shadow); text-decoration: none; color: var(--text); min-width: 0; }
+.rub .t { font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rub .c { color: var(--muted); font-size: 12px; display: block; }
+.rub .txt { flex: 1; min-width: 0; }
+.rub .go { color: var(--muted); }
+.rub:hover { border-color: var(--primary-light); }
+.rub:hover .go { color: var(--primary); }
+
+.col-side { min-width: 0; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 24px; padding: 20px; box-shadow: 0 1px 2px var(--shadow); position: sticky; top: 20px; }
+.act { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.act a { display: flex; gap: 12px; align-items: center; padding: 10px; margin: 0 -10px; border-radius: 16px; text-decoration: none; color: var(--text); }
+.act a:hover { background: var(--hover); }
+.act .tile-ic { width: 36px; height: 36px; }
+.act .txt { flex: 1; min-width: 0; }
+.act .t { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act .s { color: var(--muted); font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act .amt { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.side-total { margin-top: 16px; padding: 16px; border-radius: 18px; background: var(--ink); color: var(--on-ink); display: flex; justify-content: space-between; align-items: center; gap: 10px; text-decoration: none; }
+.side-total small { display: block; opacity: .7; font-size: 12px; }
+.side-total strong { font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+@media (max-width: 1100px) {
+  .home-grid { grid-template-columns: minmax(0, 1fr); }
+  .col-side { position: static; }
+  .qa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .home { background: radial-gradient(500px 300px at 0% 0%, var(--glow-1), transparent 70%), radial-gradient(400px 260px at 100% 0%, var(--glow-2), transparent 70%); background-repeat: no-repeat; }
+  .top { margin-bottom: 20px; }
+  .insight { padding: 16px; }
+  .insight .bulb { width: 70px; height: 70px; }
+  .stats { gap: 8px; }
+  .stat { padding: 12px; border-radius: 18px; }
+  .stat .n { font-size: 22px; }
+  .stat .l { font-size: 13px; }
+  .rub-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .rub { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 18px; }
+  .rub .t { white-space: normal; font-size: 13px; line-height: 1.25; }
+  .rub .go { display: none; }
+  .qa { gap: 16px; padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .qa .go { transition: none; } }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main class="home" x-data="home()" x-cloak>
+  <div class="top">
+    <a class="brandmark" href="index.html"><span class="logo">F</span><span x-text="d ? d.company.name : 'Facturation'"></span></a>
+    <span class="spacer"></span>
+    <button type="button" class="icon-btn" aria-label="Rechercher" @click="searchOpen = !searchOpen; $nextTick(() => searchOpen && $refs.q.focus())" x-html="icon('search')"></button>
+    <a class="icon-btn" href="documents.html?type=facture&amp;status=emise" :aria-label="d && d.counts.invoices_overdue ? d.counts.invoices_overdue + ' facture(s) en retard' : 'Factures à encaisser'">
+      <span x-html="icon('bell')"></span><span class="dot" x-show="d && d.counts.invoices_overdue"></span>
+    </a>
+    <a class="avatar" href="parametres.html" :style="avatarStyle(d ? d.company.name : '')" x-text="initials(d ? d.company.name : '')" aria-label="Paramètres de l'entreprise"></a>
+  </div>
+
+  <div class="finder" x-show="searchOpen" @click.outside="results = null" @keydown.escape="results = null; searchOpen = false">
+    <div class="search-pill">
+      <span x-html="icon('search')"></span>
+      <input id="home-search" x-ref="q" type="search" x-model="q" @input.debounce.200ms="search()" @keydown.enter.prevent="openFirst()"
+             placeholder="Rechercher un client, un devis, un article…" autocomplete="off" aria-label="Rechercher">
+    </div>
+    <div class="finder-results" x-show="results">
+      <template x-if="results">
+        <div>
+          <template x-if="results.docs.length"><h3>Devis, factures, avoirs</h3></template>
+          <template x-for="r in results.docs" :key="'d' + r.id">
+            <a :href="'document.html?id=' + r.id"><span x-text="LABELS.type[r.type] + ' ' + (r.number || '(brouillon)') + ' · ' + (r.client_name || '')"></span><span class="r-side" x-text="money(r.total_ttc)"></span></a>
+          </template>
+          <template x-if="results.clients.length"><h3>Clients</h3></template>
+          <template x-for="r in results.clients" :key="'c' + r.id">
+            <a :href="'clients.html?id=' + r.id"><span x-text="clientName(r)"></span><span class="r-side" x-text="r.city || ''"></span></a>
+          </template>
+          <template x-if="results.items.length"><h3>Catalogue</h3></template>
+          <template x-for="r in results.items" :key="'i' + r.id">
+            <a :href="'catalogue.html?id=' + r.id"><span x-text="(r.reference ? r.reference + ' · ' : '') + r.designation"></span><span class="r-side" x-text="money(r.sale_price) + ' / ' + r.unit"></span></a>
+          </template>
+          <p class="r-none" x-show="!results.docs.length && !results.clients.length && !results.items.length" x-text="'Aucun résultat pour « ' + q + ' ».'"></p>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <div class="home-grid">
+    <div class="col-main">
+      <div>
+        <p class="hello-date" x-text="greeting + ' · ' + dateLabel"></p>
+        <h1 class="hello">Prêt à<em>conclure vos chantiers</em></h1>
+      </div>
+
+      <a class="insight" :class="d && d.insight.tone" :href="d ? d.insight.href : 'document.html?new=devis'">
+        <div class="ins-body">
+          <p class="ins-title" x-text="d ? d.insight.title : 'Conseil du jour'"></p>
+          <p class="ins-text" x-text="d ? d.insight.text : 'Chargement…'"></p>
+          <span class="ins-cta">Y aller <span x-html="icon('arrow')"></span></span>
+        </div>
+        <svg class="bulb" viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <radialGradient id="glow" cx="50%" cy="42%" r="50%"><stop offset="0" stop-color="#9cc6f7" stop-opacity=".85"/><stop offset="1" stop-color="#9cc6f7" stop-opacity="0"/></radialGradient>
+            <radialGradient id="glass" cx="40%" cy="32%" r="70%"><stop offset="0" stop-color="#f4f9ff"/><stop offset=".45" stop-color="#7fb4f5"/><stop offset="1" stop-color="#1d6fe0"/></radialGradient>
+            <linearGradient id="base" x1="0" x2="1"><stop offset="0" stop-color="#9aa0b4"/><stop offset=".5" stop-color="#e9ebf2"/><stop offset="1" stop-color="#7c8398"/></linearGradient>
+          </defs>
+          <circle cx="50" cy="42" r="46" fill="url(#glow)"/>
+          <g stroke="#5b9cf0" stroke-width="3" stroke-linecap="round"><path d="M50 4v8M18 16l6 6M82 16l-6 6M8 44h8M84 44h8"/></g>
+          <path d="M50 18a24 24 0 0 0-14 43.5c2.5 2 4 4.5 4 7.5v3h20v-3c0-3 1.5-5.5 4-7.5A24 24 0 0 0 50 18z" fill="url(#glass)"/>
+          <ellipse cx="42" cy="32" rx="6" ry="9" fill="#fff" opacity=".55" transform="rotate(-25 42 32)"/>
+          <rect x="39" y="72" width="22" height="6" rx="2" fill="url(#base)"/>
+          <rect x="40" y="79" width="20" height="5" rx="2" fill="url(#base)"/>
+          <rect x="44" y="85" width="12" height="5" rx="2.5" fill="#5f667c"/>
+        </svg>
+      </a>
+
+      <div class="stats">
+        <a class="stat" href="documents.html?type=devis&amp;status=envoye">
+          <div class="stat-top"><span class="tile-ic" x-html="icon('quote')"></span><span class="n" x-text="d ? d.counts.quotes_waiting : '–'"></span></div>
+          <span class="l">Devis</span><span class="s">En attente de réponse</span>
+        </a>
+        <a class="stat" href="documents.html?type=facture&amp;status=emise">
+          <div class="stat-top"><span class="tile-ic violet" x-html="icon('invoice')"></span><span class="n" x-text="d ? d.counts.invoices_open : '–'"></span></div>
+          <span class="l">Factures</span><span class="s" x-text="d ? money(d.receivable) + ' à encaisser' : 'À encaisser'"></span>
+        </a>
+        <a class="stat" href="documents.html?type=facture&amp;status=emise">
+          <div class="stat-top"><span class="tile-ic pink" x-html="icon('bell')"></span><span class="n" x-text="d ? d.counts.invoices_overdue : '–'"></span></div>
+          <span class="l">Relances</span><span class="s">Factures en retard</span>
+        </a>
+      </div>
+
+      <section>
+        <div class="sec-head"><h2>Actions rapides</h2></div>
+        <div class="qa-grid">
+          <a class="qa" href="document.html?new=devis"><div class="qa-top"><span class="tile-ic" x-html="icon('plus')"></span><span class="go" x-html="icon('arrow')"></span></div>Nouveau devis</a>
+          <a class="qa" href="document.html?new=facture"><div class="qa-top"><span class="tile-ic violet" x-html="icon('invoice')"></span><span class="go" x-html="icon('arrow')"></span></div>Nouvelle facture</a>
+          <a class="qa" href="clients.html?new=1"><div class="qa-top"><span class="tile-ic green" x-html="icon('user')"></span><span class="go" x-html="icon('arrow')"></span></div>Ajouter un client</a>
+          <a class="qa" href="catalogue.html?new=1"><div class="qa-top"><span class="tile-ic pink" x-html="icon('box')"></span><span class="go" x-html="icon('arrow')"></span></div>Ajouter un article</a>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head"><h2>Toutes les rubriques</h2></div>
+        <div class="rub-grid">
+          <template x-for="r in rubriques" :key="r.href">
+            <a class="rub" :href="r.href">
+              <span class="tile-ic" :class="r.tone" x-html="icon(r.icon)"></span>
+              <span class="txt"><span class="t" x-text="r.title"></span><span class="c" x-text="r.count()"></span></span>
+              <span class="go" x-html="icon('arrow')"></span>
+            </a>
+          </template>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col-side" aria-labelledby="act-title">
+      <div class="sec-head"><h2 id="act-title">Activité récente</h2><a href="tableau-de-bord.html">Tout voir</a></div>
+      <ul class="act">
+        <template x-for="(a, i) in (d ? d.activity : [])" :key="i">
+          <li><a :href="a.href">
+            <span class="tile-ic" :class="{ facture: 'violet', avoir: 'pink', payment: 'green', devis: '' }[a.kind]" x-html="icon({ devis: 'quote', facture: 'invoice', avoir: 'credit', payment: 'check' }[a.kind])"></span>
+            <span class="txt"><span class="t" x-text="a.text"></span><span class="s" x-text="(a.sub ? a.sub + ' · ' : '') + relDate(a.at)"></span></span>
+            <span class="amt" x-text="money(a.amount)"></span>
+          </a></li>
+        </template>
+      </ul>
+      <p class="muted" x-show="d && !d.activity.length">Aucune activité pour l'instant.</p>
+      <a class="side-total" href="tableau-de-bord.html">
+        <span><small>Reste à encaisser</small><strong x-text="d ? money(d.receivable) : '–'"></strong></span>
+        <span x-html="icon('arrow')"></span>
+      </a>
+    </aside>
+  </div>
+</main>
+<script>
+function home() {
+  const now = new Date();
+  const label = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+  return {
+    d: null, q: '', results: null, searchOpen: false,
+    dateLabel: label,
+    greeting: now.getHours() >= 18 ? 'Bonsoir' : 'Bonjour',
+    get rubriques() {
+      const c = this.d ? this.d.counts : null;
+      const n = (v, one, many) => (c ? `${v} ${v > 1 ? many : one}` : '–');
+      return [
+        { href: 'documents.html?type=devis', title: 'Devis', icon: 'quote', tone: '', count: () => n(c && c.quotes, 'devis', 'devis') },
+        { href: 'documents.html?type=facture', title: 'Factures', icon: 'invoice', tone: 'violet', count: () => n(c && c.invoices, 'émise', 'émises') },
+        { href: 'documents.html?type=avoir', title: 'Avoirs', icon: 'credit', tone: 'pink', count: () => n(c && c.credits, 'avoir', 'avoirs') },
+        { href: 'clients.html', title: 'Clients', icon: 'users', tone: 'green', count: () => n(c && c.clients, 'fiche', 'fiches') },
+        { href: 'catalogue.html', title: 'Catalogue & tarifs', icon: 'box', tone: 'amber', count: () => n(c && c.items, 'article', 'articles') },
+        { href: 'catalogue.html?tab=categories', title: 'Catégories', icon: 'tag', tone: '', count: () => n(c && c.categories, 'catégorie', 'catégories') },
+        { href: 'tableau-de-bord.html', title: 'Tableau de bord', icon: 'chart', tone: 'violet', count: () => 'Exercice ' + now.getFullYear() },
+        { href: 'modeles.html', title: 'Modèles', icon: 'layout', tone: 'pink', count: () => n(c && c.templates, 'modèle', 'modèles') },
+        { href: 'parametres.html', title: 'Paramètres', icon: 'settings', tone: 'green', count: () => (this.d ? (this.d.company_missing.length ? this.d.company_missing.length + ' info(s) à compléter' : 'Fiche complète') : '–') }
+      ];
+    },
+    async init() { this.d = await api('/home'); },
+    async search() {
+      const q = this.q.trim();
+      if (q.length < 2) { this.results = null; return; }
+      const enc = encodeURIComponent(q);
+      const [docs, clients, items] = await Promise.all([api('/documents?q=' + enc), api('/clients?q=' + enc), api('/items?limit=5&q=' + enc)]);
+      if (q !== this.q.trim()) return;
+      this.results = { docs: docs.slice(0, 6), clients: clients.slice(0, 5), items };
+    },
+    openFirst() {
+      const link = this.$root.querySelector('.finder-results a');
+      if (link) link.click();
+    }
+  };
+}
+</script>
+</body>
+</html>

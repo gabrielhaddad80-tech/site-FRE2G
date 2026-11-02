@@ -1,0 +1,15 @@
+/* Police hébergée localement : Plus Jakarta Sans (licence SIL OFL 1.1, voir public/fonts/) */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(../fonts/jakarta-latin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(../fonts/jakarta-latin-italic.woff2) format('woff2');
+}

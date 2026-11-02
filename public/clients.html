@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clients — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/chat.js"></script>
+<script defer src="vendor/alpine.js"></script>
+<style>
+.page-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.page-head h1 { flex: 1; margin: 0; text-align: center; font-size: 20px; }
+.pills { margin: 16px 0 4px; }
+.leads { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+.lead { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; border-radius: 22px; background: var(--surface); border: 1px solid var(--border-soft); box-shadow: 0 1px 2px var(--shadow); color: var(--text); text-decoration: none; min-width: 0; }
+.lead:hover { border-color: var(--primary-light); }
+.lead-top { display: flex; align-items: center; gap: 12px; }
+.lead-id { flex: 1; min-width: 0; }
+.lead-id strong { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead-id small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.go-circle { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--border); color: var(--muted); flex-shrink: 0; }
+.lead:hover .go-circle { color: var(--primary); border-color: var(--primary); }
+.lead-meta { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px 12px; color: var(--muted); font-size: 12.5px; }
+.lead-meta > span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lead-meta svg.i { width: 15px; height: 15px; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.amount { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* Fiche client */
+.detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.detail > * { min-width: 0; }
+.profile { grid-column: 1 / -1; display: flex; align-items: center; gap: 24px; padding: 24px; border-radius: 28px; background: linear-gradient(135deg, var(--glow-1), var(--glow-2)); border: 1px solid var(--border-soft); }
+.profile .big-avatar { width: 128px; height: 128px; border-radius: 36px; font-size: 42px; font-weight: 800; letter-spacing: -0.04em; }
+.profile .who { flex: 1; min-width: 0; }
+.profile h2 { margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.profile .sub { color: var(--muted); margin: 4px 0 14px; }
+.profile .big-amount { font-size: clamp(24px, 3.2vw, 34px); font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.profile .big-amount small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.round-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.round { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; text-decoration: none; border: 0; }
+.round.blue { background: #1d6fe0; } .round.green { background: #0f2747; } .round.dark { background: var(--ink); color: var(--on-ink); }
+.round svg.i { width: 20px; height: 20px; }
+.panel, .notes { min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 24px; padding: 18px; box-shadow: 0 1px 2px var(--shadow); }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+.panel-head h3 { margin: 0; font-size: 16px; }
+.info-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border-soft); border-radius: 16px; margin-top: 8px; }
+.info-row .tile-ic { width: 34px; height: 34px; border-radius: 10px; background: var(--surface-2); color: var(--muted); }
+.info-row .v { font-weight: 600; overflow-wrap: anywhere; }
+.info-row .k { display: block; color: var(--muted); font-size: 12px; }
+.notes { background: var(--primary-light); border: 1px solid var(--primary-light); border-radius: 20px; padding: 16px; }
+.notes .panel-head { margin-bottom: 8px; }
+.notes p { margin: 0; color: var(--muted); line-height: 1.55; white-space: pre-line; }
+.notes .edit { width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: var(--on-primary); border: 0; padding: 0; justify-content: center; }
+.notes .edit svg.i { width: 15px; height: 15px; }
+.act { list-style: none; margin: 0; padding: 0; }
+.act a { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border-soft); border-radius: 16px; margin-top: 8px; color: var(--text); text-decoration: none; }
+.act a:hover { border-color: var(--primary-light); }
+.act .txt { flex: 1; min-width: 0; }
+.act .t { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act .s { display: block; color: var(--muted); font-size: 12px; }
+.act .amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.act .tile-ic { width: 34px; height: 34px; border-radius: 10px; }
+@media (max-width: 900px) {
+  .detail { grid-template-columns: minmax(0, 1fr); }
+  .profile { flex-direction: column; align-items: flex-start; gap: 16px; padding: 20px; }
+  .profile .big-avatar { width: 96px; height: 96px; border-radius: 28px; font-size: 32px; }
+}
+@media (max-width: 760px) { .leads { grid-template-columns: minmax(0, 1fr); } .page-head .btn span:last-child { display: none; } .page-head .btn { width: 40px; height: 40px; padding: 0; justify-content: center; } }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="clientsPage()" x-cloak>
+  <!-- Liste -->
+  <template x-if="!detail">
+    <div>
+      <div class="page-head">
+        <a class="icon-btn" href="index.html" aria-label="Retour à l'accueil" x-html="icon('back')"></a>
+        <h1>Clients</h1>
+        <button class="primary" type="button" @click="edit({ kind: 'professionnel', country: 'France' })"><span x-html="icon('plus')"></span><span>Nouveau client</span></button>
+      </div>
+      <div class="search-pill">
+        <span x-html="icon('search')"></span>
+        <input type="search" x-model="q" @input.debounce.300ms="load()" placeholder="Rechercher un client (nom, ville, e-mail)…" aria-label="Rechercher un client">
+      </div>
+      <div class="pills">
+        <button type="button" :class="!kind && 'active'" @click="kind = ''">Tous</button>
+        <button type="button" :class="kind === 'professionnel' && 'active'" @click="kind = 'professionnel'">Professionnels</button>
+        <button type="button" :class="kind === 'particulier' && 'active'" @click="kind = 'particulier'">Particuliers</button>
+      </div>
+      <div class="leads">
+        <template x-for="c in filtered" :key="c.id">
+          <a class="lead" :href="'clients.html?id=' + c.id">
+            <div class="lead-top">
+              <span class="avatar" :style="avatarStyle(clientName(c))" x-text="initials(clientName(c))"></span>
+              <span class="lead-id"><strong x-text="clientName(c)"></strong><small x-text="[c.code, c.company ? [c.first_name, c.last_name].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ')"></small></span>
+              <span class="go-circle" x-html="icon('arrow')"></span>
+            </div>
+            <div class="lead-meta">
+              <span><span x-html="icon('mail')"></span><span class="ellipsis" x-text="c.email || '—'"></span></span>
+              <span><span x-html="icon('pin')"></span><span class="ellipsis" x-text="c.city || '—'"></span></span>
+              <span><span x-html="icon('phone')"></span><span x-text="c.phone || '—'"></span></span>
+              <span><span x-html="icon('quote')"></span><span x-text="c.documents_count + ' document(s)'"></span></span>
+            </div>
+            <div class="lead-foot">
+              <span class="badge" :class="c.kind === 'particulier' ? 'envoye' : 'accepte'" x-text="c.kind === 'particulier' ? 'Particulier' : 'Professionnel'"></span>
+              <strong class="amount" x-text="money(c.invoiced)"></strong>
+            </div>
+          </a>
+        </template>
+      </div>
+      <div class="empty" x-show="!filtered.length">Aucun client.</div>
+    </div>
+  </template>
+
+  <!-- Fiche -->
+  <template x-if="detail">
+    <div>
+      <div class="page-head">
+        <a class="icon-btn" href="clients.html" aria-label="Retour aux clients" x-html="icon('back')"></a>
+        <h1>Fiche client</h1>
+        <button type="button" class="icon-btn" aria-label="Modifier le client" @click="edit(detail)" x-html="icon('edit')"></button>
+      </div>
+      <div class="detail">
+        <section class="profile">
+          <span class="avatar big-avatar" :style="avatarStyle(clientName(detail))" x-text="initials(clientName(detail))"></span>
+          <div class="who">
+            <h2 x-text="clientName(detail)"></h2>
+            <p class="sub" x-text="[detail.company ? [detail.civility, detail.first_name, detail.last_name].filter(Boolean).join(' ') : (detail.kind === 'particulier' ? 'Particulier' : ''), detail.city, detail.code].filter(Boolean).join(' · ')"></p>
+            <div class="big-amount"><small>Chiffre d'affaires facturé (TTC)</small><span x-text="money(stats.invoiced)"></span></div>
+            <div class="round-actions">
+              <a class="round blue" x-show="detail.phone" :href="'tel:' + (detail.phone || '').replace(/\s/g, '')" :aria-label="'Appeler ' + detail.phone" x-html="icon('phone')"></a>
+              <a class="round green" x-show="detail.email" :href="'mailto:' + detail.email" :aria-label="'Écrire à ' + detail.email" x-html="icon('mail')"></a>
+              <a class="round dark" :href="'document.html?new=devis&client_id=' + detail.id" aria-label="Nouveau devis pour ce client" x-html="icon('plus')"></a>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h3>Informations de contact</h3><span class="badge" :class="stats.open ? 'partielle' : 'accepte'" x-text="stats.open ? stats.open + ' facture(s) à régler' : 'À jour'"></span></div>
+          <div class="info-row"><span class="tile-ic" x-html="icon('mail')"></span><span><span class="v" x-text="detail.email || 'Non renseigné'"></span><span class="k">E-mail</span></span></div>
+          <div class="info-row"><span class="tile-ic" x-html="icon('phone')"></span><span><span class="v" x-text="detail.phone || 'Non renseigné'"></span><span class="k">Téléphone</span></span></div>
+          <div class="info-row"><span class="tile-ic" x-html="icon('pin')"></span><span><span class="v" x-text="[detail.address, [detail.postal_code, detail.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'Non renseignée'"></span><span class="k">Adresse</span></span></div>
+          <div class="info-row"><span class="tile-ic" x-html="icon('clock')"></span><span><span class="v" x-text="history.length ? relDate(history[0].date) : 'Aucun document'"></span><span class="k">Dernier document</span></span></div>
+          <div class="info-row" x-show="detail.siret || detail.vat_number"><span class="tile-ic" x-html="icon('building')"></span><span><span class="v" x-text="[detail.siret, detail.vat_number].filter(Boolean).join(' · ')"></span><span class="k">SIRET · TVA</span></span></div>
+        </section>
+
+        <div style="display:grid; grid-template-columns:minmax(0, 1fr); gap:16px; min-width:0">
+          <section class="notes">
+            <div class="panel-head"><h3>Notes</h3><button type="button" class="edit" aria-label="Modifier les notes" @click="edit(detail)" x-html="icon('edit')"></button></div>
+            <p x-text="detail.notes || 'Aucune note. Ajoutez ici ce qui compte pour ce client : préférences, historique des échanges, prochaines étapes.'"></p>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h3>Activité récente</h3><span class="muted small" x-text="history.length + ' document(s)'"></span></div>
+            <ul class="act">
+              <template x-for="d in history.slice(0, 8)" :key="d.id">
+                <li><a :href="'document.html?id=' + d.id">
+                  <span class="tile-ic" :class="{ facture: 'violet', avoir: 'pink' }[d.type]" x-html="icon({ devis: 'quote', facture: 'invoice', avoir: 'credit' }[d.type])"></span>
+                  <span class="txt"><span class="t" x-text="LABELS.type[d.type] + ' ' + (d.number || '(brouillon)') + (d.title ? ' · ' + d.title : '')"></span>
+                    <span class="s" x-text="LABELS.status[d.status] + ' · ' + relDate(d.date)"></span></span>
+                  <span class="amt" x-text="money(d.total_ttc)"></span>
+                </a></li>
+              </template>
+            </ul>
+            <p class="muted" x-show="!history.length">Aucun document pour ce client.</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <div class="modal-bg" x-show="form" @keydown.escape.window="form = null">
+    <template x-if="form">
+      <div class="modal">
+        <h2 x-text="form.id ? 'Modifier ' + clientName(form) : 'Nouveau client'"></h2>
+        <div class="grid grid-3">
+          <div><label>Type</label><select x-model="form.kind"><option value="professionnel">Professionnel</option><option value="particulier">Particulier</option></select></div>
+          <div><label>Code client</label><input x-model="form.code" placeholder="Automatique"></div>
+          <div><label>Raison sociale</label><input x-model="form.company"></div>
+          <div><label>Civilité</label><select x-model="form.civility"><option value=""></option><option>M.</option><option>Mme</option></select></div>
+          <div><label>Prénom</label><input x-model="form.first_name"></div>
+          <div><label>Nom</label><input x-model="form.last_name"></div>
+          <div style="grid-column: span 3"><label>Adresse</label><textarea x-model="form.address" rows="2"></textarea></div>
+          <div><label>Code postal</label><input x-model="form.postal_code"></div>
+          <div><label>Ville</label><input x-model="form.city"></div>
+          <div><label>Pays</label><input x-model="form.country"></div>
+          <div><label>E-mail</label><input type="email" x-model="form.email"></div>
+          <div><label>Téléphone</label><input x-model="form.phone"></div>
+          <div></div>
+          <div><label>SIRET</label><input x-model="form.siret"></div>
+          <div><label>N° TVA intracommunautaire</label><input x-model="form.vat_number"></div>
+          <div></div>
+          <div><label>Délai de paiement (jours)</label><input type="number" x-model="form.payment_days" placeholder="Par défaut"></div>
+          <div><label>Remise habituelle (%)</label><input type="number" step="any" x-model="form.discount_pct"></div>
+          <div></div>
+          <div style="grid-column: span 3"><label>Notes internes</label><textarea x-model="form.notes" rows="3"></textarea></div>
+        </div>
+        <div class="actions">
+          <button class="danger" x-show="form.id" @click="remove()" style="margin-right:auto">Supprimer</button>
+          <button @click="form = null">Annuler</button>
+          <button class="primary" @click="save()">Enregistrer</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</main>
+<script>
+function clientsPage() {
+  return {
+    rows: [], q: '', kind: '', form: null, detail: null, history: [],
+    get filtered() { return this.kind ? this.rows.filter((c) => c.kind === this.kind) : this.rows; },
+    get stats() {
+      const issued = this.history.filter((d) => d.number && (d.type === 'facture' || d.type === 'avoir'));
+      return {
+        invoiced: issued.reduce((s, d) => s + (d.type === 'facture' ? d.total_ttc : -d.total_ttc), 0),
+        open: this.history.filter((d) => d.type === 'facture' && ['emise', 'partielle'].includes(d.status)).length
+      };
+    },
+    async init() {
+      const id = qs('id');
+      if (id) await this.openDetail(id);
+      else {
+        await this.load();
+        if (qs('new')) this.edit({ kind: 'professionnel', country: 'France' });
+      }
+    },
+    async load() { this.rows = await api('/clients?q=' + encodeURIComponent(this.q)); },
+    async openDetail(id) {
+      [this.detail, this.history] = await Promise.all([api('/clients/' + id), api('/documents?client_id=' + id)]);
+      document.title = clientName(this.detail) + ' — Facturation';
+    },
+    edit(c) { this.form = { ...c }; },
+    async save() {
+      let saved;
+      if (this.form.id) saved = await api('/clients/' + this.form.id, { method: 'PUT', body: this.form });
+      else saved = await api('/clients', { body: this.form });
+      this.form = null;
+      toast('Client enregistré');
+      if (this.detail) await this.openDetail(saved.id);
+      else go('clients.html?id=' + saved.id);
+    },
+    async remove() {
+      if (!(await uiConfirm('Supprimer ce client ?'))) return;
+      await api('/clients/' + this.form.id, { method: 'DELETE' });
+      this.form = null;
+      go('clients.html');
+    }
+  };
+}
+</script>
+</body>
+</html>

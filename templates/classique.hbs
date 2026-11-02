@@ -1,0 +1,146 @@
+<div class="doc">
+  <header class="doc-header">
+    <div class="company">
+      {{#if company.logo}}<img class="logo" src="{{company.logo}}" alt="{{company.name}}">{{/if}}
+      <div class="company-name">{{company.name}}</div>
+      <div>{{company.address}}</div>
+      <div>{{company.postal_code}} {{company.city}}</div>
+      {{#if company.phone}}<div>Tél. : {{company.phone}}</div>{{/if}}
+      {{#if company.email}}<div>{{company.email}}</div>{{/if}}
+      {{#if company.website}}<div>{{company.website}}</div>{{/if}}
+    </div>
+    <div class="doc-title">
+      <h1>{{upper doc.type_label}}</h1>
+      <table class="meta">
+        <tr><th>N°</th><td>{{doc.number}}</td></tr>
+        <tr><th>Date</th><td>{{date doc.date}}</td></tr>
+        {{#if isQuote}}{{#if doc.validity_date}}<tr><th>Valable jusqu'au</th><td>{{date doc.validity_date}}</td></tr>{{/if}}{{/if}}
+        {{#if isInvoice}}{{#if doc.due_date}}<tr><th>Échéance</th><td>{{date doc.due_date}}</td></tr>{{/if}}{{/if}}
+        {{#if client.code}}<tr><th>Code client</th><td>{{client.code}}</td></tr>{{/if}}
+        {{#if source}}<tr><th>{{#if isCredit}}Facture d'origine{{else}}Réf. devis{{/if}}</th><td>{{source.number}}</td></tr>{{/if}}
+      </table>
+    </div>
+  </header>
+
+  <section class="parties">
+    <div class="box site">
+      {{#if doc.site_address}}
+        <div class="label">Adresse d'intervention</div>
+        <div>{{nl2br doc.site_address}}</div>
+      {{/if}}
+    </div>
+    <div class="box client">
+      <div class="label">Client</div>
+      <div class="client-name">{{client.display_name}}</div>
+      {{#if client.contact_name}}<div>{{client.contact_name}}</div>{{/if}}
+      <div>{{nl2br client.full_address}}</div>
+      {{#if client.vat_number}}<div>TVA : {{client.vat_number}}</div>{{/if}}
+    </div>
+  </section>
+
+  {{#if doc.title}}<div class="object"><strong>Objet :</strong> {{doc.title}}</div>{{/if}}
+  {{#if doc.intro}}<p class="intro">{{nl2br doc.intro}}</p>{{/if}}
+
+  <table class="lines">
+    <thead>
+      <tr>
+        <th class="c-ref">Réf.</th>
+        <th class="c-des">Désignation</th>
+        <th class="c-num">Qté</th>
+        <th class="c-unit">Unité</th>
+        <th class="c-num">P.U. HT</th>
+        {{#unless vat_exempt}}<th class="c-num">TVA</th>{{/unless}}
+        <th class="c-num">Total HT</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lines}}
+        {{#if isSection}}
+          <tr class="section"><td colspan="7">{{designation}}</td></tr>
+        {{/if}}
+        {{#if isText}}
+          <tr class="text"><td></td><td colspan="6">{{nl2br designation}}</td></tr>
+        {{/if}}
+        {{#if isItem}}
+          <tr class="item">
+            <td class="c-ref">{{reference}}</td>
+            <td class="c-des">
+              <div class="des">{{designation}}</div>
+              {{#if description}}<div class="desc">{{nl2br description}}</div>{{/if}}
+              {{#if (gt discount_pct 0)}}<div class="desc">Remise {{percent discount_pct}}</div>{{/if}}
+            </td>
+            <td class="c-num">{{number quantity}}</td>
+            <td class="c-unit">{{unit}}</td>
+            <td class="c-num">{{money unit_price}}</td>
+            {{#unless ../vat_exempt}}<td class="c-num">{{percent vat_rate}}</td>{{/unless}}
+            <td class="c-num">{{money total_ht}}</td>
+          </tr>
+        {{/if}}
+        {{#if closing_section}}
+          <tr class="subtotal"><td colspan="{{#if ../vat_exempt}}5{{else}}6{{/if}}">Sous-total {{closing_section}}</td><td class="c-num">{{money closing_section_total}}</td></tr>
+        {{/if}}
+      {{/each}}
+    </tbody>
+  </table>
+
+  <section class="bottom">
+    <div class="vat-summary">
+      {{#if vat_exempt}}
+        <p class="mention">{{vat_exempt_mention}}</p>
+      {{else}}
+        <table class="vat">
+          <thead><tr><th>Taux TVA</th><th>Base HT</th><th>Montant TVA</th></tr></thead>
+          <tbody>
+            {{#each totals.vat}}<tr><td>{{percent rate}}</td><td>{{money base}}</td><td>{{money amount}}</td></tr>{{/each}}
+          </tbody>
+        </table>
+      {{/if}}
+    </div>
+    <table class="totals">
+      {{#if (gt totals.discount_amount 0)}}
+        <tr><th>Total HT brut</th><td>{{money totals.ht_brut}}</td></tr>
+        <tr><th>Remise {{percent totals.discount_pct}}</th><td>- {{money totals.discount_amount}}</td></tr>
+      {{/if}}
+      <tr><th>Total HT</th><td>{{money totals.ht}}</td></tr>
+      {{#unless vat_exempt}}<tr><th>Total TVA</th><td>{{money totals.total_vat}}</td></tr>{{/unless}}
+      <tr class="grand"><th>{{#if vat_exempt}}Net à payer{{else}}Total TTC{{/if}}</th><td>{{money totals.ttc}}</td></tr>
+      {{#if isQuote}}{{#if (gt totals.deposit_pct 0)}}
+        <tr><th>Acompte à la commande ({{percent totals.deposit_pct}})</th><td>{{money totals.deposit_amount}}</td></tr>
+      {{/if}}{{/if}}
+      {{#if isInvoice}}{{#if (gt totals.paid 0)}}
+        <tr><th>Déjà réglé</th><td>- {{money totals.paid}}</td></tr>
+        <tr class="grand"><th>Reste à payer</th><td>{{money totals.due}}</td></tr>
+      {{/if}}{{/if}}
+    </table>
+  </section>
+
+  {{#if doc.notes}}<div class="notes">{{nl2br doc.notes}}</div>{{/if}}
+  {{#if doc.conditions}}<div class="conditions"><div class="label">Conditions</div>{{nl2br doc.conditions}}</div>{{/if}}
+
+  {{#if isInvoice}}
+    {{#if company.iban}}
+      <div class="bank"><div class="label">Coordonnées bancaires</div>
+        {{#if company.bank_name}}{{company.bank_name}} — {{/if}}IBAN : {{company.iban}}{{#if company.bic}} — BIC : {{company.bic}}{{/if}}
+      </div>
+    {{/if}}
+  {{/if}}
+
+  {{#if isQuote}}
+    <div class="signature">
+      <div class="box">
+        <div class="label">Bon pour accord</div>
+        <div class="small">Date, signature et cachet précédés de la mention « Bon pour accord »</div>
+      </div>
+    </div>
+  {{/if}}
+
+  {{#unless isQuote}}{{#if legal_mentions}}<div class="legal">{{nl2br legal_mentions}}</div>{{/if}}{{/unless}}
+
+  <footer class="doc-footer">
+    {{company.name}}{{#if company.legal_form}} — {{company.legal_form}}{{/if}}{{#if company.capital}} au capital de {{company.capital}}{{/if}}
+    {{#if company.siret}} — SIRET {{company.siret}}{{/if}}{{#if company.rcs}} — RCS {{company.rcs}}{{/if}}{{#if company.ape}} — APE {{company.ape}}{{/if}}
+    {{#if company.vat_number}} — TVA intracom. {{company.vat_number}}{{/if}}
+    {{#if company.insurance}}<br>{{company.insurance}}{{/if}}
+    {{#if footer_text}}<br>{{nl2br footer_text}}{{/if}}
+  </footer>
+</div>

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assistant IA — Facturation</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/common.js"></script>
+<script src="js/chat.js"></script>
+<script defer src="vendor/alpine.js"></script>
+<style>
+  .kb-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; margin-bottom: 20px; }
+  .kb-head h1 { margin: 0 0 4px; }
+  .kb-head p { margin: 0; color: var(--muted); max-width: 70ch; line-height: 1.5; }
+  .kb-head .spacer { flex: 1; }
+  .kb-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .kb-grid > * { min-width: 0; }
+  .kb-card h2 { display: flex; align-items: center; gap: 10px; }
+  .kb-card h2 .tile-ic { width: 32px; height: 32px; border-radius: 10px; }
+  .kb-card .lead { color: var(--muted); margin: -4px 0 12px; line-height: 1.5; }
+  #kb-instructions { min-height: 300px; line-height: 1.55; }
+  .kb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+  .kb-row .spacer { flex: 1; }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .examples button { font-size: 12px; padding: 5px 11px; white-space: normal; text-align: left; }
+  .drop { display: grid; place-items: center; gap: 4px; padding: 22px; border: 2px dashed var(--border); border-radius: 18px; color: var(--muted); text-align: center; cursor: pointer; }
+  .drop.over { border-color: var(--primary); background: var(--primary-light); }
+  .drop strong { color: var(--text); }
+  .files { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .file { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 16px; min-width: 0; }
+  .file.off { opacity: .55; }
+  .file .tile-ic { width: 36px; height: 36px; border-radius: 10px; }
+  .file .txt { flex: 1; min-width: 0; }
+  .file .n { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file .m { display: block; color: var(--muted); font-size: 12px; }
+  .switch { position: relative; width: 40px; height: 24px; flex-shrink: 0; }
+  .switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--border); transition: background .15s; pointer-events: none; }
+  .switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px var(--shadow); transition: transform .15s; }
+  .switch input:checked + span { background: var(--primary); }
+  .switch input:checked + span::after { transform: translateX(16px); }
+  .switch input:focus-visible + span { outline: 3px solid var(--primary-light); }
+  .meter { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-top: 14px; }
+  .meter div { height: 100%; background: var(--primary); }
+  .note { margin-top: 16px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .preview-text { white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; max-height: 60vh; overflow: auto; background: var(--surface-2); border-radius: 12px; padding: 12px; margin: 0; }
+  .preview-img { max-width: 100%; border-radius: 12px; border: 1px solid var(--border); }
+  .busy { display: flex; align-items: center; gap: 8px; color: var(--muted); margin-top: 10px; }
+  .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid var(--primary-light); border-top-color: var(--primary); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 1000px) { .kb-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (prefers-reduced-motion: reduce) { .switch span, .switch span::after { transition: none; } }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main x-data="knowledgePage()" x-cloak>
+  <div class="kb-head">
+    <div>
+      <h1>Assistant IA</h1>
+      <p>Comme un projet Claude : vos instructions et vos fichiers sont utilisés par l'IA dans le chat et lorsqu'elle rédige un devis ou une facture.</p>
+    </div>
+    <span class="spacer"></span>
+    <button type="button" class="primary" @click="chatToggle(true)"><span x-html="icon('sparkle')"></span>Ouvrir le chat</button>
+  </div>
+
+  <div class="kb-grid">
+    <section class="card kb-card" aria-labelledby="kb-i-title">
+      <h2 id="kb-i-title"><span class="tile-ic violet" x-html="icon('edit')"></span>Instructions</h2>
+      <p class="lead">Expliquez à l'IA comment vous travaillez : elle suivra ces consignes à chaque réponse.</p>
+      <label for="kb-instructions" class="sr-label">Instructions pour l'assistant</label>
+      <textarea id="kb-instructions" x-model="instructions" :maxlength="limits.instructions"
+        placeholder="Ex. : Nous sommes une entreprise de rénovation à Lyon. Nos devis comptent toujours le déplacement et l'évacuation des gravats. Taux horaire 45 € HT. Acompte de 30 % à la commande. Ton professionnel et chaleureux, vouvoiement."></textarea>
+      <div class="kb-row">
+        <span class="small muted" x-text="instructions.length.toLocaleString('fr-FR') + ' / ' + limits.instructions.toLocaleString('fr-FR') + ' caractères'"></span>
+        <span class="spacer"></span>
+        <span class="small muted" x-show="dirty">Modifications non enregistrées</span>
+        <button type="button" class="primary" @click="saveInstructions()" :disabled="!dirty"><span x-html="icon('check')"></span>Enregistrer</button>
+      </div>
+      <div class="examples" aria-label="Exemples à ajouter">
+        <template x-for="ex in examples" :key="ex">
+          <button type="button" @click="addExample(ex)" x-text="'+ ' + ex"></button>
+        </template>
+      </div>
+    </section>
+
+    <section class="card kb-card" aria-labelledby="kb-f-title">
+      <h2 id="kb-f-title"><span class="tile-ic amber" x-html="icon('file')"></span>Fichiers de référence</h2>
+      <p class="lead">Tarifs fournisseurs, conditions générales, anciens devis, fiches techniques, photos… L'IA les consulte pour répondre et chiffrer.</p>
+      <label class="drop" :class="over && 'over'" @dragover.prevent="over = true" @dragleave="over = false" @drop.prevent="over = false; upload($event.dataTransfer.files)">
+        <span x-html="icon('clip')"></span>
+        <strong>Ajouter des fichiers</strong>
+        <span class="small">PDF, images, textes ou CSV — glissez-les ici ou cliquez</span>
+        <input type="file" multiple accept="application/pdf,.pdf,image/*,.txt,.csv,.md,.json,.xml" style="display:none" @change="upload($event.target.files); $event.target.value = ''">
+      </label>
+      <div class="busy" x-show="uploading" role="status"><span class="spinner"></span><span x-text="uploading"></span></div>
+
+      <ul class="files">
+        <template x-for="f in files" :key="f.id">
+          <li class="file" :class="!f.active && 'off'">
+            <span class="tile-ic" :class="{ pdf: 'pink', image: 'green', text: '' }[f.kind]" x-html="icon(f.kind === 'image' ? 'camera' : 'file')"></span>
+            <span class="txt">
+              <button type="button" class="n" style="all:unset; cursor:pointer; display:block; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" @click="preview(f)" x-text="f.name" :title="'Aperçu de ' + f.name"></button>
+              <span class="m" x-text="({ pdf: 'PDF', image: 'Image', text: 'Texte' })[f.kind] + ' · ' + size(f.size) + ' · ajouté le ' + fdate(f.created_at)"></span>
+            </span>
+            <label class="switch" :title="f.active ? 'Utilisé par l\'IA' : 'Ignoré par l\'IA'">
+              <input type="checkbox" :checked="f.active" @change="toggle(f, $event.target.checked)" :aria-label="(f.active ? 'Désactiver ' : 'Activer ') + f.name">
+              <span></span>
+            </label>
+            <button type="button" class="icon-btn" style="width:34px; height:34px" @click="remove(f)" :aria-label="'Supprimer ' + f.name" x-html="icon('x')"></button>
+          </li>
+        </template>
+      </ul>
+      <p class="empty" x-show="!files.length && !uploading" style="padding:18px 0 4px">Aucun fichier pour l'instant.</p>
+      <div class="meter" :title="size(used) + ' utilisés sur ' + size(limits.total)"><div :style="`width:${Math.min(100, used / limits.total * 100)}%`"></div></div>
+      <p class="small muted" style="margin:6px 0 0" x-text="files.length + ' / ' + limits.files + ' fichiers · ' + size(used) + ' sur ' + size(limits.total) + ' · ' + files.filter((f) => f.active).length + ' actif(s)'"></p>
+    </section>
+  </div>
+
+  <p class="note">Les instructions et les fichiers actifs sont envoyés à l'IA (Anthropic) avec chaque demande. Ils sont mis en cache quelques minutes pour réduire le coût des messages suivants. Désactivez les fichiers dont vous n'avez pas besoin : les réponses seront plus rapides et moins chères.</p>
+
+  <div class="modal-bg" x-show="viewing" @keydown.escape.window="viewing = null">
+    <template x-if="viewing">
+      <div class="modal wide" @click.outside="viewing = null">
+        <h2 x-text="viewing.name"></h2>
+        <template x-if="viewing.kind === 'image'"><img class="preview-img" :src="'data:' + viewing.media_type + ';base64,' + viewing.data" :alt="viewing.name"></template>
+        <template x-if="viewing.kind !== 'image'">
+          <div>
+            <p class="small muted" x-show="viewing.kind === 'pdf'">Texte extrait du PDF (l'IA lit aussi la mise en page et les images du document original).</p>
+            <pre class="preview-text" x-text="viewing.text || 'Aucun texte lisible dans ce fichier.'"></pre>
+          </div>
+        </template>
+        <div class="actions"><button type="button" @click="viewing = null">Fermer</button></div>
+      </div>
+    </template>
+  </div>
+</main>
+<script>
+function knowledgePage() {
+  return {
+    instructions: '', saved: '', files: [], limits: { files: 20, total: 30 * 1048576, instructions: 20000 },
+    over: false, uploading: '', viewing: null,
+    examples: [
+      'Toujours compter le déplacement',
+      'Taux horaire de main d\'œuvre : 45 € HT',
+      'Acompte de 30 % à la commande',
+      'TVA 10 % pour la rénovation des logements de plus de 2 ans',
+      'Vouvoyer les clients, ton professionnel',
+      'Arrondir les quantités de fournitures au supérieur'
+    ],
+    get dirty() { return this.instructions !== this.saved; },
+    get used() { return this.files.reduce((s, f) => s + f.size, 0); },
+    async init() {
+      const k = await api('/knowledge');
+      this.instructions = this.saved = k.instructions;
+      this.files = k.files;
+      this.limits = k.limits;
+      window.addEventListener('beforeunload', (e) => { if (this.dirty) { e.preventDefault(); e.returnValue = ''; } });
+    },
+    size(n) {
+      if (n < 1024) return n + ' o';
+      if (n < 1048576) return Math.round(n / 1024) + ' Ko';
+      return (n / 1048576).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' Mo';
+    },
+    addExample(ex) {
+      this.instructions = (this.instructions.trim() ? this.instructions.replace(/\s*$/, '\n') : '') + '- ' + ex + '.';
+    },
+    async saveInstructions() {
+      const r = await api('/knowledge/instructions', { method: 'PUT', body: { instructions: this.instructions } });
+      this.saved = this.instructions = r.instructions;
+      toast('Instructions enregistrées');
+    },
+    async upload(fileList) {
+      for (const file of [...(fileList || [])]) {
+        this.uploading = 'Préparation de « ' + file.name + ' »…';
+        let f;
+        try { f = await prepareKnowledgeFile(file); } catch (e) { toast(e.message, 'error'); continue; }
+        this.uploading = 'Enregistrement de « ' + file.name + ' »…';
+        try {
+          this.files.push(await api('/knowledge/files', { body: { name: f.name, kind: f.kind, media_type: f.media_type, data: f.data, text: f.text } }));
+        } catch (e) { /* message déjà affiché par api() */ }
+      }
+      this.uploading = '';
+    },
+    async toggle(f, active) {
+      const r = await api('/knowledge/files/' + f.id, { method: 'PUT', body: { active } });
+      Object.assign(f, r);
+    },
+    async remove(f) {
+      if (!(await uiConfirm(`Supprimer « ${f.name} » des fichiers de l'assistant ?`, 'Supprimer'))) return;
+      await api('/knowledge/files/' + f.id, { method: 'DELETE' });
+      this.files = this.files.filter((x) => x.id !== f.id);
+    },
+    async preview(f) {
+      this.viewing = await api('/knowledge/files/' + f.id);
+    }
+  };
+}
+</script>
+</body>
+</html>

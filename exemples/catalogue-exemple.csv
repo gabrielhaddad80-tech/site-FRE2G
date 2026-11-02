@@ -1,0 +1,4 @@
+﻿reference;designation;description;type;unite;prix achat;prix vente;tva;categorie
+PL-001;Tube cuivre 14 mm;Barre de 2 m;fourniture;ml;4,20;6,90;20;Plomberie
+PL-002;Raccord laiton 14 mm;;fourniture;u;1,10;2,50;20;Plomberie
+MO-PLB;Main d'oeuvre plombier;;main d'oeuvre;h;30;52;10;Main d'oeuvre
