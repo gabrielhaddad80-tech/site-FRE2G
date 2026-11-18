@@ -1,0 +1,2 @@
+code;raison_sociale;siret;tva_intra;contact;email;telephone;adresse;code_postal;ville;delai_paiement_jours;remise_pct
+CL0001;Client Exemple SARL;12345678900011;FR00123456789;Mme Martin;achats@exemple.fr;0102030405;1 rue de l'Exemple;75001;Paris;30;0

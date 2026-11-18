@@ -1,0 +1,18 @@
+{
+  "name": "fre2g-adv",
+  "version": "1.0.0",
+  "description": "ADV (Administration des Ventes) FRE2G avec agent IA Claude",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/server.js",
+    "dev": "node --watch --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/server.js",
+    "seed": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/seed.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
+    "express": "^4.21.2",
+    "nodemailer": "^6.9.16"
+  }
+}

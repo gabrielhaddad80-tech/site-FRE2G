@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ADV FRE2G</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside id="nav">
+    <div class="logo">FRE2G <span>ADV</span></div>
+    <button data-vue="tableau" class="actif">Tableau de bord</button>
+    <button data-vue="agent">Agent ADV</button>
+    <button data-vue="envoi">Boîte d'envoi <b id="nb-envoi"></b></button>
+    <hr>
+    <button data-vue="devis">Devis</button>
+    <button data-vue="commandes">Commandes</button>
+    <button data-vue="factures">Factures</button>
+    <hr>
+    <button data-vue="clients">Clients</button>
+    <button data-vue="produits">Catalogue</button>
+    <button data-vue="journal">Journal</button>
+    <div id="etat"></div>
+  </aside>
+  <main id="contenu"></main>
+  <dialog id="modal"><div id="modal-corps"></div></dialog>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
