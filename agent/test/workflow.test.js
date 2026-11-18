@@ -47,6 +47,7 @@ before(async () => {
 after(async () => {
   server.close();
   await ctx.close();
+  fs.rmSync(dataDir, { recursive: true, force: true });
 });
 
 test('les montants du devis 261182 (Alternative Finance) tombent juste', () => {
