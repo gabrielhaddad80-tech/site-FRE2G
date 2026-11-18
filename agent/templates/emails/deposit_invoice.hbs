@@ -1,0 +1,6 @@
+Subject: Facture d'acompte {{invoice.number}} — devis N° {{quote.number}}
+<p>{{greeting}}</p>
+<p>Veuillez trouver ci-joint la facture d'acompte <strong>{{invoice.number}}</strong> d'un montant de <strong>{{money invoice.amount_due}} TTC</strong>, correspondant à {{pct details.pct}} du devis N° {{quote.number}}.</p>
+{{#if company.iban}}<p>Règlement par virement : IBAN <strong>{{company.iban}}</strong>{{#if company.bic}} — BIC {{company.bic}}{{/if}}, en indiquant la référence <strong>{{invoice.number}}</strong>.</p>{{/if}}
+<p>Les travaux seront planifiés dès réception de l'acompte. {{#if invoice.due_on_receipt}}Cette facture est payable à réception.{{else}}Échéance : {{dateFr invoice.due_date}}.{{/if}}</p>
+<p>Bien cordialement,<br><strong>{{company.signatory}}</strong></p>

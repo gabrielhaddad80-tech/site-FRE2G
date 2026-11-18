@@ -1,0 +1,7 @@
+<div class="footer-ids">
+  {{company.name}}{{#if company.legal_form}} — {{company.legal_form}}{{/if}}{{#if company.capital}} au capital de {{company.capital}}{{/if}}
+  — {{company.address}}, {{company.postal_code}} {{company.city}}
+  {{#if company.siret}} — SIRET {{company.siret}}{{/if}}{{#if company.rcs}} — RCS {{company.rcs}}{{/if}}{{#if company.ape}} — APE {{company.ape}}{{/if}}
+  {{#if company.vat_number}} — TVA intracom. {{company.vat_number}}{{/if}}
+  {{#if company.insurance}}<br>{{company.insurance}}{{/if}}
+</div>

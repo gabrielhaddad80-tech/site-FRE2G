@@ -1,0 +1,13 @@
+<header class="head">
+  <div class="brand">
+    <div class="logo">{{initial company.name}}</div>
+    <div>
+      <div class="name">{{company.name}}</div>
+      <div class="tag">{{company.address}} — {{company.postal_code}} {{company.city}}{{#if company.phone}} — Tél. {{company.phone}}{{/if}}{{#if company.email}} — {{company.email}}{{/if}}</div>
+    </div>
+  </div>
+  <div class="doc-type">
+    <h1>{{docTitle}}</h1>
+    <div class="ref">N° {{docNumber}}</div>
+  </div>
+</header>

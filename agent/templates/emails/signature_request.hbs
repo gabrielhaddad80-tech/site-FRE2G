@@ -1,0 +1,8 @@
+Subject: Votre devis {{company.name}} N° {{quote.number}} à signer en ligne
+<p>{{greeting}}</p>
+<p>Merci pour votre accord sur notre proposition{{#if quote.object}} « {{quote.object}} »{{/if}}.</p>
+<p>Vous trouverez ci-joint le devis N° {{quote.number}} d'un montant de <strong>{{money totals.ttc}} TTC</strong>. Vous pouvez le signer électroniquement en quelques secondes, depuis votre ordinateur ou votre téléphone :</p>
+<p style="text-align:center;margin:26px 0;"><a href="{{signUrl}}" style="background:#d62839;color:#ffffff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:999px;display:inline-block;">Consulter et signer le devis</a></p>
+<p>Dès réception du devis signé, nous commandons le matériel et vous adressons la facture d'acompte de {{pct schedule.deposit_pct}} ({{money schedule.deposit_ttc}}). Les travaux sont planifiés à réception de l'acompte.</p>
+<p style="font-size:13px;color:#6b7686;">Ce lien est personnel et valable jusqu'au {{dateFr validUntil}}. Si le bouton ne fonctionne pas, copiez cette adresse dans votre navigateur : {{signUrl}}</p>
+<p>Bien cordialement,<br><strong>{{company.signatory}}</strong></p>

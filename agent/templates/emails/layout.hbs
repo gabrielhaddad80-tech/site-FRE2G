@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f3f6;font-family:Helvetica,Arial,sans-serif;color:#16202e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f3f6;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+        <tr><td style="background:#0f2747;padding:18px 24px;color:#ffffff;font-size:20px;font-weight:800;">{{company.name}}</td></tr>
+        <tr><td style="padding:24px;font-size:15px;line-height:1.55;">{{{body}}}</td></tr>
+        <tr><td style="padding:14px 24px;background:#f6f7f9;font-size:12px;color:#6b7686;">
+          {{company.name}} — {{company.address}}, {{company.postal_code}} {{company.city}}{{#if company.phone}} — {{company.phone}}{{/if}}{{#if company.email}} — {{company.email}}{{/if}}
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>

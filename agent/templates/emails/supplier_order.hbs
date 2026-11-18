@@ -1,0 +1,10 @@
+Subject: Commande {{company.name}} {{order.number}} — chantier devis N° {{quote.number}}
+<p>Bonjour{{#if supplier.contact}} {{supplier.contact}}{{/if}},</p>
+<p>Nous vous confirmons la commande du matériel ci-dessous (bon de commande <strong>{{order.number}}</strong> en pièce jointe){{#if supplier.account_number}}, sur notre compte n° {{supplier.account_number}}{{/if}} :</p>
+<table cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;font-size:14px;">
+  <tr style="background:#0f2747;color:#fff;"><th align="left">Qté</th><th align="left">Référence</th><th align="left">Désignation</th></tr>
+  {{#each order.items}}<tr style="border-bottom:1px solid #dfe3e9;"><td>{{num qty}}</td><td>{{reference}}</td><td>{{designation}}</td></tr>{{/each}}
+</table>
+<p><strong>Livraison :</strong> {{order.delivery_address}}</p>
+<p>Merci de nous confirmer par retour la disponibilité, le prix et la date de livraison.</p>
+<p>Cordialement,<br><strong>{{company.signatory}}</strong>{{#if company.phone}}<br>{{company.phone}}{{/if}}</p>

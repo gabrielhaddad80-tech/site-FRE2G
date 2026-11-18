@@ -1,0 +1,8 @@
+Subject: Facture de solde {{invoice.number}} — installation terminée
+<p>{{greeting}}</p>
+<p>Votre installation{{#if quote.object}} ({{quote.object}}){{/if}} est terminée et mise en service. Merci de nous avoir fait confiance.</p>
+<p>Veuillez trouver ci-joint la facture de solde <strong>{{invoice.number}}</strong> : reste à payer <strong>{{money invoice.amount_due}} TTC</strong>, acompte déjà réglé déduit.</p>
+{{#if company.iban}}<p>Règlement par virement : IBAN <strong>{{company.iban}}</strong>{{#if company.bic}} — BIC {{company.bic}}{{/if}}, en indiquant la référence <strong>{{invoice.number}}</strong>.</p>{{/if}}
+<p>{{#if invoice.due_on_receipt}}Cette facture est payable à réception.{{else}}Échéance : {{dateFr invoice.due_date}}.{{/if}}</p>
+<p>Pour garder votre installation performante, nous vous proposerons prochainement un contrat d'entretien.</p>
+<p>Bien cordialement,<br><strong>{{company.signatory}}</strong></p>

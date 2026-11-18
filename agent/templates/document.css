@@ -1,0 +1,80 @@
+/* Mise en page commune aux devis, factures et bons de commande FRE2G (A4) */
+:root { --navy: #0f2747; --red: #d62839; --blue: #1d6fe0; --soft: #eef2f8; --line: #dfe3e9; --muted: #5b6676; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 9.6pt; color: #16202e; line-height: 1.42; }
+h1, h2, h3 { color: var(--navy); margin: 0; }
+p { margin: 0 0 7px; }
+.muted { color: var(--muted); }
+.small { font-size: 8.2pt; }
+.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.page-break { page-break-before: always; }
+.avoid-break { page-break-inside: avoid; }
+
+/* En-tête */
+.head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--navy); padding-bottom: 10px; margin-bottom: 14px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .logo { width: 44px; height: 44px; border-radius: 10px; background: var(--red); color: #fff; font-weight: 800; font-style: italic; font-size: 20pt; display: grid; place-items: center; }
+.brand .name { font-size: 17pt; font-weight: 800; color: var(--navy); letter-spacing: -0.01em; }
+.brand .tag { font-size: 8.2pt; color: var(--muted); max-width: 95mm; }
+.head .doc-type { text-align: right; }
+.head .doc-type h1 { font-size: 16pt; letter-spacing: .03em; white-space: nowrap; }
+.head .doc-type .ref { font-size: 11pt; font-weight: 700; color: var(--red); }
+
+/* Tableau d'identification (Émetteur / Client / N° / Date / Validité / Objet) */
+table.ident { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+table.ident th { width: 25%; text-align: left; vertical-align: top; padding: 5px 8px; background: var(--soft); color: var(--navy); font-weight: 700; border-bottom: 1px solid #fff; }
+table.ident td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+
+h2.section { font-size: 12pt; margin: 18px 0 8px; padding-bottom: 3px; border-bottom: 1.5px solid var(--red); }
+.letter p { text-align: justify; }
+.signoff { font-weight: 700; margin-top: 4px; }
+
+/* Tableaux de contenu */
+table.grid { width: 100%; border-collapse: collapse; margin: 6px 0 8px; }
+table.grid thead th { background: var(--navy); color: #fff; font-size: 8.6pt; font-weight: 700; text-align: left; padding: 5px 7px; }
+table.grid thead th.num { text-align: right; }
+table.grid td { padding: 5px 7px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.grid tr { page-break-inside: avoid; }
+table.grid tr.total td { font-weight: 700; border-bottom: none; }
+table.grid tr.grand td { background: var(--navy); color: #fff; font-weight: 800; font-size: 10.5pt; }
+table.grid tr.sub td { background: var(--soft); }
+table.grid .desc { font-size: 8.2pt; color: var(--muted); }
+
+.phase { margin: 6px 0 2px; font-weight: 700; color: var(--navy); }
+ol.steps { margin: 2px 0 8px 0; padding-left: 20px; }
+ol.steps li { margin: 1px 0; }
+ul.cond { padding-left: 18px; margin: 6px 0; }
+ul.cond li { margin: 3px 0; }
+
+/* Bon pour accord */
+.accord { margin-top: 14px; border: 1.5px solid var(--navy); border-radius: 8px; padding: 10px 12px; page-break-inside: avoid; }
+.accord h3 { font-size: 11pt; margin-bottom: 6px; }
+.accord .row { display: flex; gap: 10px; margin: 4px 0; }
+.accord .row .k { width: 190px; color: var(--muted); }
+.accord .box { height: 80px; border: 1px dashed #aab3c0; border-radius: 6px; margin-top: 6px; }
+.accord .signed-img { max-height: 90px; max-width: 280px; display: block; margin-top: 4px; }
+.accord .stamp { display: inline-block; margin-top: 6px; padding: 3px 8px; border: 1.5px solid #17885a; color: #17885a; border-radius: 4px; font-weight: 700; font-size: 8.4pt; }
+
+/* Totaux factures */
+.totals-wrap { display: flex; justify-content: space-between; gap: 18px; margin-top: 8px; page-break-inside: avoid; }
+table.vat { border-collapse: collapse; font-size: 8.6pt; align-self: flex-start; }
+table.vat th, table.vat td { border: 1px solid var(--line); padding: 3px 7px; text-align: right; white-space: nowrap; }
+table.vat th { background: var(--soft); color: var(--navy); }
+table.totals { border-collapse: collapse; min-width: 290px; }
+table.totals th { text-align: left; font-weight: 500; padding: 4px 9px; }
+table.totals td { text-align: right; padding: 4px 9px; white-space: nowrap; }
+table.totals tr.grand th, table.totals tr.grand td { background: var(--navy); color: #fff; font-weight: 800; font-size: 10.5pt; }
+table.totals tr.minus td, table.totals tr.minus th { color: var(--muted); }
+
+.box-info { margin-top: 12px; padding: 8px 11px; background: var(--soft); border-radius: 6px; page-break-inside: avoid; }
+.box-info .k { font-weight: 700; color: var(--navy); }
+.legal { margin-top: 12px; font-size: 7.6pt; color: var(--muted); }
+.footer-ids { margin-top: 18px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 7.6pt; color: var(--muted); text-align: center; }
+
+/* Certificat de signature */
+.cert h1 { font-size: 15pt; margin-bottom: 4px; }
+.cert table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.cert th { width: 32%; text-align: left; vertical-align: top; padding: 5px 8px; background: var(--soft); color: var(--navy); }
+.cert td { padding: 5px 8px; border-bottom: 1px solid var(--line); word-break: break-all; }
+.cert .hash { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 8pt; }

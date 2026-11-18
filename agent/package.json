@@ -1,0 +1,27 @@
+{
+  "name": "fre2g-agent",
+  "version": "1.0.0",
+  "description": "Agent FRE2G : devis, signature électronique, commande fournisseur, factures d'acompte et de solde",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js",
+    "install-browser": "playwright install chromium"
+  },
+  "author": "FRE2G",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.22.3",
+    "handlebars": "^4.7.10",
+    "nodemailer": "^10.6.0",
+    "playwright": "^1.63.0",
+    "zod": "^4.6.7"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  }
+}

@@ -1,0 +1,75 @@
+{{> head docTitle=docTitle docNumber=invoice.number}}
+
+<table class="ident">
+  <tr><th>Émetteur</th><td>{{company.name}} — {{company.address}} — {{company.postal_code}} {{company.city}}{{#if company.siret}} — SIRET {{company.siret}}{{/if}}{{#if company.vat_number}} — TVA {{company.vat_number}}{{/if}}</td></tr>
+  <tr><th>Client</th><td>{{client.display_name}}{{#if client.code}} (code {{client.code}}){{/if}}{{#if client.address_line}} — {{client.address_line}}{{/if}}{{#if client.siret}} — SIRET {{client.siret}}{{/if}}{{#if client.vat_number}} — TVA {{client.vat_number}}{{/if}}</td></tr>
+  <tr><th>Facture N°</th><td>{{invoice.number}}</td></tr>
+  <tr><th>Date</th><td>{{dateFr invoice.date}}</td></tr>
+  <tr><th>Échéance</th><td>{{#if invoice.due_on_receipt}}Payable à réception{{else}}{{dateFr invoice.due_date}}{{/if}}</td></tr>
+  <tr><th>Référence</th><td>Devis N° {{quote.number}} du {{dateFr quote.date}}{{#if quote.signed_date}}, signé le {{dateFr quote.signed_date}}{{/if}}</td></tr>
+  {{#if quote.site_address}}<tr><th>Adresse des travaux</th><td>{{quote.site_address}}</td></tr>{{/if}}
+  {{#if quote.object}}<tr><th>Objet</th><td>{{quote.object}}</td></tr>{{/if}}
+</table>
+
+{{#if isDeposit}}
+<h2 class="section">Facture d'acompte</h2>
+<p>Acompte de {{pct details.pct}} à la commande, conformément à l'échéancier du devis N° {{quote.number}} accepté (montant total des travaux : {{money quoteTotals.ht}} HT, soit {{money quoteTotals.ttc}} TTC).</p>
+<table class="grid">
+  <thead><tr><th>Désignation</th><th class="num" style="width:70px">TVA</th><th class="num" style="width:120px">Montant HT</th><th class="num" style="width:110px">TVA</th><th class="num" style="width:120px">Montant TTC</th></tr></thead>
+  <tbody>
+    {{#each details.vat}}
+    <tr><td>Acompte {{pct ../details.pct}} sur devis N° {{../quote.number}}{{#if ../multiVat}} — part à {{pct rate}}{{/if}}</td><td class="num">{{pct rate}}</td><td class="num">{{money base}}</td><td class="num">{{money amount}}</td><td class="num">{{money (add base amount)}}</td></tr>
+    {{/each}}
+  </tbody>
+</table>
+<div class="totals-wrap">
+  <div></div>
+  <table class="totals">
+    <tr><th>Total HT</th><td>{{money invoice.total_ht}}</td></tr>
+    <tr><th>Total TVA</th><td>{{money invoice.total_vat}}</td></tr>
+    <tr class="grand"><th>Net à payer TTC</th><td>{{money invoice.amount_due}}</td></tr>
+  </table>
+</div>
+<p class="small muted" style="margin-top:8px">Le solde ({{money schedule.balance_ttc}} TTC) sera facturé à la mise en route de l'installation, déduction faite du présent acompte.</p>
+{{/if}}
+
+{{#if isBalance}}
+<h2 class="section">Facture de solde</h2>
+<p>Travaux réalisés conformément au devis N° {{quote.number}}{{#if quote.installed_date}}, installation mise en route le {{dateFr quote.installed_date}}{{/if}}.</p>
+<table class="grid">
+  <thead><tr><th>Désignation</th><th class="num" style="width:56px">Qté</th><th class="num" style="width:110px">Prix unitaire HT</th><th class="num" style="width:56px">TVA</th><th class="num" style="width:110px">Total HT</th></tr></thead>
+  <tbody>
+    {{#each quoteTotals.lines}}
+    <tr><td>{{designation}}{{#if description}}<div class="desc">{{description}}</div>{{/if}}</td><td class="num">{{num qty}}</td><td class="num">{{money unit_price}}</td><td class="num">{{pct vat_rate}}</td><td class="num">{{money total_ht}}</td></tr>
+    {{/each}}
+  </tbody>
+</table>
+<div class="totals-wrap">
+  <table class="vat">
+    <thead><tr><th>Taux TVA</th><th>Base HT</th><th>TVA</th></tr></thead>
+    <tbody>
+      {{#each details.vat}}<tr><td>{{pct rate}}</td><td>{{money base}}</td><td>{{money amount}}</td></tr>{{/each}}
+    </tbody>
+  </table>
+  <table class="totals">
+    <tr><th>Total HT</th><td>{{money details.ht}}</td></tr>
+    <tr><th>Total TVA</th><td>{{money details.total_vat}}</td></tr>
+    <tr><th><strong>Total TTC des travaux</strong></th><td><strong>{{money details.ttc}}</strong></td></tr>
+    {{#each details.deposits}}
+    <tr class="minus"><th>Acompte versé (facture {{this.number}} du {{dateShort date}})</th><td>- {{money ttc}}</td></tr>
+    {{/each}}
+    <tr class="grand"><th>Reste à payer TTC</th><td>{{money invoice.amount_due}}</td></tr>
+  </table>
+</div>
+{{/if}}
+
+{{#if company.iban}}
+<div class="box-info">
+  <span class="k">Règlement par virement</span> — {{#if company.bank_name}}{{company.bank_name}} — {{/if}}IBAN : {{company.iban}}{{#if company.bic}} — BIC : {{company.bic}}{{/if}}<br>
+  Merci d'indiquer la référence <strong>{{invoice.number}}</strong> dans le libellé du virement.
+</div>
+{{/if}}
+
+{{#if legal}}<div class="legal">{{legal}}</div>{{/if}}
+
+{{> footer}}

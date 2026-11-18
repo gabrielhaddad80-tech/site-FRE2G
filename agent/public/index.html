@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Agent FRE2G</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <nav id="nav" aria-label="Menu principal" hidden>
+    <a class="brand" href="#/"><span class="logo">F</span> Agent FRE2G</a>
+    <a href="#/" data-route="dashboard">Tableau de bord</a>
+    <a href="#/devis" data-route="devis">Devis &amp; dossiers</a>
+    <a href="#/clients" data-route="clients">Clients</a>
+    <a href="#/factures" data-route="factures">Factures</a>
+    <a href="#/fournisseurs" data-route="fournisseurs">Fournisseurs</a>
+    <a href="#/parametres" data-route="parametres">Paramètres</a>
+    <div class="nav-bottom">
+      <a class="btn-new" href="#/devis/nouveau">+ Nouveau devis</a>
+      <button type="button" id="logout" class="link">Se déconnecter</button>
+    </div>
+  </nav>
+  <main id="app"><p class="empty">Chargement…</p></main>
+  <div id="toasts" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{{> head docTitle="BON DE COMMANDE" docNumber=order.number}}
+
+<table class="ident">
+  <tr><th>Client (acheteur)</th><td>{{company.name}} — {{company.address}} — {{company.postal_code}} {{company.city}}{{#if company.phone}} — Tél. {{company.phone}}{{/if}}{{#if company.email}} — {{company.email}}{{/if}}</td></tr>
+  <tr><th>Fournisseur</th><td>{{supplier.name}}{{#if supplier.contact}} — à l'attention de {{supplier.contact}}{{/if}}</td></tr>
+  {{#if supplier.account_number}}<tr><th>N° de compte {{company.name}}</th><td>{{supplier.account_number}}</td></tr>{{/if}}
+  <tr><th>Date de commande</th><td>{{dateFr order.date}}</td></tr>
+  <tr><th>Référence chantier</th><td>Devis N° {{quote.number}}{{#if quote.object}} — {{quote.object}}{{/if}}</td></tr>
+  <tr><th>Livraison</th><td>{{order.delivery_address}}</td></tr>
+</table>
+
+<h2 class="section">Matériel commandé</h2>
+<table class="grid">
+  <thead><tr><th style="width:50px">Qté</th><th style="width:26%">Référence</th><th>Désignation</th><th>Caractéristiques</th>{{#if order.show_prices}}<th class="num" style="width:100px">Prix d'achat HT</th>{{/if}}</tr></thead>
+  <tbody>
+    {{#each order.items}}
+    <tr><td>{{num qty}}</td><td>{{reference}}</td><td>{{designation}}</td><td>{{caracteristiques}}</td>{{#if ../order.show_prices}}<td class="num">{{#if purchase_price}}{{money purchase_price}}{{/if}}</td>{{/if}}</tr>
+    {{/each}}
+  </tbody>
+</table>
+
+<div class="box-info">
+  <span class="k">Merci de nous confirmer par retour de mail</span> la disponibilité du matériel, le prix et la date de livraison prévue.
+</div>
+
+{{> footer}}

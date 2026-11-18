@@ -1,0 +1,128 @@
+{{> head docTitle="DEVIS" docNumber=quote.number}}
+
+<table class="ident">
+  <tr><th>Émetteur</th><td>{{company.name}} — {{company.address}} — {{company.postal_code}} {{company.city}}{{#if company.siret}} — SIRET {{company.siret}}{{/if}}{{#if company.vat_number}} — TVA {{company.vat_number}}{{/if}}</td></tr>
+  <tr><th>Client</th><td>{{client.display_name}}{{#if client.address_line}} — {{client.address_line}}{{/if}}</td></tr>
+  <tr><th>Devis N°</th><td>{{quote.number}}</td></tr>
+  <tr><th>Date</th><td>{{dateFr quote.date}}</td></tr>
+  <tr><th>Validité</th><td>{{quote.validity_days}} jours</td></tr>
+  {{#if quote.site_address}}<tr><th>Adresse des travaux</th><td>{{quote.site_address}}</td></tr>{{/if}}
+  {{#if quote.object}}<tr><th>Objet</th><td>{{quote.object}}</td></tr>{{/if}}
+</table>
+
+{{#if letter.has_body}}
+<h2 class="section">Lettre d'accompagnement</h2>
+<div class="letter">
+  <p>{{letter.greeting}}</p>
+  {{#each letter.paragraphs}}<p>{{this}}</p>{{/each}}
+  {{#if letter.closing}}<p>{{letter.closing}}</p>{{/if}}
+  <p>{{letter.politeness}}</p>
+  <p class="signoff">{{company.signatory}}</p>
+</div>
+{{/if}}
+
+{{#if materiel.items.length}}
+<h2 class="section">Matériel proposé</h2>
+{{#if materiel.intro}}<p>{{materiel.intro}}</p>{{/if}}
+<table class="grid">
+  <thead><tr><th style="width:46px">Qté</th><th style="width:24%">Référence</th><th>Désignation</th><th style="width:34%">Caractéristiques</th></tr></thead>
+  <tbody>
+    {{#each materiel.items}}
+    <tr><td>{{num qty}}</td><td>{{reference}}</td><td>{{designation}}</td><td>{{caracteristiques}}</td></tr>
+    {{/each}}
+  </tbody>
+</table>
+{{#if materiel.note}}<p class="small">{{materiel.note}}</p>{{/if}}
+{{/if}}
+
+{{#if travaux.phases.length}}
+<h2 class="section">Description des travaux</h2>
+{{#if travaux.intro}}<p>{{travaux.intro}}</p>{{/if}}
+{{#each travaux.phases}}
+  <div class="avoid-break">
+    <div class="phase">{{inc @index}}. {{title}}</div>
+    <ol class="steps">{{#each steps}}<li>{{this}}</li>{{/each}}</ol>
+  </div>
+{{/each}}
+{{/if}}
+
+<h2 class="section">Montant</h2>
+<p>Le montant total s'élève à {{money totals.ht}} HT, soit {{money totals.ttc}} TTC.</p>
+<table class="grid">
+  <thead><tr><th>Poste</th><th class="num" style="width:56px">Qté</th><th class="num" style="width:110px">Prix unitaire HT</th>{{#if multiVat}}<th class="num" style="width:56px">TVA</th>{{/if}}<th class="num" style="width:110px">Total HT</th></tr></thead>
+  <tbody>
+    {{#each totals.lines}}
+    <tr>
+      <td>{{designation}}{{#if description}}<div class="desc">{{description}}</div>{{/if}}</td>
+      <td class="num">{{num qty}}</td>
+      <td class="num">{{money unit_price}}</td>
+      {{#if ../multiVat}}<td class="num">{{pct vat_rate}}</td>{{/if}}
+      <td class="num">{{money total_ht}}</td>
+    </tr>
+    {{/each}}
+    <tr class="total"><td colspan="{{#if multiVat}}4{{else}}3{{/if}}">Total HT</td><td class="num">{{money totals.ht}}</td></tr>
+    {{#each totals.vat}}
+    <tr><td colspan="{{#if ../multiVat}}4{{else}}3{{/if}}">TVA {{pct rate}}{{#if ../multiVat}} (base {{money base}}){{/if}}</td><td class="num">{{money amount}}</td></tr>
+    {{/each}}
+    <tr class="grand"><td colspan="{{#if multiVat}}4{{else}}3{{/if}}">Total TTC</td><td class="num">{{money totals.ttc}}</td></tr>
+  </tbody>
+</table>
+{{#if conditions.vat_note}}<p class="small">{{conditions.vat_note}}</p>{{/if}}
+
+<div class="avoid-break">
+<h2 class="section">Conditions et bon pour accord</h2>
+<p>Le règlement se fait en {{#if schedule.single}}une échéance{{else}}deux échéances{{/if}}.</p>
+<table class="grid">
+  <thead><tr><th>Échéance</th><th class="num" style="width:70px">Part</th><th class="num" style="width:130px">Montant TTC</th></tr></thead>
+  <tbody>
+    {{#unless schedule.single}}<tr><td>Acompte à la commande</td><td class="num">{{pct schedule.deposit_pct}}</td><td class="num">{{money schedule.deposit_ttc}}</td></tr>{{/unless}}
+    <tr><td>{{#if schedule.single}}Paiement à la mise en route{{else}}Solde à la mise en route{{/if}}</td><td class="num">{{pct schedule.balance_pct}}</td><td class="num">{{money schedule.balance_ttc}}</td></tr>
+    <tr class="total"><td>Total</td><td class="num">100&nbsp;%</td><td class="num">{{money totals.ttc}}</td></tr>
+  </tbody>
+</table>
+<ul class="cond">
+  {{#if conditions.delai}}<li><strong>Délai</strong> : {{conditions.delai}}</li>{{/if}}
+  {{#if conditions.non_compris}}<li><strong>Non compris</strong> : {{conditions.non_compris}}</li>{{/if}}
+  {{#if conditions.garantie}}<li><strong>Garantie</strong> : {{conditions.garantie}}</li>{{/if}}
+  <li><strong>Validité du devis</strong> : {{quote.validity_days}} jours à compter du {{dateFr quote.date}}.</li>
+</ul>
+</div>
+
+<div class="accord">
+  <h3>Bon pour accord</h3>
+  {{#if signature}}
+    <div class="row"><div class="k">Date :</div><div>{{signature.signed_at_text}}</div></div>
+    <div class="row"><div class="k">Nom et qualité du signataire :</div><div>{{signature.name}}{{#if signature.quality}} — {{signature.quality}}{{/if}}</div></div>
+    <div class="row"><div class="k">Mention :</div><div>« {{signature.mention}} »</div></div>
+    <div class="row"><div class="k">Signature :</div><div><img class="signed-img" src="{{signature.image}}" alt="Signature"></div></div>
+    <span class="stamp">Signé électroniquement — certificat en dernière page</span>
+  {{else}}
+    <div class="row"><div class="k">Date :</div><div></div></div>
+    <div class="row"><div class="k">Nom et qualité du signataire :</div><div></div></div>
+    <div class="small muted">Signature et cachet, précédés de la mention « Bon pour accord » :</div>
+    <div class="box"></div>
+  {{/if}}
+</div>
+
+{{> footer}}
+
+{{#if certificate}}
+<div class="page-break cert">
+  <h1>Certificat de signature électronique</h1>
+  <p class="muted">Ce certificat est joint au devis N° {{quote.number}} et en fait partie intégrante. Il récapitule les éléments qui permettent d'identifier le signataire et de garantir l'intégrité du document signé (signature électronique au sens de l'article 1367 du Code civil et du règlement européen eIDAS n° 910/2014).</p>
+  <table>
+    <tr><th>Document</th><td>Devis N° {{quote.number}} du {{dateFr quote.date}} — {{money totals.ttc}} TTC</td></tr>
+    <tr><th>Empreinte SHA-256 du devis présenté</th><td class="hash">{{certificate.original_sha256}}</td></tr>
+    <tr><th>Envoyé pour signature le</th><td>{{certificate.sent_at_text}} à {{certificate.sent_to}}</td></tr>
+    <tr><th>Signataire</th><td>{{signature.name}}{{#if signature.quality}} — {{signature.quality}}{{/if}}</td></tr>
+    <tr><th>Adresse e-mail du signataire</th><td>{{certificate.email}}</td></tr>
+    <tr><th>Vérification de l'e-mail</th><td>{{#if certificate.otp_verified}}Code à usage unique envoyé à {{certificate.email}} et saisi correctement avant la signature{{else}}Accès par lien personnel envoyé à {{certificate.email}}{{/if}}</td></tr>
+    <tr><th>Consentement</th><td>Case « J'ai lu le devis et je l'accepte » cochée, mention « {{signature.mention}} » saisie, signature manuscrite tracée à l'écran</td></tr>
+    <tr><th>Date et heure de signature</th><td>{{signature.signed_at_text}}</td></tr>
+    <tr><th>Adresse IP</th><td>{{certificate.ip}}</td></tr>
+    <tr><th>Navigateur</th><td>{{certificate.user_agent}}</td></tr>
+    <tr><th>Identifiant de la transaction</th><td class="hash">{{certificate.transaction_id}}</td></tr>
+  </table>
+  <p class="small muted" style="margin-top:10px">L'empreinte SHA-256 du présent PDF signé est conservée par {{company.name}} dans le journal du dossier, ce qui permet de vérifier à tout moment que le document n'a pas été modifié.</p>
+</div>
+{{/if}}
